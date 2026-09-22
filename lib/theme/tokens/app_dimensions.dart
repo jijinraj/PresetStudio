@@ -11,4 +11,14 @@ class AppDimensions {
   static const double iconLg = 24;
 
   static const double dividerWidth = 1;
+
+  // Responsive layout
+  static const double desktopBreakpoint = 900;
+
+  // Desktop editor
+  static const double libraryPanelWidth = 220;
+  static const double adjustmentsPanelWidth = 280;
+
+  // Mobile editor
+  static const double mobileBottomBarHeight = 64;
 }
