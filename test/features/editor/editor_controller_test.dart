@@ -58,5 +58,23 @@ void main() {
       expect(controller.session.adjustments.saturation, 0);
       expect(controller.session.isDirty, isFalse);
     });
+
+    test('setting a new source image resets editing state', () {
+      final controller = EditorController();
+
+      controller.setSourceImage('first.jpg');
+
+      controller.updateAdjustments(
+        const ImageAdjustments(exposure: 1, saturation: 20),
+      );
+
+      controller.setSourceImage('second.jpg');
+
+      expect(controller.session.sourceImagePath, 'second.jpg');
+      expect(controller.session.adjustments.exposure, 0);
+      expect(controller.session.adjustments.saturation, 0);
+      expect(controller.session.activePresetId, isNull);
+      expect(controller.session.isDirty, isFalse);
+    });
   });
 }

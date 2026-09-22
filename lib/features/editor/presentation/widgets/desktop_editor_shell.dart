@@ -5,9 +5,19 @@ import '../../../../theme/tokens/app_colors.dart';
 import '../../../../theme/tokens/app_dimensions.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
+import '../../application/editor_controller.dart';
 
 class DesktopEditorShell extends StatelessWidget {
-  const DesktopEditorShell({super.key});
+  const DesktopEditorShell({
+    required this.controller,
+    required this.onImportImage,
+    required this.isImporting,
+    super.key,
+  });
+
+  final EditorController controller;
+  final Future<void> Function() onImportImage;
+  final bool isImporting;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +34,18 @@ class DesktopEditorShell extends StatelessWidget {
                   child: _LibraryPanel(),
                 ),
                 const VerticalDivider(width: 1),
-                const Expanded(child: _CanvasArea()),
+                Expanded(
+                  child: AnimatedBuilder(
+                    animation: controller,
+                    builder: (context, _) {
+                      return _CanvasArea(
+                        sourceImagePath: controller.session.sourceImagePath,
+                        onImportImage: onImportImage,
+                        isImporting: isImporting,
+                      );
+                    },
+                  ),
+                ),
                 const VerticalDivider(width: 1),
                 const SizedBox(
                   width: AppDimensions.adjustmentsPanelWidth,
@@ -85,25 +106,112 @@ class _LibraryPanel extends StatelessWidget {
 }
 
 class _CanvasArea extends StatelessWidget {
-  const _CanvasArea();
+  const _CanvasArea({
+    required this.sourceImagePath,
+    required this.onImportImage,
+    required this.isImporting,
+  });
+
+  final String? sourceImagePath;
+  final Future<void> Function() onImportImage;
+  final bool isImporting;
 
   @override
   Widget build(BuildContext context) {
+    final path = sourceImagePath;
+
     return Container(
       color: AppColors.background,
       padding: const EdgeInsets.all(AppSpacing.xl),
-      child: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.image_outlined, size: 40, color: AppColors.textDisabled),
-            SizedBox(height: AppSpacing.sm),
-            Text('Canvas', style: AppTypography.title),
-            SizedBox(height: AppSpacing.xs),
-            Text('No image loaded', style: AppTypography.bodyMuted),
-          ],
-        ),
+      child: Center(
+        child: path == null
+            ? _EmptyCanvas(
+                onImportImage: onImportImage,
+                isImporting: isImporting,
+              )
+            : _LoadedImageState(
+                sourceImagePath: path,
+                onImportImage: onImportImage,
+                isImporting: isImporting,
+              ),
       ),
+    );
+  }
+}
+
+class _EmptyCanvas extends StatelessWidget {
+  const _EmptyCanvas({required this.onImportImage, required this.isImporting});
+
+  final Future<void> Function() onImportImage;
+  final bool isImporting;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(
+          Icons.image_outlined,
+          size: 40,
+          color: AppColors.textDisabled,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        const Text('Open an image', style: AppTypography.title),
+        const SizedBox(height: AppSpacing.xs),
+        const Text(
+          'Choose a JPEG, PNG, or WebP image from your device.',
+          style: AppTypography.bodyMuted,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FilledButton.icon(
+          onPressed: isImporting ? null : onImportImage,
+          icon: const Icon(Icons.folder_open_outlined),
+          label: Text(isImporting ? 'Opening...' : 'Choose image'),
+        ),
+      ],
+    );
+  }
+}
+
+class _LoadedImageState extends StatelessWidget {
+  const _LoadedImageState({
+    required this.sourceImagePath,
+    required this.onImportImage,
+    required this.isImporting,
+  });
+
+  final String sourceImagePath;
+  final Future<void> Function() onImportImage;
+  final bool isImporting;
+
+  @override
+  Widget build(BuildContext context) {
+    final fileName = sourceImagePath.split(RegExp(r'[\\/]')).last;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(
+          Icons.check_circle_outline,
+          size: 40,
+          color: AppColors.textSecondary,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(fileName, style: AppTypography.title, textAlign: TextAlign.center),
+        const SizedBox(height: AppSpacing.xs),
+        const Text(
+          'Image loaded and ready for editing.',
+          style: AppTypography.bodyMuted,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        OutlinedButton.icon(
+          onPressed: isImporting ? null : onImportImage,
+          icon: const Icon(Icons.swap_horiz),
+          label: const Text('Change image'),
+        ),
+      ],
     );
   }
 }

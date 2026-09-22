@@ -17,10 +17,10 @@ void main() {
     expect(find.text('PresetStudio'), findsOneWidget);
     expect(find.text('Library'), findsOneWidget);
     expect(find.text('Adjustments'), findsOneWidget);
-    expect(find.text('Canvas'), findsOneWidget);
-    expect(find.text('No image loaded'), findsOneWidget);
-  });
 
+    expect(find.text('Open an image'), findsOneWidget);
+    expect(find.text('Choose image'), findsOneWidget);
+  });
   testWidgets('renders mobile PresetStudio editor shell', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -33,9 +33,11 @@ void main() {
     await tester.pumpWidget(const PresetStudioApp());
 
     expect(find.text('PresetStudio'), findsOneWidget);
+    expect(find.text('Open an image'), findsOneWidget);
+    expect(find.text('Choose image'), findsOneWidget);
+
     expect(find.text('Looks'), findsOneWidget);
     expect(find.text('Edit'), findsOneWidget);
     expect(find.text('Crop'), findsOneWidget);
-    expect(find.text('Canvas'), findsOneWidget);
   });
 }

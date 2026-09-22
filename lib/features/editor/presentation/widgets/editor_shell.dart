@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../../application/editor_controller.dart';
 import '../../../../theme/tokens/app_dimensions.dart';
 import 'desktop_editor_shell.dart';
 import 'mobile_editor_shell.dart';
 
 class EditorShell extends StatelessWidget {
-  const EditorShell({super.key});
+  const EditorShell({
+    required this.controller,
+    required this.onImportImage,
+    required this.isImporting,
+    super.key,
+  });
+
+  final EditorController controller;
+  final Future<void> Function() onImportImage;
+  final bool isImporting;
 
   @override
   Widget build(BuildContext context) {
@@ -15,10 +25,18 @@ class EditorShell extends StatelessWidget {
             constraints.maxWidth >= AppDimensions.desktopBreakpoint;
 
         if (isDesktop) {
-          return const DesktopEditorShell();
+          return DesktopEditorShell(
+            controller: controller,
+            onImportImage: onImportImage,
+            isImporting: isImporting,
+          );
         }
 
-        return const MobileEditorShell();
+        return MobileEditorShell(
+          controller: controller,
+          onImportImage: onImportImage,
+          isImporting: isImporting,
+        );
       },
     );
   }
