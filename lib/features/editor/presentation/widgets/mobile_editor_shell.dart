@@ -36,6 +36,7 @@ class MobileEditorShell extends StatelessWidget {
             color: AppColors.canvas,
             child: EditorImageViewport(
               sourceImagePath: controller.session.sourceImagePath,
+              adjustments: controller.session.adjustments,
               onImportImage: onImportImage,
               isImporting: isImporting,
             ),

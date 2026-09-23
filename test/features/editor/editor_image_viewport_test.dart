@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/editor_image_viewport.dart';
 
 void main() {
@@ -9,6 +10,7 @@ void main() {
         home: Scaffold(
           body: EditorImageViewport(
             sourceImagePath: null,
+            adjustments: ImageAdjustments.initial,
             onImportImage: () async {},
             isImporting: false,
           ),
@@ -17,7 +19,9 @@ void main() {
     );
 
     expect(find.text('Open an image'), findsOneWidget);
+
     expect(find.text('Choose image'), findsOneWidget);
+
     expect(find.byIcon(Icons.image_outlined), findsOneWidget);
   });
 
@@ -27,6 +31,7 @@ void main() {
         home: Scaffold(
           body: EditorImageViewport(
             sourceImagePath: null,
+            adjustments: ImageAdjustments.initial,
             onImportImage: () async {},
             isImporting: true,
           ),

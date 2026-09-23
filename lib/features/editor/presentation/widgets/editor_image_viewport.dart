@@ -1,21 +1,24 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../../../../theme/tokens/app_colors.dart';
 import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
+import '../../domain/image_adjustments.dart';
+import 'editor_rendered_image.dart';
 
 class EditorImageViewport extends StatelessWidget {
   const EditorImageViewport({
     required this.sourceImagePath,
+    required this.adjustments,
     required this.onImportImage,
     required this.isImporting,
     super.key,
   });
 
   final String? sourceImagePath;
+  final ImageAdjustments adjustments;
+
   final Future<void> Function() onImportImage;
   final bool isImporting;
 
@@ -32,6 +35,7 @@ class EditorImageViewport extends StatelessWidget {
 
     return _LoadedViewport(
       sourceImagePath: path,
+      adjustments: adjustments,
       onImportImage: onImportImage,
       isImporting: isImporting,
     );
@@ -84,26 +88,28 @@ class _EmptyViewport extends StatelessWidget {
 class _LoadedViewport extends StatelessWidget {
   const _LoadedViewport({
     required this.sourceImagePath,
+    required this.adjustments,
     required this.onImportImage,
     required this.isImporting,
   });
 
   final String sourceImagePath;
+  final ImageAdjustments adjustments;
+
   final Future<void> Function() onImportImage;
   final bool isImporting;
 
   @override
   Widget build(BuildContext context) {
-    final file = File(sourceImagePath);
-
     return Stack(
       fit: StackFit.expand,
       children: [
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Center(
-            child: Image.file(
-              file,
+            child: EditorRenderedImage(
+              sourceImagePath: sourceImagePath,
+              adjustments: adjustments,
               fit: BoxFit.contain,
               filterQuality: FilterQuality.medium,
               errorBuilder: (context, error, stackTrace) {
