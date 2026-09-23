@@ -612,5 +612,171 @@ void main() {
         expect(changedValue, isNull);
       },
     );
+
+    testWidgets('control plus arrow uses precision step in numeric editor', (
+      tester,
+    ) async {
+      double? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdjustmentControl(
+              definition: exposureDefinition,
+              value: 1.27,
+              onChanged: (value) {
+                changedValue = value;
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('adjustment-exposure-value')));
+
+      await tester.pump();
+
+      final input = find.byKey(
+        const ValueKey('adjustment-exposure-value-input'),
+      );
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+      await tester.pump();
+
+      final textField = tester.widget<TextField>(input);
+
+      expect(textField.controller?.text, '1.28');
+
+      expect(changedValue, isNull);
+    });
+
+    testWidgets('control plus arrow uses precision step', (tester) async {
+      double? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdjustmentControl(
+              definition: exposureDefinition,
+              value: 1.27,
+              onChanged: (value) {
+                changedValue = value;
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('adjustment-exposure-slider')),
+      );
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+      expect(changedValue, 1.28);
+    });
+
+    testWidgets('shift plus arrow uses coarse step', (tester) async {
+      double? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdjustmentControl(
+              definition: exposureDefinition,
+              value: 1.27,
+              onChanged: (value) {
+                changedValue = value;
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('adjustment-exposure-slider')),
+      );
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+
+      expect(changedValue, 1.77);
+    });
+
+    testWidgets('control plus mouse wheel uses precision step', (tester) async {
+      double? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdjustmentControl(
+              definition: exposureDefinition,
+              value: 1.27,
+              onChanged: (value) {
+                changedValue = value;
+              },
+            ),
+          ),
+        ),
+      );
+
+      final interaction = tester.widget<Listener>(
+        find.byKey(const ValueKey('adjustment-exposure-slider-interaction')),
+      );
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+
+      interaction.onPointerSignal?.call(
+        const PointerScrollEvent(scrollDelta: Offset(0, -20)),
+      );
+
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+      expect(changedValue, 1.28);
+    });
+
+    testWidgets('shift plus mouse wheel uses coarse step', (tester) async {
+      double? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdjustmentControl(
+              definition: exposureDefinition,
+              value: 1.27,
+              onChanged: (value) {
+                changedValue = value;
+              },
+            ),
+          ),
+        ),
+      );
+
+      final interaction = tester.widget<Listener>(
+        find.byKey(const ValueKey('adjustment-exposure-slider-interaction')),
+      );
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+
+      interaction.onPointerSignal?.call(
+        const PointerScrollEvent(scrollDelta: Offset(0, -20)),
+      );
+
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+
+      expect(changedValue, 1.77);
+    });
   });
 }

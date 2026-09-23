@@ -212,9 +212,9 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
     _sliderFocusNode.requestFocus();
 
     if (event.scrollDelta.dy < 0) {
-      _adjustByInteractionStep(1);
+      _adjustByCurrentStep(1);
     } else {
-      _adjustByInteractionStep(-1);
+      _adjustByCurrentStep(-1);
     }
   }
 
@@ -231,14 +231,14 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
 
     if (key == LogicalKeyboardKey.arrowUp ||
         key == LogicalKeyboardKey.arrowRight) {
-      _adjustByInteractionStep(1);
+      _adjustByCurrentStep(1);
 
       return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.arrowDown ||
         key == LogicalKeyboardKey.arrowLeft) {
-      _adjustByInteractionStep(-1);
+      _adjustByCurrentStep(-1);
 
       return KeyEventResult.handled;
     }
@@ -282,14 +282,13 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
 
   void _adjustEditingValueByStep(int direction) {
     final definition = widget.definition;
+    final step = _stepForCurrentModifiers();
 
     final currentValue =
         double.tryParse(_valueController.text.trim()) ??
         definition.sanitize(widget.value);
 
-    final nextValue = definition.sanitize(
-      currentValue + (definition.interactionStep * direction),
-    );
+    final nextValue = definition.sanitize(currentValue + (step * direction));
 
     final formattedValue = _formatNumber(nextValue, definition.precisionStep);
 
@@ -299,14 +298,28 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
     );
   }
 
-  void _adjustByInteractionStep(int direction) {
+  void _adjustByCurrentStep(int direction) {
     final definition = widget.definition;
+    final step = _stepForCurrentModifiers();
 
-    final nextValue = definition.sanitize(
-      widget.value + (definition.interactionStep * direction),
-    );
+    final nextValue = definition.sanitize(widget.value + (step * direction));
 
     widget.onChanged(nextValue);
+  }
+
+  double _stepForCurrentModifiers() {
+    final definition = widget.definition;
+    final keyboard = HardwareKeyboard.instance;
+
+    if (keyboard.isControlPressed) {
+      return definition.precisionStep;
+    }
+
+    if (keyboard.isShiftPressed) {
+      return definition.coarseStep;
+    }
+
+    return definition.interactionStep;
   }
 
   void _beginValueEditing(double value) {
