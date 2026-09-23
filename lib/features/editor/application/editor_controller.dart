@@ -5,6 +5,7 @@ import '../domain/crop_state.dart';
 import '../domain/editor_session.dart';
 import '../domain/export_settings.dart';
 import '../domain/image_adjustments.dart';
+import '../domain/image_transform.dart';
 
 class EditorController extends ChangeNotifier {
   EditorController({this._session = EditorSession.initial});
@@ -17,6 +18,7 @@ class EditorController extends ChangeNotifier {
     _session = _session.copyWith(
       sourceImagePath: path,
       adjustments: ImageAdjustments.initial,
+      transform: ImageTransform.initial,
       crop: CropState.initial,
       clearActivePreset: true,
       isDirty: false,
@@ -55,6 +57,12 @@ class EditorController extends ChangeNotifier {
 
   void updateCrop(CropState crop) {
     _session = _session.copyWith(crop: crop, isDirty: true);
+
+    notifyListeners();
+  }
+
+  void updateTransform(ImageTransform transform) {
+    _session = _session.copyWith(transform: transform, isDirty: true);
 
     notifyListeners();
   }

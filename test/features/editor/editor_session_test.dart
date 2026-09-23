@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/domain/editor_session.dart';
+import 'package:presetstudio/features/editor/domain/image_transform.dart';
 
 void main() {
   group('EditorSession', () {
@@ -14,6 +15,7 @@ void main() {
       expect(session.adjustments.exposure, 0);
       expect(session.adjustments.contrast, 0);
       expect(session.adjustments.saturation, 0);
+      expect(session.transform.isDefault, isTrue);
     });
 
     test('copyWith preserves unchanged values', () {
@@ -42,6 +44,23 @@ void main() {
 
       expect(updated.sourceImagePath, isNull);
       expect(updated.activePresetId, isNull);
+    });
+
+    test('copyWith updates image transform state', () {
+      const session = EditorSession.initial;
+
+      const transform = ImageTransform(
+        rotationQuarterTurns: 1,
+        flipHorizontal: true,
+      );
+
+      final updated = session.copyWith(transform: transform);
+
+      expect(updated.transform.rotationQuarterTurns, 1);
+
+      expect(updated.transform.flipHorizontal, isTrue);
+
+      expect(updated.transform.flipVertical, isFalse);
     });
   });
 }
