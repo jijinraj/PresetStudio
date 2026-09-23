@@ -1,24 +1,21 @@
 class AppDimensions {
   const AppDimensions._();
 
-  static const double toolbarHeight = 56;
+  static const double toolbarHeight = 52;
 
-  static const double buttonHeight = 40;
-  static const double inputHeight = 40;
+  static const double buttonHeight = 36;
+  static const double inputHeight = 36;
 
-  static const double iconSm = 16;
-  static const double iconMd = 20;
-  static const double iconLg = 24;
+  static const double iconSm = 14;
+  static const double iconMd = 18;
+  static const double iconLg = 22;
 
   static const double dividerWidth = 1;
 
-  // Responsive layout
   static const double desktopBreakpoint = 900;
 
-  // Desktop editor
-  static const double libraryPanelWidth = 220;
-  static const double adjustmentsPanelWidth = 280;
+  static const double libraryPanelWidth = 200;
+  static const double adjustmentsPanelWidth = 260;
 
-  // Mobile editor
-  static const double mobileBottomBarHeight = 64;
+  static const double mobileBottomBarHeight = 60;
 }

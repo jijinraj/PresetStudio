@@ -12,7 +12,7 @@ class PresetStudioApp extends StatelessWidget {
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: PresetStudioTheme.light,
+      theme: PresetStudioTheme.dark,
       home: const EditorScreen(),
     );
   }

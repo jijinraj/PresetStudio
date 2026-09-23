@@ -33,7 +33,7 @@ class MobileEditorShell extends StatelessWidget {
         animation: controller,
         builder: (context, _) {
           return ColoredBox(
-            color: AppColors.background,
+            color: AppColors.canvas,
             child: EditorImageViewport(
               sourceImagePath: controller.session.sourceImagePath,
               onImportImage: onImportImage,
