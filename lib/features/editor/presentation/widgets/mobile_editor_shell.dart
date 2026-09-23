@@ -94,8 +94,17 @@ class _MobileToolBar extends StatelessWidget {
                           : null,
                     ),
                   ),
-                  const Expanded(
-                    child: _MobileTool(icon: Icons.crop, label: 'Crop'),
+                  Expanded(
+                    child: _MobileTool(
+                      icon: Icons.crop,
+                      label: 'Crop',
+                      enabled: hasImage,
+                      onTap: hasImage
+                          ? () {
+                              _showCropSheet(context);
+                            }
+                          : null,
+                    ),
                   ),
                 ],
               ),
@@ -138,28 +147,9 @@ class _MobileToolBar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Edit', style: AppTypography.title),
-
                     const SizedBox(height: AppSpacing.lg),
-
-                    const Text('Transform', style: AppTypography.label),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    RotationControl(
-                      transform: session.transform,
-                      onChanged: controller.updateTransform,
-                    ),
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    const Divider(height: 1),
-
-                    const SizedBox(height: AppSpacing.lg),
-
                     const Text('Light', style: AppTypography.label),
-
                     const SizedBox(height: AppSpacing.md),
-
                     AdjustmentControl(
                       definition: exposureDefinition,
                       value: session.adjustments.exposure,
@@ -169,6 +159,51 @@ class _MobileToolBar extends StatelessWidget {
                           value,
                         );
                       },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCropSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+        return SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.lg + bottomInset,
+            ),
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) {
+                final session = controller.session;
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Crop & Transform', style: AppTypography.title),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text('Rotation', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.md),
+                    RotationControl(
+                      transform: session.transform,
+                      onChanged: controller.updateTransform,
                     ),
                   ],
                 );
