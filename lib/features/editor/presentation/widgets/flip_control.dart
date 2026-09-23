@@ -79,7 +79,7 @@ class _FlipButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: 'Flip $label',
-      child: OutlinedButton.icon(
+      child: OutlinedButton(
         key: buttonKey,
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
@@ -90,12 +90,26 @@ class _FlipButton extends StatelessWidget {
               ? AppColors.accentMuted
               : Colors.transparent,
           disabledForegroundColor: AppColors.textDisabled,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs,
+            vertical: AppSpacing.sm,
+          ),
+          visualDensity: VisualDensity.compact,
           side: BorderSide(
             color: isActive ? AppColors.accent : AppColors.borderStrong,
           ),
         ),
-        icon: Icon(icon, size: 18),
-        label: Text(label),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16),
+              const SizedBox(width: AppSpacing.xs),
+              Text(label, maxLines: 1, softWrap: false),
+            ],
+          ),
+        ),
       ),
     );
   }

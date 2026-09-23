@@ -34,6 +34,7 @@ class DesktopEditorShell extends StatelessWidget {
           const Divider(height: 1),
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(
                   width: AppDimensions.libraryPanelWidth,
