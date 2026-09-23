@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../domain/image_adjustments.dart';
+import '../domain/image_transform.dart';
 import 'editor_render_plan.dart';
 
 class EditorRenderPipeline {
@@ -29,11 +30,15 @@ class EditorRenderPipeline {
     0.0,
   ];
 
-  EditorRenderPlan buildPlan(ImageAdjustments adjustments) {
+  EditorRenderPlan buildPlan(
+    ImageAdjustments adjustments, {
+    ImageTransform transform = ImageTransform.initial,
+  }) {
     final sanitizedAdjustments = adjustments.sanitized();
 
     return EditorRenderPlan(
       adjustments: sanitizedAdjustments,
+      transform: transform,
       colorMatrix: _buildExposureMatrix(sanitizedAdjustments.exposure),
     );
   }

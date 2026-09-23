@@ -5,12 +5,14 @@ import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../domain/image_adjustments.dart';
+import '../../domain/image_transform.dart';
 import 'editor_rendered_image.dart';
 
 class EditorImageViewport extends StatelessWidget {
   const EditorImageViewport({
     required this.sourceImagePath,
     required this.adjustments,
+    required this.transform,
     required this.onImportImage,
     required this.isImporting,
     super.key,
@@ -18,6 +20,7 @@ class EditorImageViewport extends StatelessWidget {
 
   final String? sourceImagePath;
   final ImageAdjustments adjustments;
+  final ImageTransform transform;
 
   final Future<void> Function() onImportImage;
   final bool isImporting;
@@ -36,6 +39,7 @@ class EditorImageViewport extends StatelessWidget {
     return _LoadedViewport(
       sourceImagePath: path,
       adjustments: adjustments,
+      transform: transform,
       onImportImage: onImportImage,
       isImporting: isImporting,
     );
@@ -89,12 +93,13 @@ class _LoadedViewport extends StatelessWidget {
   const _LoadedViewport({
     required this.sourceImagePath,
     required this.adjustments,
+    required this.transform,
     required this.onImportImage,
     required this.isImporting,
   });
-
   final String sourceImagePath;
   final ImageAdjustments adjustments;
+  final ImageTransform transform;
 
   final Future<void> Function() onImportImage;
   final bool isImporting;
@@ -110,6 +115,7 @@ class _LoadedViewport extends StatelessWidget {
             child: EditorRenderedImage(
               sourceImagePath: sourceImagePath,
               adjustments: adjustments,
+              transform: transform,
               fit: BoxFit.contain,
               filterQuality: FilterQuality.medium,
               errorBuilder: (context, error, stackTrace) {

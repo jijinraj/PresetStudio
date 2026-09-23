@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
 import 'package:presetstudio/features/editor/rendering/editor_render_pipeline.dart';
+import 'package:presetstudio/features/editor/domain/image_transform.dart';
 
 void main() {
   group('EditorRenderPipeline', () {
@@ -85,6 +86,19 @@ void main() {
 
       expect(adjustments.exposure, 500.0);
       expect(plan.adjustments.exposure, 5.0);
+    });
+
+    test('includes image transform in render plan', () {
+      const transform = ImageTransform(rotationQuarterTurns: 1);
+
+      final plan = pipeline.buildPlan(
+        ImageAdjustments.initial,
+        transform: transform,
+      );
+
+      expect(plan.transform.rotationQuarterTurns, 1);
+      expect(plan.transform.flipHorizontal, isFalse);
+      expect(plan.transform.flipVertical, isFalse);
     });
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
+import 'package:presetstudio/features/editor/domain/image_transform.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/editor_image_viewport.dart';
 
 void main() {
@@ -11,6 +12,7 @@ void main() {
           body: EditorImageViewport(
             sourceImagePath: null,
             adjustments: ImageAdjustments.initial,
+            transform: ImageTransform.initial,
             onImportImage: () async {},
             isImporting: false,
           ),
@@ -32,6 +34,7 @@ void main() {
           body: EditorImageViewport(
             sourceImagePath: null,
             adjustments: ImageAdjustments.initial,
+            transform: ImageTransform.initial,
             onImportImage: () async {},
             isImporting: true,
           ),

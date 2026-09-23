@@ -47,6 +47,7 @@ class DesktopEditorShell extends StatelessWidget {
                         child: EditorImageViewport(
                           sourceImagePath: controller.session.sourceImagePath,
                           adjustments: controller.session.adjustments,
+                          transform: controller.session.transform,
                           onImportImage: onImportImage,
                           isImporting: isImporting,
                         ),
