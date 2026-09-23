@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
-import 'package:presetstudio/features/editor/rendering/editor_render_pipeline.dart';
 import 'package:presetstudio/features/editor/domain/image_transform.dart';
+import 'package:presetstudio/features/editor/rendering/editor_render_pipeline.dart';
 
 void main() {
   group('EditorRenderPipeline', () {
@@ -29,7 +29,9 @@ void main() {
         final plan = pipeline.buildPlan(adjustments);
 
         expect(plan.colorMatrix[0], closeTo(2.0, 0.000001));
+
         expect(plan.colorMatrix[6], closeTo(2.0, 0.000001));
+
         expect(plan.colorMatrix[12], closeTo(2.0, 0.000001));
       },
     );
@@ -40,15 +42,122 @@ void main() {
       final plan = pipeline.buildPlan(adjustments);
 
       expect(plan.colorMatrix[0], closeTo(0.5, 0.000001));
+
       expect(plan.colorMatrix[6], closeTo(0.5, 0.000001));
+
       expect(plan.colorMatrix[12], closeTo(0.5, 0.000001));
     });
 
-    test('preserves alpha while changing exposure', () {
-      const adjustments = ImageAdjustments(exposure: 2.0);
+    test('reduces contrast to midpoint at negative one hundred', () {
+      const adjustments = ImageAdjustments(contrast: -100.0);
 
       final plan = pipeline.buildPlan(adjustments);
 
+      expect(plan.colorMatrix[0], closeTo(0.0, 0.000001));
+
+      expect(plan.colorMatrix[6], closeTo(0.0, 0.000001));
+
+      expect(plan.colorMatrix[12], closeTo(0.0, 0.000001));
+
+      expect(plan.colorMatrix[4], closeTo(127.5, 0.000001));
+
+      expect(plan.colorMatrix[9], closeTo(127.5, 0.000001));
+
+      expect(plan.colorMatrix[14], closeTo(127.5, 0.000001));
+    });
+
+    test('doubles contrast around midpoint at positive one hundred', () {
+      const adjustments = ImageAdjustments(contrast: 100.0);
+
+      final plan = pipeline.buildPlan(adjustments);
+
+      expect(plan.colorMatrix[0], closeTo(2.0, 0.000001));
+
+      expect(plan.colorMatrix[6], closeTo(2.0, 0.000001));
+
+      expect(plan.colorMatrix[12], closeTo(2.0, 0.000001));
+
+      expect(plan.colorMatrix[4], closeTo(-127.5, 0.000001));
+
+      expect(plan.colorMatrix[9], closeTo(-127.5, 0.000001));
+
+      expect(plan.colorMatrix[14], closeTo(-127.5, 0.000001));
+    });
+
+    test('desaturates fully to luminance grayscale', () {
+      const adjustments = ImageAdjustments(saturation: -100.0);
+
+      final plan = pipeline.buildPlan(adjustments);
+
+      const red = 0.2126;
+      const green = 0.7152;
+      const blue = 0.0722;
+
+      expect(plan.colorMatrix[0], closeTo(red, 0.000001));
+
+      expect(plan.colorMatrix[1], closeTo(green, 0.000001));
+
+      expect(plan.colorMatrix[2], closeTo(blue, 0.000001));
+
+      expect(plan.colorMatrix[5], closeTo(red, 0.000001));
+
+      expect(plan.colorMatrix[6], closeTo(green, 0.000001));
+
+      expect(plan.colorMatrix[7], closeTo(blue, 0.000001));
+
+      expect(plan.colorMatrix[10], closeTo(red, 0.000001));
+
+      expect(plan.colorMatrix[11], closeTo(green, 0.000001));
+
+      expect(plan.colorMatrix[12], closeTo(blue, 0.000001));
+    });
+
+    test('increases saturation at positive one hundred', () {
+      const adjustments = ImageAdjustments(saturation: 100.0);
+
+      final plan = pipeline.buildPlan(adjustments);
+
+      expect(plan.colorMatrix[0], closeTo(1.7874, 0.000001));
+
+      expect(plan.colorMatrix[1], closeTo(-0.7152, 0.000001));
+
+      expect(plan.colorMatrix[2], closeTo(-0.0722, 0.000001));
+
+      expect(plan.colorMatrix[6], closeTo(1.2848, 0.000001));
+
+      expect(plan.colorMatrix[12], closeTo(1.9278, 0.000001));
+    });
+
+    test('applies exposure before contrast', () {
+      const adjustments = ImageAdjustments(exposure: 1.0, contrast: 100.0);
+
+      final plan = pipeline.buildPlan(adjustments);
+
+      expect(plan.colorMatrix[0], closeTo(4.0, 0.000001));
+
+      expect(plan.colorMatrix[6], closeTo(4.0, 0.000001));
+
+      expect(plan.colorMatrix[12], closeTo(4.0, 0.000001));
+
+      expect(plan.colorMatrix[4], closeTo(-127.5, 0.000001));
+
+      expect(plan.colorMatrix[9], closeTo(-127.5, 0.000001));
+
+      expect(plan.colorMatrix[14], closeTo(-127.5, 0.000001));
+    });
+
+    test('preserves alpha across combined color adjustments', () {
+      const adjustments = ImageAdjustments(
+        exposure: 1.0,
+        contrast: 40.0,
+        saturation: 35.0,
+      );
+
+      final plan = pipeline.buildPlan(adjustments);
+
+      expect(plan.colorMatrix[15], 0.0);
+      expect(plan.colorMatrix[16], 0.0);
+      expect(plan.colorMatrix[17], 0.0);
       expect(plan.colorMatrix[18], 1.0);
       expect(plan.colorMatrix[19], 0.0);
     });
@@ -61,7 +170,9 @@ void main() {
       expect(plan.adjustments.exposure, 5.0);
 
       expect(plan.colorMatrix[0], closeTo(32.0, 0.000001));
+
       expect(plan.colorMatrix[6], closeTo(32.0, 0.000001));
+
       expect(plan.colorMatrix[12], closeTo(32.0, 0.000001));
     });
 
@@ -75,7 +186,9 @@ void main() {
       final plan = pipeline.buildPlan(adjustments);
 
       expect(plan.adjustments.exposure, 0.0);
+
       expect(plan.adjustments.contrast, -100.0);
+
       expect(plan.adjustments.saturation, 100.0);
     });
 
@@ -85,6 +198,7 @@ void main() {
       final plan = pipeline.buildPlan(adjustments);
 
       expect(adjustments.exposure, 500.0);
+
       expect(plan.adjustments.exposure, 5.0);
     });
 
@@ -97,7 +211,9 @@ void main() {
       );
 
       expect(plan.transform.rotationDegrees, 90.0);
+
       expect(plan.transform.flipHorizontal, isFalse);
+
       expect(plan.transform.flipVertical, isFalse);
     });
   });
