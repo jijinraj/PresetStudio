@@ -6,6 +6,9 @@ import '../../../../theme/tokens/app_dimensions.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../application/editor_controller.dart';
+import '../../domain/adjustment_definition.dart';
+import '../../domain/adjustment_type.dart';
+import 'adjustment_control.dart';
 import 'editor_image_viewport.dart';
 
 class MobileEditorShell extends StatelessWidget {
@@ -43,13 +46,15 @@ class MobileEditorShell extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: const _MobileToolBar(),
+      bottomNavigationBar: _MobileToolBar(controller: controller),
     );
   }
 }
 
 class _MobileToolBar extends StatelessWidget {
-  const _MobileToolBar();
+  const _MobileToolBar({required this.controller});
+
+  final EditorController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -59,20 +64,26 @@ class _MobileToolBar extends StatelessWidget {
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
-      child: const SafeArea(
+      child: SafeArea(
         top: false,
         child: Row(
           children: [
-            Expanded(
+            const Expanded(
               child: _MobileTool(
                 icon: Icons.auto_awesome_outlined,
                 label: 'Looks',
               ),
             ),
             Expanded(
-              child: _MobileTool(icon: Icons.tune, label: 'Edit'),
+              child: _MobileTool(
+                icon: Icons.tune,
+                label: 'Edit',
+                onTap: () {
+                  _showEditSheet(context);
+                },
+              ),
             ),
-            Expanded(
+            const Expanded(
               child: _MobileTool(icon: Icons.crop, label: 'Crop'),
             ),
           ],
@@ -80,23 +91,84 @@ class _MobileToolBar extends StatelessWidget {
       ),
     );
   }
+
+  void _showEditSheet(BuildContext context) {
+    final exposureDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.exposure,
+    );
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.lg,
+            ),
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) {
+                final session = controller.session;
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Edit', style: AppTypography.title),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text('Light', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.md),
+                    AdjustmentControl(
+                      definition: exposureDefinition,
+                      value: session.adjustments.exposure,
+                      enabled: session.sourceImagePath != null,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.exposure,
+                          value,
+                        );
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _MobileTool extends StatelessWidget {
-  const _MobileTool({required this.icon, required this.label});
+  const _MobileTool({required this.icon, required this.label, this.onTap});
 
   final IconData icon;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: AppDimensions.iconMd, color: AppColors.textSecondary),
-        const SizedBox(height: AppSpacing.xxs),
-        Text(label, style: AppTypography.label),
-      ],
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: AppDimensions.iconMd,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(label, style: AppTypography.label),
+        ],
+      ),
     );
   }
 }

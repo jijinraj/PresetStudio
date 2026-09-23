@@ -6,6 +6,9 @@ import '../../../../theme/tokens/app_dimensions.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../application/editor_controller.dart';
+import '../../domain/adjustment_definition.dart';
+import '../../domain/adjustment_type.dart';
+import 'adjustment_control.dart';
 import 'editor_image_viewport.dart';
 
 class DesktopEditorShell extends StatelessWidget {
@@ -52,9 +55,9 @@ class DesktopEditorShell extends StatelessWidget {
                   ),
                 ),
                 const VerticalDivider(width: 1),
-                const SizedBox(
+                SizedBox(
                   width: AppDimensions.adjustmentsPanelWidth,
-                  child: _AdjustmentsPanel(),
+                  child: _AdjustmentsPanel(controller: controller),
                 ),
               ],
             ),
@@ -111,25 +114,42 @@ class _LibraryPanel extends StatelessWidget {
 }
 
 class _AdjustmentsPanel extends StatelessWidget {
-  const _AdjustmentsPanel();
+  const _AdjustmentsPanel({required this.controller});
+
+  final EditorController controller;
 
   @override
   Widget build(BuildContext context) {
+    final exposureDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.exposure,
+    );
+
     return Container(
       color: AppColors.surface,
       padding: const EdgeInsets.all(AppSpacing.md),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Adjustments', style: AppTypography.title),
-          SizedBox(height: AppSpacing.lg),
-          Text('Light', style: AppTypography.label),
-          SizedBox(height: AppSpacing.sm),
-          Text(
-            'Editing controls will appear here.',
-            style: AppTypography.bodyMuted,
-          ),
-        ],
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          final session = controller.session;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Adjustments', style: AppTypography.title),
+              const SizedBox(height: AppSpacing.lg),
+              const Text('Light', style: AppTypography.label),
+              const SizedBox(height: AppSpacing.md),
+              AdjustmentControl(
+                definition: exposureDefinition,
+                value: session.adjustments.exposure,
+                enabled: session.sourceImagePath != null,
+                onChanged: (value) {
+                  controller.updateAdjustment(AdjustmentType.exposure, value);
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }
