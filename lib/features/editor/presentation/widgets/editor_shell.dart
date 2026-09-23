@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../application/editor_controller.dart';
 import '../../../../theme/tokens/app_dimensions.dart';
+import '../../application/editor_controller.dart';
 import 'desktop_editor_shell.dart';
+import 'editor_keyboard_shortcuts.dart';
 import 'mobile_editor_shell.dart';
 
 class EditorShell extends StatelessWidget {
@@ -19,25 +20,28 @@ class EditorShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isDesktop =
-            constraints.maxWidth >= AppDimensions.desktopBreakpoint;
+    return EditorKeyboardShortcuts(
+      controller: controller,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop =
+              constraints.maxWidth >= AppDimensions.desktopBreakpoint;
 
-        if (isDesktop) {
-          return DesktopEditorShell(
+          if (isDesktop) {
+            return DesktopEditorShell(
+              controller: controller,
+              onImportImage: onImportImage,
+              isImporting: isImporting,
+            );
+          }
+
+          return MobileEditorShell(
             controller: controller,
             onImportImage: onImportImage,
             isImporting: isImporting,
           );
-        }
-
-        return MobileEditorShell(
-          controller: controller,
-          onImportImage: onImportImage,
-          isImporting: isImporting,
-        );
-      },
+        },
+      ),
     );
   }
 }
