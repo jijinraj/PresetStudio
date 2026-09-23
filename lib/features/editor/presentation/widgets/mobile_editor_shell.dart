@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../theme/tokens/app_colors.dart';
 import '../../../../theme/tokens/app_dimensions.dart';
+import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../application/editor_controller.dart';
@@ -131,87 +132,217 @@ class _MobileToolBar extends StatelessWidget {
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.surface,
-      showDragHandle: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      showDragHandle: false,
       isScrollControlled: true,
       builder: (context) {
-        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+        AdjustmentType? activeAdjustment;
 
-        return SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.sm,
-              AppSpacing.md,
-              AppSpacing.lg + bottomInset,
-            ),
-            child: AnimatedBuilder(
-              animation: controller,
-              builder: (context, _) {
-                final session = controller.session;
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Edit', style: AppTypography.title),
+            final availableHeight = MediaQuery.sizeOf(context).height;
 
-                    const SizedBox(height: AppSpacing.lg),
+            final isFocused = activeAdjustment != null;
 
-                    const Text('Light', style: AppTypography.label),
+            void focusAdjustment(AdjustmentType type) {
+              if (activeAdjustment == type) {
+                return;
+              }
 
-                    const SizedBox(height: AppSpacing.md),
+              setSheetState(() {
+                activeAdjustment = type;
+              });
+            }
 
-                    AdjustmentControl(
-                      definition: exposureDefinition,
-                      value: session.adjustments.exposure,
-                      onChanged: (value) {
-                        controller.updateAdjustment(
-                          AdjustmentType.exposure,
-                          value,
+            void leaveFocusedMode() {
+              if (activeAdjustment == null) {
+                return;
+              }
+
+              setSheetState(() {
+                activeAdjustment = null;
+              });
+            }
+
+            return SizedBox(
+              height: availableHeight * 0.68,
+              child: Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  IgnorePointer(
+                    ignoring: isFocused,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 120),
+                      opacity: isFocused ? 0.0 : 1.0,
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Container(
+                          key: const ValueKey('mobile-edit-sheet-surface'),
+                          constraints: BoxConstraints(
+                            maxHeight: availableHeight * 0.68,
+                          ),
+                          decoration: const BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(AppRadii.md),
+                            ),
+                          ),
+                          child: SafeArea(
+                            top: false,
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.fromLTRB(
+                                AppSpacing.md,
+                                AppSpacing.sm,
+                                AppSpacing.md,
+                                AppSpacing.lg + bottomInset,
+                              ),
+                              child: AnimatedBuilder(
+                                animation: controller,
+                                builder: (context, _) {
+                                  final session = controller.session;
+
+                                  return Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Center(
+                                        child: Container(
+                                          width: 36,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.borderStrong,
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: AppSpacing.md),
+
+                                      const Text(
+                                        'Edit',
+                                        style: AppTypography.title,
+                                      ),
+
+                                      const SizedBox(height: AppSpacing.lg),
+
+                                      const Text(
+                                        'Light',
+                                        style: AppTypography.label,
+                                      ),
+
+                                      const SizedBox(height: AppSpacing.md),
+
+                                      AdjustmentControl(
+                                        definition: exposureDefinition,
+                                        value: session.adjustments.exposure,
+                                        onChanged: (value) {
+                                          controller.updateAdjustment(
+                                            AdjustmentType.exposure,
+                                            value,
+                                          );
+                                        },
+                                        onInteractionStart: () {
+                                          focusAdjustment(
+                                            AdjustmentType.exposure,
+                                          );
+                                        },
+                                      ),
+
+                                      const SizedBox(height: AppSpacing.lg),
+
+                                      AdjustmentControl(
+                                        definition: contrastDefinition,
+                                        value: session.adjustments.contrast,
+                                        onChanged: (value) {
+                                          controller.updateAdjustment(
+                                            AdjustmentType.contrast,
+                                            value,
+                                          );
+                                        },
+                                        onInteractionStart: () {
+                                          focusAdjustment(
+                                            AdjustmentType.contrast,
+                                          );
+                                        },
+                                      ),
+
+                                      const SizedBox(height: AppSpacing.lg),
+
+                                      const Divider(height: 1),
+
+                                      const SizedBox(height: AppSpacing.lg),
+
+                                      const Text(
+                                        'Color',
+                                        style: AppTypography.label,
+                                      ),
+
+                                      const SizedBox(height: AppSpacing.md),
+
+                                      AdjustmentControl(
+                                        definition: saturationDefinition,
+                                        value: session.adjustments.saturation,
+                                        onChanged: (value) {
+                                          controller.updateAdjustment(
+                                            AdjustmentType.saturation,
+                                            value,
+                                          );
+                                        },
+                                        onInteractionStart: () {
+                                          focusAdjustment(
+                                            AdjustmentType.saturation,
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  if (isFocused)
+                    AnimatedBuilder(
+                      animation: controller,
+                      builder: (context, _) {
+                        final type = activeAdjustment!;
+
+                        final definition = AdjustmentDefinitions.of(type);
+
+                        final value = switch (type) {
+                          AdjustmentType.exposure =>
+                            controller.session.adjustments.exposure,
+                          AdjustmentType.contrast =>
+                            controller.session.adjustments.contrast,
+                          AdjustmentType.saturation =>
+                            controller.session.adjustments.saturation,
+                          _ => definition.defaultValue,
+                        };
+
+                        return _MobileFocusedAdjustmentBar(
+                          definition: definition,
+                          value: value,
+                          onChanged: (nextValue) {
+                            controller.updateAdjustment(type, nextValue);
+                          },
+                          onClose: leaveFocusedMode,
                         );
                       },
                     ),
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    AdjustmentControl(
-                      definition: contrastDefinition,
-                      value: session.adjustments.contrast,
-                      onChanged: (value) {
-                        controller.updateAdjustment(
-                          AdjustmentType.contrast,
-                          value,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    const Divider(height: 1),
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    const Text('Color', style: AppTypography.label),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    AdjustmentControl(
-                      definition: saturationDefinition,
-                      value: session.adjustments.saturation,
-                      onChanged: (value) {
-                        controller.updateAdjustment(
-                          AdjustmentType.saturation,
-                          value,
-                        );
-                      },
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -271,6 +402,166 @@ class _MobileToolBar extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _MobileFocusedAdjustmentBar extends StatelessWidget {
+  const _MobileFocusedAdjustmentBar({
+    required this.definition,
+    required this.value,
+    required this.onChanged,
+    required this.onClose,
+  });
+
+  final AdjustmentDefinition definition;
+  final double value;
+  final ValueChanged<double> onChanged;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final sanitizedValue = definition.sanitize(value);
+
+    final divisions =
+        ((definition.maxValue - definition.minValue) /
+                definition.interactionStep)
+            .round();
+
+    return Container(
+      key: const ValueKey('mobile-focused-adjustment-bar'),
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.sm,
+            AppSpacing.xs,
+            AppSpacing.sm,
+            AppSpacing.xs,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 32,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 40),
+
+                    Expanded(
+                      child: Text(
+                        definition.label,
+                        textAlign: TextAlign.center,
+                        style: AppTypography.label,
+                      ),
+                    ),
+
+                    SizedBox(
+                      width: 40,
+                      child: IconButton(
+                        key: const ValueKey('mobile-focused-close'),
+                        onPressed: onClose,
+                        tooltip: 'Back to adjustments',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Text(
+                _formatValue(definition, sanitizedValue),
+                key: const ValueKey('mobile-focused-value'),
+                style: AppTypography.title,
+              ),
+
+              const SizedBox(height: AppSpacing.xxs),
+
+              Row(
+                children: [
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: IconButton(
+                      key: const ValueKey('mobile-focused-decrement'),
+                      onPressed: sanitizedValue <= definition.minValue
+                          ? null
+                          : () {
+                              onChanged(
+                                definition.sanitize(
+                                  sanitizedValue - definition.interactionStep,
+                                ),
+                              );
+                            },
+                      tooltip: 'Decrease ${definition.label}',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.remove, size: 20),
+                    ),
+                  ),
+
+                  Expanded(
+                    child: Slider(
+                      key: const ValueKey('mobile-focused-slider'),
+                      value: sanitizedValue,
+                      min: definition.minValue,
+                      max: definition.maxValue,
+                      divisions: divisions,
+                      onChanged: (nextValue) {
+                        onChanged(definition.sanitize(nextValue));
+                      },
+                    ),
+                  ),
+
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: IconButton(
+                      key: const ValueKey('mobile-focused-increment'),
+                      onPressed: sanitizedValue >= definition.maxValue
+                          ? null
+                          : () {
+                              onChanged(
+                                definition.sanitize(
+                                  sanitizedValue + definition.interactionStep,
+                                ),
+                              );
+                            },
+                      tooltip: 'Increase ${definition.label}',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.add, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _formatValue(AdjustmentDefinition definition, double value) {
+    final decimalPlaces = _decimalPlaces(definition.precisionStep);
+
+    final formatted = value.toStringAsFixed(decimalPlaces);
+
+    return value > 0 ? '+$formatted' : formatted;
+  }
+
+  static int _decimalPlaces(double value) {
+    final text = value.toString();
+
+    if (!text.contains('.')) {
+      return 0;
+    }
+
+    return text.split('.').last.length;
   }
 }
 

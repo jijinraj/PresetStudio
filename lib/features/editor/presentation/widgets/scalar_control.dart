@@ -17,6 +17,8 @@ class ScalarControl extends StatefulWidget {
     required this.coarseStep,
     required this.sanitize,
     required this.onChanged,
+    this.onInteractionStart,
+    this.onInteractionEnd,
     this.valueSuffix = '',
     this.enabled = true,
     super.key,
@@ -38,7 +40,11 @@ class ScalarControl extends StatefulWidget {
   final double coarseStep;
 
   final ScalarValueSanitizer sanitize;
+
   final ValueChanged<double> onChanged;
+
+  final VoidCallback? onInteractionStart;
+  final VoidCallback? onInteractionEnd;
 
   final String valueSuffix;
   final bool enabled;
@@ -143,9 +149,19 @@ class _ScalarControlState extends State<ScalarControl> {
             max: widget.maxValue,
             divisions: divisions,
             focusNode: _sliderFocusNode,
+            onChangeStart: widget.enabled && widget.onInteractionStart != null
+                ? (_) {
+                    widget.onInteractionStart!();
+                  }
+                : null,
             onChanged: widget.enabled
                 ? (nextValue) {
                     widget.onChanged(widget.sanitize(nextValue));
+                  }
+                : null,
+            onChangeEnd: widget.enabled && widget.onInteractionEnd != null
+                ? (_) {
+                    widget.onInteractionEnd!();
                   }
                 : null,
           ),

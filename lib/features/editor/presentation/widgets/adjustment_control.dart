@@ -8,6 +8,8 @@ class AdjustmentControl extends StatelessWidget {
     required this.definition,
     required this.value,
     required this.onChanged,
+    this.onInteractionStart,
+    this.onInteractionEnd,
     this.enabled = true,
     super.key,
   });
@@ -15,6 +17,10 @@ class AdjustmentControl extends StatelessWidget {
   final AdjustmentDefinition definition;
   final double value;
   final ValueChanged<double> onChanged;
+
+  final VoidCallback? onInteractionStart;
+  final VoidCallback? onInteractionEnd;
+
   final bool enabled;
 
   @override
@@ -31,6 +37,8 @@ class AdjustmentControl extends StatelessWidget {
       coarseStep: definition.coarseStep,
       sanitize: definition.sanitize,
       onChanged: onChanged,
+      onInteractionStart: onInteractionStart,
+      onInteractionEnd: onInteractionEnd,
       enabled: enabled,
     );
   }
