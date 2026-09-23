@@ -1,3 +1,6 @@
+import 'adjustment_definition.dart';
+import 'adjustment_type.dart';
+
 class ImageAdjustments {
   const ImageAdjustments({
     this.exposure = 0,
@@ -25,6 +28,62 @@ class ImageAdjustments {
   final double saturation;
 
   static const ImageAdjustments initial = ImageAdjustments();
+
+  bool get isDefault {
+    return AdjustmentType.values.every((type) {
+      final definition = AdjustmentDefinitions.of(type);
+
+      return valueFor(type) == definition.defaultValue;
+    });
+  }
+
+  double valueFor(AdjustmentType type) {
+    return switch (type) {
+      AdjustmentType.exposure => exposure,
+      AdjustmentType.contrast => contrast,
+      AdjustmentType.highlights => highlights,
+      AdjustmentType.shadows => shadows,
+      AdjustmentType.whites => whites,
+      AdjustmentType.blacks => blacks,
+      AdjustmentType.temperature => temperature,
+      AdjustmentType.tint => tint,
+      AdjustmentType.vibrance => vibrance,
+      AdjustmentType.saturation => saturation,
+    };
+  }
+
+  double normalizedValueFor(AdjustmentType type) {
+    final definition = AdjustmentDefinitions.of(type);
+
+    return definition.normalize(valueFor(type));
+  }
+
+  ImageAdjustments withValue(AdjustmentType type, double value) {
+    final sanitizedValue = AdjustmentDefinitions.of(type).sanitize(value);
+
+    return switch (type) {
+      AdjustmentType.exposure => copyWith(exposure: sanitizedValue),
+      AdjustmentType.contrast => copyWith(contrast: sanitizedValue),
+      AdjustmentType.highlights => copyWith(highlights: sanitizedValue),
+      AdjustmentType.shadows => copyWith(shadows: sanitizedValue),
+      AdjustmentType.whites => copyWith(whites: sanitizedValue),
+      AdjustmentType.blacks => copyWith(blacks: sanitizedValue),
+      AdjustmentType.temperature => copyWith(temperature: sanitizedValue),
+      AdjustmentType.tint => copyWith(tint: sanitizedValue),
+      AdjustmentType.vibrance => copyWith(vibrance: sanitizedValue),
+      AdjustmentType.saturation => copyWith(saturation: sanitizedValue),
+    };
+  }
+
+  ImageAdjustments sanitized() {
+    var result = this;
+
+    for (final type in AdjustmentType.values) {
+      result = result.withValue(type, result.valueFor(type));
+    }
+
+    return result;
+  }
 
   ImageAdjustments copyWith({
     double? exposure,

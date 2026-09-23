@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/application/editor_controller.dart';
+import 'package:presetstudio/features/editor/domain/adjustment_type.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
 
 void main() {
@@ -8,6 +9,7 @@ void main() {
       final controller = EditorController();
 
       expect(controller.session.hasImage, isFalse);
+
       expect(controller.session.isDirty, isFalse);
     });
 
@@ -17,7 +19,9 @@ void main() {
       controller.setSourceImage('photo.jpg');
 
       expect(controller.session.sourceImagePath, 'photo.jpg');
+
       expect(controller.session.hasImage, isTrue);
+
       expect(controller.session.isDirty, isFalse);
     });
 
@@ -27,7 +31,46 @@ void main() {
       controller.updateAdjustments(const ImageAdjustments(exposure: 0.5));
 
       expect(controller.session.adjustments.exposure, 0.5);
+
       expect(controller.session.isDirty, isTrue);
+    });
+
+    test('bulk adjustment update sanitizes values', () {
+      final controller = EditorController();
+
+      controller.updateAdjustments(
+        const ImageAdjustments(exposure: 100, contrast: -500, saturation: 123),
+      );
+
+      expect(controller.session.adjustments.exposure, 5);
+
+      expect(controller.session.adjustments.contrast, -100);
+
+      expect(controller.session.adjustments.saturation, 100);
+    });
+
+    test('updates a single adjustment', () {
+      final controller = EditorController();
+
+      controller.updateAdjustment(AdjustmentType.exposure, 1.5);
+
+      expect(controller.session.adjustments.exposure, 1.5);
+
+      expect(controller.session.adjustments.contrast, 0);
+
+      expect(controller.session.isDirty, isTrue);
+    });
+
+    test('single adjustment update sanitizes value', () {
+      final controller = EditorController();
+
+      controller.updateAdjustment(AdjustmentType.exposure, 100);
+
+      expect(controller.session.adjustments.exposure, 5);
+
+      controller.updateAdjustment(AdjustmentType.contrast, 12.8);
+
+      expect(controller.session.adjustments.contrast, 13);
     });
 
     test('manual adjustment clears active preset', () {
@@ -40,9 +83,61 @@ void main() {
 
       expect(controller.session.activePresetId, 'preset-001');
 
-      controller.updateAdjustments(const ImageAdjustments(contrast: 12));
+      controller.updateAdjustment(AdjustmentType.contrast, 12);
 
       expect(controller.session.activePresetId, isNull);
+    });
+
+    test('bulk manual adjustment clears active preset', () {
+      final controller = EditorController();
+
+      controller.applyPreset(
+        presetId: 'preset-001',
+        adjustments: const ImageAdjustments(saturation: 20),
+      );
+
+      controller.updateAdjustments(const ImageAdjustments(saturation: 30));
+
+      expect(controller.session.activePresetId, isNull);
+    });
+
+    test('preset adjustments are sanitized before entering session', () {
+      final controller = EditorController();
+
+      controller.applyPreset(
+        presetId: 'extreme-preset',
+        adjustments: const ImageAdjustments(
+          exposure: 50,
+          contrast: -500,
+          temperature: 12.8,
+        ),
+      );
+
+      expect(controller.session.adjustments.exposure, 5);
+
+      expect(controller.session.adjustments.contrast, -100);
+
+      expect(controller.session.adjustments.temperature, 13);
+
+      expect(controller.session.activePresetId, 'extreme-preset');
+
+      expect(controller.session.isDirty, isTrue);
+    });
+
+    test('reset adjustments restores defaults', () {
+      final controller = EditorController();
+
+      controller.updateAdjustment(AdjustmentType.exposure, 2);
+
+      controller.updateAdjustment(AdjustmentType.saturation, 40);
+
+      controller.resetAdjustments();
+
+      expect(controller.session.adjustments.isDefault, isTrue);
+
+      expect(controller.session.activePresetId, isNull);
+
+      expect(controller.session.isDirty, isTrue);
     });
 
     test('clear source image resets the session', () {
@@ -55,7 +150,9 @@ void main() {
       controller.clearSourceImage();
 
       expect(controller.session.hasImage, isFalse);
+
       expect(controller.session.adjustments.saturation, 0);
+
       expect(controller.session.isDirty, isFalse);
     });
 
@@ -71,9 +168,25 @@ void main() {
       controller.setSourceImage('second.jpg');
 
       expect(controller.session.sourceImagePath, 'second.jpg');
+
       expect(controller.session.adjustments.exposure, 0);
+
       expect(controller.session.adjustments.saturation, 0);
+
       expect(controller.session.activePresetId, isNull);
+
+      expect(controller.session.isDirty, isFalse);
+    });
+
+    test('mark saved clears dirty state', () {
+      final controller = EditorController();
+
+      controller.updateAdjustment(AdjustmentType.contrast, 20);
+
+      expect(controller.session.isDirty, isTrue);
+
+      controller.markSaved();
+
       expect(controller.session.isDirty, isFalse);
     });
   });

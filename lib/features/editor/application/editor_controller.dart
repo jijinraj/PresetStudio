@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../domain/adjustment_type.dart';
 import '../domain/crop_state.dart';
 import '../domain/editor_session.dart';
 import '../domain/export_settings.dart';
@@ -26,10 +27,23 @@ class EditorController extends ChangeNotifier {
 
   void clearSourceImage() {
     _session = EditorSession.initial;
+
     notifyListeners();
   }
 
   void updateAdjustments(ImageAdjustments adjustments) {
+    _session = _session.copyWith(
+      adjustments: adjustments.sanitized(),
+      clearActivePreset: true,
+      isDirty: true,
+    );
+
+    notifyListeners();
+  }
+
+  void updateAdjustment(AdjustmentType type, double value) {
+    final adjustments = _session.adjustments.withValue(type, value);
+
     _session = _session.copyWith(
       adjustments: adjustments,
       clearActivePreset: true,
@@ -51,7 +65,7 @@ class EditorController extends ChangeNotifier {
   }) {
     _session = _session.copyWith(
       activePresetId: presetId,
-      adjustments: adjustments,
+      adjustments: adjustments.sanitized(),
       isDirty: true,
     );
 
