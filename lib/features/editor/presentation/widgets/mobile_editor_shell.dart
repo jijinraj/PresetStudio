@@ -10,6 +10,7 @@ import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
 import 'adjustment_control.dart';
 import 'editor_image_viewport.dart';
+import 'rotation_control.dart';
 
 class MobileEditorShell extends StatelessWidget {
   const MobileEditorShell({
@@ -112,15 +113,18 @@ class _MobileToolBar extends StatelessWidget {
       context: context,
       backgroundColor: AppColors.surface,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (context) {
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
         return SafeArea(
           top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
               AppSpacing.md,
               AppSpacing.sm,
               AppSpacing.md,
-              AppSpacing.lg,
+              AppSpacing.lg + bottomInset,
             ),
             child: AnimatedBuilder(
               animation: controller,
@@ -132,9 +136,28 @@ class _MobileToolBar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Edit', style: AppTypography.title),
+
                     const SizedBox(height: AppSpacing.lg),
-                    const Text('Light', style: AppTypography.label),
+
+                    const Text('Transform', style: AppTypography.label),
+
                     const SizedBox(height: AppSpacing.md),
+
+                    RotationControl(
+                      transform: session.transform,
+                      onChanged: controller.updateTransform,
+                    ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    const Divider(height: 1),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    const Text('Light', style: AppTypography.label),
+
+                    const SizedBox(height: AppSpacing.md),
+
                     AdjustmentControl(
                       definition: exposureDefinition,
                       value: session.adjustments.exposure,

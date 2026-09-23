@@ -10,6 +10,7 @@ import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
 import 'adjustment_control.dart';
 import 'editor_image_viewport.dart';
+import 'rotation_control.dart';
 
 class DesktopEditorShell extends StatelessWidget {
   const DesktopEditorShell({
@@ -146,8 +147,23 @@ class _AdjustmentsPanel extends StatelessWidget {
                   style: AppTypography.bodyMuted,
                 )
               else ...[
+                const Text('Transform', style: AppTypography.label),
+                const SizedBox(height: AppSpacing.md),
+
+                RotationControl(
+                  transform: session.transform,
+                  onChanged: controller.updateTransform,
+                ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                const Divider(height: 1),
+
+                const SizedBox(height: AppSpacing.lg),
+
                 const Text('Light', style: AppTypography.label),
                 const SizedBox(height: AppSpacing.md),
+
                 AdjustmentControl(
                   definition: exposureDefinition,
                   value: session.adjustments.exposure,
