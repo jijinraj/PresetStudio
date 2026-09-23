@@ -89,14 +89,14 @@ void main() {
     });
 
     test('includes image transform in render plan', () {
-      const transform = ImageTransform(rotationQuarterTurns: 1);
+      const transform = ImageTransform(rotationDegrees: 90.0);
 
       final plan = pipeline.buildPlan(
         ImageAdjustments.initial,
         transform: transform,
       );
 
-      expect(plan.transform.rotationQuarterTurns, 1);
+      expect(plan.transform.rotationDegrees, 90.0);
       expect(plan.transform.flipHorizontal, isFalse);
       expect(plan.transform.flipVertical, isFalse);
     });

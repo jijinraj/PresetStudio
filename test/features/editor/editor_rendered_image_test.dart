@@ -14,7 +14,7 @@ void main() {
               body: EditorRenderedImage(
                 sourceImagePath: 'missing-test-image.jpg',
                 adjustments: ImageAdjustments.initial,
-                transform: ImageTransform(rotationQuarterTurns: quarterTurns),
+                transform: ImageTransform(rotationDegrees: quarterTurns * 90.0),
                 errorBuilder: (context, error, stackTrace) {
                   return const SizedBox();
                 },
@@ -38,7 +38,7 @@ void main() {
             body: EditorRenderedImage(
               sourceImagePath: 'missing-test-image.jpg',
               adjustments: const ImageAdjustments(exposure: 1.0),
-              transform: const ImageTransform(rotationQuarterTurns: 1),
+              transform: const ImageTransform(rotationDegrees: 90.0),
               errorBuilder: (context, error, stackTrace) {
                 return const SizedBox();
               },

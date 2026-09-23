@@ -1,27 +1,43 @@
 class ImageTransform {
   const ImageTransform({
-    this.rotationQuarterTurns = 0,
+    this.rotationDegrees = 0.0,
     this.flipHorizontal = false,
     this.flipVertical = false,
   });
 
-  final int rotationQuarterTurns;
+  static const double quarterTurnDegrees = 90.0;
+  static const double fullRotationDegrees = 360.0;
+
+  final double rotationDegrees;
   final bool flipHorizontal;
   final bool flipVertical;
 
   static const ImageTransform initial = ImageTransform();
 
+  double get normalizedRotationDegrees => _normalizeDegrees(rotationDegrees);
+
   bool get isDefault =>
-      rotationQuarterTurns == 0 && !flipHorizontal && !flipVertical;
+      normalizedRotationDegrees == 0.0 && !flipHorizontal && !flipVertical;
+
+  /// Temporary compatibility with the current quarter-turn renderer.
+  ///
+  /// Arbitrary-angle rendering will replace this in the next rendering
+  /// commit. Until then, the existing 90-degree rotation behavior remains
+  /// unchanged.
+  int get rotationQuarterTurns {
+    final turns = (normalizedRotationDegrees / quarterTurnDegrees).round();
+
+    return ((turns % 4) + 4) % 4;
+  }
 
   ImageTransform copyWith({
-    int? rotationQuarterTurns,
+    double? rotationDegrees,
     bool? flipHorizontal,
     bool? flipVertical,
   }) {
     return ImageTransform(
-      rotationQuarterTurns: _normalizeQuarterTurns(
-        rotationQuarterTurns ?? this.rotationQuarterTurns,
+      rotationDegrees: _normalizeDegrees(
+        rotationDegrees ?? this.rotationDegrees,
       ),
       flipHorizontal: flipHorizontal ?? this.flipHorizontal,
       flipVertical: flipVertical ?? this.flipVertical,
@@ -29,11 +45,15 @@ class ImageTransform {
   }
 
   ImageTransform rotateClockwise() {
-    return copyWith(rotationQuarterTurns: rotationQuarterTurns + 1);
+    return rotateBy(quarterTurnDegrees);
   }
 
   ImageTransform rotateCounterClockwise() {
-    return copyWith(rotationQuarterTurns: rotationQuarterTurns - 1);
+    return rotateBy(-quarterTurnDegrees);
+  }
+
+  ImageTransform rotateBy(double degrees) {
+    return copyWith(rotationDegrees: normalizedRotationDegrees + degrees);
   }
 
   ImageTransform toggleFlipHorizontal() {
@@ -44,7 +64,23 @@ class ImageTransform {
     return copyWith(flipVertical: !flipVertical);
   }
 
-  static int _normalizeQuarterTurns(int quarterTurns) {
-    return ((quarterTurns % 4) + 4) % 4;
+  static double _normalizeDegrees(double degrees) {
+    if (!degrees.isFinite) {
+      return 0.0;
+    }
+
+    var normalized = degrees.remainder(fullRotationDegrees);
+
+    if (normalized > 180.0) {
+      normalized -= fullRotationDegrees;
+    } else if (normalized < -180.0) {
+      normalized += fullRotationDegrees;
+    }
+
+    if (normalized == 0.0) {
+      return 0.0;
+    }
+
+    return normalized;
   }
 }

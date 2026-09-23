@@ -50,13 +50,13 @@ void main() {
       const session = EditorSession.initial;
 
       const transform = ImageTransform(
-        rotationQuarterTurns: 1,
+        rotationDegrees: 90.0,
         flipHorizontal: true,
       );
 
       final updated = session.copyWith(transform: transform);
 
-      expect(updated.transform.rotationQuarterTurns, 1);
+      expect(updated.transform.rotationDegrees, 90.0);
 
       expect(updated.transform.flipHorizontal, isTrue);
 
