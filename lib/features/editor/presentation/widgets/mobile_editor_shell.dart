@@ -66,37 +66,39 @@ class _MobileToolBar extends StatelessWidget {
         final hasImage = controller.session.sourceImagePath != null;
 
         return Container(
-          height: AppDimensions.mobileBottomBarHeight,
           decoration: const BoxDecoration(
             color: AppColors.surface,
             border: Border(top: BorderSide(color: AppColors.border)),
           ),
           child: SafeArea(
             top: false,
-            child: Row(
-              children: [
-                const Expanded(
-                  child: _MobileTool(
-                    icon: Icons.auto_awesome_outlined,
-                    label: 'Looks',
+            child: SizedBox(
+              height: AppDimensions.mobileBottomBarHeight,
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: _MobileTool(
+                      icon: Icons.auto_awesome_outlined,
+                      label: 'Looks',
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _MobileTool(
-                    icon: Icons.tune,
-                    label: 'Edit',
-                    enabled: hasImage,
-                    onTap: hasImage
-                        ? () {
-                            _showEditSheet(context);
-                          }
-                        : null,
+                  Expanded(
+                    child: _MobileTool(
+                      icon: Icons.tune,
+                      label: 'Edit',
+                      enabled: hasImage,
+                      onTap: hasImage
+                          ? () {
+                              _showEditSheet(context);
+                            }
+                          : null,
+                    ),
                   ),
-                ),
-                const Expanded(
-                  child: _MobileTool(icon: Icons.crop, label: 'Crop'),
-                ),
-              ],
+                  const Expanded(
+                    child: _MobileTool(icon: Icons.crop, label: 'Crop'),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -198,13 +200,16 @@ class _MobileTool extends StatelessWidget {
 
     return InkWell(
       onTap: enabled ? onTap : null,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: AppDimensions.iconMd, color: color),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(label, style: AppTypography.label.copyWith(color: color)),
-        ],
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: AppDimensions.iconMd, color: color),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(label, style: AppTypography.label.copyWith(color: color)),
+          ],
+        ),
       ),
     );
   }
