@@ -247,14 +247,56 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
   }
 
   KeyEventResult _handleValueKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.escape) {
-      _cancelValueEditing();
+    if (!widget.enabled) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+
+    if (key == LogicalKeyboardKey.escape) {
+      if (event is KeyDownEvent) {
+        _cancelValueEditing();
+      }
+
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowUp) {
+      _adjustEditingValueByStep(1);
+
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowDown) {
+      _adjustEditingValueByStep(-1);
 
       return KeyEventResult.handled;
     }
 
     return KeyEventResult.ignored;
+  }
+
+  void _adjustEditingValueByStep(int direction) {
+    final definition = widget.definition;
+
+    final currentValue =
+        double.tryParse(_valueController.text.trim()) ??
+        definition.sanitize(widget.value);
+
+    final nextValue = definition.sanitize(
+      currentValue + (definition.interactionStep * direction),
+    );
+
+    final formattedValue = _formatNumber(nextValue, definition.precisionStep);
+
+    _valueController.value = TextEditingValue(
+      text: formattedValue,
+      selection: TextSelection.collapsed(offset: formattedValue.length),
+    );
   }
 
   void _adjustByInteractionStep(int direction) {

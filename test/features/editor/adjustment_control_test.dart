@@ -523,5 +523,94 @@ void main() {
 
       expect(find.text('+1.50'), findsOneWidget);
     });
+    testWidgets(
+      'arrow up adjusts numeric editor without committing immediately',
+      (tester) async {
+        double? changedValue;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: AdjustmentControl(
+                definition: exposureDefinition,
+                value: 1.27,
+                onChanged: (value) {
+                  changedValue = value;
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(
+          find.byKey(const ValueKey('adjustment-exposure-value')),
+        );
+
+        await tester.pump();
+
+        final input = find.byKey(
+          const ValueKey('adjustment-exposure-value-input'),
+        );
+
+        expect(input, findsOneWidget);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+
+        await tester.pump();
+
+        final textField = tester.widget<TextField>(input);
+
+        expect(textField.controller?.text, '1.37');
+
+        expect(changedValue, isNull);
+
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+
+        await tester.pump();
+
+        expect(changedValue, 1.37);
+      },
+    );
+
+    testWidgets(
+      'arrow down adjusts numeric editor without committing immediately',
+      (tester) async {
+        double? changedValue;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: AdjustmentControl(
+                definition: exposureDefinition,
+                value: 1.27,
+                onChanged: (value) {
+                  changedValue = value;
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(
+          find.byKey(const ValueKey('adjustment-exposure-value')),
+        );
+
+        await tester.pump();
+
+        final input = find.byKey(
+          const ValueKey('adjustment-exposure-value-input'),
+        );
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+
+        await tester.pump();
+
+        final textField = tester.widget<TextField>(input);
+
+        expect(textField.controller?.text, '1.17');
+
+        expect(changedValue, isNull);
+      },
+    );
   });
 }
