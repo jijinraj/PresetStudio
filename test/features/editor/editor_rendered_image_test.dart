@@ -32,14 +32,14 @@ void main() {
       }
     });
 
-    testWidgets('preserves color filtering while rotating', (tester) async {
+    testWidgets('renders horizontal flip', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: EditorRenderedImage(
               sourceImagePath: 'missing-test-image.jpg',
-              adjustments: const ImageAdjustments(exposure: 1.0),
-              transform: const ImageTransform(rotationDegrees: 13.7),
+              adjustments: ImageAdjustments.initial,
+              transform: const ImageTransform(flipHorizontal: true),
               errorBuilder: (context, error, stackTrace) {
                 return const SizedBox();
               },
@@ -48,7 +48,128 @@ void main() {
         ),
       );
 
-      expect(find.byType(EditorRotationLayout), findsOneWidget);
+      final flip = tester.widget<Transform>(
+        find.byKey(const ValueKey('editor-image-flip')),
+      );
+
+      expect(flip.transform.storage[0], -1.0);
+
+      expect(flip.transform.storage[5], 1.0);
+    });
+
+    testWidgets('renders vertical flip', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EditorRenderedImage(
+              sourceImagePath: 'missing-test-image.jpg',
+              adjustments: ImageAdjustments.initial,
+              transform: const ImageTransform(flipVertical: true),
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      final flip = tester.widget<Transform>(
+        find.byKey(const ValueKey('editor-image-flip')),
+      );
+
+      expect(flip.transform.storage[0], 1.0);
+
+      expect(flip.transform.storage[5], -1.0);
+    });
+
+    testWidgets('renders horizontal and vertical flip together', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EditorRenderedImage(
+              sourceImagePath: 'missing-test-image.jpg',
+              adjustments: ImageAdjustments.initial,
+              transform: const ImageTransform(
+                flipHorizontal: true,
+                flipVertical: true,
+              ),
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      final flip = tester.widget<Transform>(
+        find.byKey(const ValueKey('editor-image-flip')),
+      );
+
+      expect(flip.transform.storage[0], -1.0);
+
+      expect(flip.transform.storage[5], -1.0);
+    });
+
+    testWidgets('uses identity flip transform by default', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EditorRenderedImage(
+              sourceImagePath: 'missing-test-image.jpg',
+              adjustments: ImageAdjustments.initial,
+              transform: ImageTransform.initial,
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      final flip = tester.widget<Transform>(
+        find.byKey(const ValueKey('editor-image-flip')),
+      );
+
+      expect(flip.transform.storage[0], 1.0);
+
+      expect(flip.transform.storage[5], 1.0);
+    });
+
+    testWidgets('combines rotation flips and color filtering', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EditorRenderedImage(
+              sourceImagePath: 'missing-test-image.jpg',
+              adjustments: const ImageAdjustments(exposure: 1.0),
+              transform: const ImageTransform(
+                rotationDegrees: 13.7,
+                flipHorizontal: true,
+                flipVertical: true,
+              ),
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      final rotation = tester.widget<EditorRotationLayout>(
+        find.byKey(const ValueKey('editor-image-rotation')),
+      );
+
+      final flip = tester.widget<Transform>(
+        find.byKey(const ValueKey('editor-image-flip')),
+      );
+
+      expect(rotation.rotationDegrees, closeTo(13.7, 0.000001));
+
+      expect(flip.transform.storage[0], -1.0);
+
+      expect(flip.transform.storage[5], -1.0);
 
       expect(find.byType(ColorFiltered), findsOneWidget);
     });

@@ -41,13 +41,22 @@ class EditorRenderedImage extends StatelessWidget {
       errorBuilder: errorBuilder,
     );
 
+    final flipScaleX = renderPlan.transform.flipHorizontal ? -1.0 : 1.0;
+
+    final flipScaleY = renderPlan.transform.flipVertical ? -1.0 : 1.0;
+
     return RepaintBoundary(
       child: EditorRotationLayout(
         key: const ValueKey('editor-image-rotation'),
         rotationDegrees: renderPlan.transform.normalizedRotationDegrees,
-        child: ColorFiltered(
-          colorFilter: ColorFilter.matrix(renderPlan.colorMatrix),
-          child: sourceImage,
+        child: Transform(
+          key: const ValueKey('editor-image-flip'),
+          alignment: Alignment.center,
+          transform: Matrix4.diagonal3Values(flipScaleX, flipScaleY, 1.0),
+          child: ColorFiltered(
+            colorFilter: ColorFilter.matrix(renderPlan.colorMatrix),
+            child: sourceImage,
+          ),
         ),
       ),
     );
