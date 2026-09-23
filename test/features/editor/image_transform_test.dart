@@ -36,8 +36,6 @@ void main() {
       final rotated = initial.rotateCounterClockwise();
 
       expect(rotated.rotationDegrees, -90.0);
-
-      expect(rotated.rotationQuarterTurns, 3);
     });
 
     test('supports arbitrary rotation degrees', () {
@@ -64,28 +62,6 @@ void main() {
       expect(initial.copyWith(rotationDegrees: 181.0).rotationDegrees, -179.0);
 
       expect(initial.copyWith(rotationDegrees: -181.0).rotationDegrees, 179.0);
-    });
-
-    test('derives quarter turns for existing renderer', () {
-      expect(
-        const ImageTransform(rotationDegrees: 0.0).rotationQuarterTurns,
-        0,
-      );
-
-      expect(
-        const ImageTransform(rotationDegrees: 90.0).rotationQuarterTurns,
-        1,
-      );
-
-      expect(
-        const ImageTransform(rotationDegrees: 180.0).rotationQuarterTurns,
-        2,
-      );
-
-      expect(
-        const ImageTransform(rotationDegrees: -90.0).rotationQuarterTurns,
-        3,
-      );
     });
 
     test('toggles horizontal flip', () {

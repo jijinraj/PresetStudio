@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
 import '../../rendering/editor_render_pipeline.dart';
+import 'editor_rotation_layout.dart';
 
 class EditorRenderedImage extends StatelessWidget {
   const EditorRenderedImage({
@@ -41,9 +42,9 @@ class EditorRenderedImage extends StatelessWidget {
     );
 
     return RepaintBoundary(
-      child: RotatedBox(
+      child: EditorRotationLayout(
         key: const ValueKey('editor-image-rotation'),
-        quarterTurns: renderPlan.transform.rotationQuarterTurns,
+        rotationDegrees: renderPlan.transform.normalizedRotationDegrees,
         child: ColorFiltered(
           colorFilter: ColorFilter.matrix(renderPlan.colorMatrix),
           child: sourceImage,
