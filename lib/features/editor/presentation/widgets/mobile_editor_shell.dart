@@ -121,6 +121,14 @@ class _MobileToolBar extends StatelessWidget {
       AdjustmentType.exposure,
     );
 
+    final contrastDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.contrast,
+    );
+
+    final saturationDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.saturation,
+    );
+
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.surface,
@@ -148,15 +156,53 @@ class _MobileToolBar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Edit', style: AppTypography.title),
+
                     const SizedBox(height: AppSpacing.lg),
+
                     const Text('Light', style: AppTypography.label),
+
                     const SizedBox(height: AppSpacing.md),
+
                     AdjustmentControl(
                       definition: exposureDefinition,
                       value: session.adjustments.exposure,
                       onChanged: (value) {
                         controller.updateAdjustment(
                           AdjustmentType.exposure,
+                          value,
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    AdjustmentControl(
+                      definition: contrastDefinition,
+                      value: session.adjustments.contrast,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.contrast,
+                          value,
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    const Divider(height: 1),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    const Text('Color', style: AppTypography.label),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    AdjustmentControl(
+                      definition: saturationDefinition,
+                      value: session.adjustments.saturation,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.saturation,
                           value,
                         );
                       },

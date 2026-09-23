@@ -128,6 +128,14 @@ class _AdjustmentsPanel extends StatelessWidget {
       AdjustmentType.exposure,
     );
 
+    final contrastDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.contrast,
+    );
+
+    final saturationDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.saturation,
+    );
+
     return Container(
       color: AppColors.surface,
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -135,6 +143,7 @@ class _AdjustmentsPanel extends StatelessWidget {
         animation: controller,
         builder: (context, _) {
           final session = controller.session;
+
           final hasImage = session.sourceImagePath != null;
 
           return SingleChildScrollView(
@@ -142,6 +151,7 @@ class _AdjustmentsPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Adjustments', style: AppTypography.title),
+
                 const SizedBox(height: AppSpacing.lg),
 
                 if (!hasImage)
@@ -151,6 +161,7 @@ class _AdjustmentsPanel extends StatelessWidget {
                   )
                 else ...[
                   const Text('Transform', style: AppTypography.label),
+
                   const SizedBox(height: AppSpacing.md),
 
                   RotationControl(
@@ -172,6 +183,7 @@ class _AdjustmentsPanel extends StatelessWidget {
                   const SizedBox(height: AppSpacing.lg),
 
                   const Text('Light', style: AppTypography.label),
+
                   const SizedBox(height: AppSpacing.md),
 
                   AdjustmentControl(
@@ -180,6 +192,40 @@ class _AdjustmentsPanel extends StatelessWidget {
                     onChanged: (value) {
                       controller.updateAdjustment(
                         AdjustmentType.exposure,
+                        value,
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  AdjustmentControl(
+                    definition: contrastDefinition,
+                    value: session.adjustments.contrast,
+                    onChanged: (value) {
+                      controller.updateAdjustment(
+                        AdjustmentType.contrast,
+                        value,
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  const Divider(height: 1),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  const Text('Color', style: AppTypography.label),
+
+                  const SizedBox(height: AppSpacing.md),
+
+                  AdjustmentControl(
+                    definition: saturationDefinition,
+                    value: session.adjustments.saturation,
+                    onChanged: (value) {
+                      controller.updateAdjustment(
+                        AdjustmentType.saturation,
                         value,
                       );
                     },
