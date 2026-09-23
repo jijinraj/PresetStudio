@@ -17,23 +17,29 @@ void main() {
       expect(AdjustmentDefinitions.values.length, AdjustmentType.values.length);
     });
 
-    test('defines exposure range', () {
+    test('defines exposure range and interaction precision', () {
       final definition = AdjustmentDefinitions.of(AdjustmentType.exposure);
 
       expect(definition.label, 'Exposure');
       expect(definition.minValue, -5);
       expect(definition.maxValue, 5);
       expect(definition.defaultValue, 0);
-      expect(definition.step, 0.1);
+
+      expect(definition.precisionStep, 0.01);
+      expect(definition.interactionStep, 0.1);
+      expect(definition.coarseStep, 0.5);
     });
 
-    test('defines standard adjustment range', () {
+    test('defines standard adjustment range and interaction steps', () {
       final definition = AdjustmentDefinitions.of(AdjustmentType.contrast);
 
       expect(definition.minValue, -100);
       expect(definition.maxValue, 100);
       expect(definition.defaultValue, 0);
-      expect(definition.step, 1);
+
+      expect(definition.precisionStep, 1);
+      expect(definition.interactionStep, 1);
+      expect(definition.coarseStep, 10);
     });
 
     test('clamps values to valid range', () {
@@ -44,14 +50,16 @@ void main() {
       expect(definition.clamp(2.5), 2.5);
     });
 
-    test('sanitizes values using configured step', () {
+    test('sanitizes values using configured precision', () {
       final exposure = AdjustmentDefinitions.of(AdjustmentType.exposure);
 
       final contrast = AdjustmentDefinitions.of(AdjustmentType.contrast);
 
-      expect(exposure.sanitize(1.24), closeTo(1.2, 0.0001));
+      expect(exposure.sanitize(1.24), closeTo(1.24, 0.0001));
 
-      expect(exposure.sanitize(1.27), closeTo(1.3, 0.0001));
+      expect(exposure.sanitize(1.27), closeTo(1.27, 0.0001));
+
+      expect(exposure.sanitize(1.276), closeTo(1.28, 0.0001));
 
       expect(contrast.sanitize(12.3), 12);
 
@@ -64,6 +72,14 @@ void main() {
       expect(exposure.sanitize(500), 5);
 
       expect(exposure.sanitize(-500), -5);
+    });
+
+    test('preserves exposure hundredth precision', () {
+      final exposure = AdjustmentDefinitions.of(AdjustmentType.exposure);
+
+      expect(exposure.sanitize(1.27), closeTo(1.27, 0.0001));
+
+      expect(exposure.sanitize(-2.43), closeTo(-2.43, 0.0001));
     });
 
     test('normalizes positive and negative values', () {
@@ -130,16 +146,24 @@ void main() {
       expect(updated.exposure, 5);
     });
 
-    test('single adjustment update respects step', () {
+    test('single adjustment update respects canonical precision', () {
       const adjustments = ImageAdjustments.initial;
 
-      final exposure = adjustments.withValue(AdjustmentType.exposure, 1.27);
+      final exposure = adjustments.withValue(AdjustmentType.exposure, 1.276);
 
       final contrast = adjustments.withValue(AdjustmentType.contrast, 12.8);
 
-      expect(exposure.exposure, closeTo(1.3, 0.0001));
+      expect(exposure.exposure, closeTo(1.28, 0.0001));
 
       expect(contrast.contrast, 13);
+    });
+
+    test('single exposure adjustment preserves hundredth precision', () {
+      const adjustments = ImageAdjustments.initial;
+
+      final updated = adjustments.withValue(AdjustmentType.exposure, 1.27);
+
+      expect(updated.exposure, closeTo(1.27, 0.0001));
     });
 
     test('normalizes stored adjustment value', () {
@@ -167,16 +191,16 @@ void main() {
       expect(sanitized.temperature, 13);
     });
 
-    test('sanitizing preserves valid untouched values', () {
+    test('sanitizing preserves valid precise exposure values', () {
       const adjustments = ImageAdjustments(
-        exposure: 1.5,
+        exposure: 1.27,
         contrast: 25,
         tint: -30,
       );
 
       final sanitized = adjustments.sanitized();
 
-      expect(sanitized.exposure, 1.5);
+      expect(sanitized.exposure, closeTo(1.27, 0.0001));
 
       expect(sanitized.contrast, 25);
 

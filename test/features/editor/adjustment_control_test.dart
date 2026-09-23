@@ -12,7 +12,9 @@ void main() {
       AdjustmentType.exposure,
     );
 
-    testWidgets('displays adjustment label and default value', (tester) async {
+    testWidgets('displays adjustment label and precise default value', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -27,14 +29,14 @@ void main() {
 
       expect(find.text('Exposure'), findsOneWidget);
 
-      expect(find.text('0.0'), findsOneWidget);
+      expect(find.text('0.00'), findsOneWidget);
 
-      expect(find.text('-5.0'), findsOneWidget);
+      expect(find.text('-5.00'), findsOneWidget);
 
-      expect(find.text('+5.0'), findsOneWidget);
+      expect(find.text('+5.00'), findsOneWidget);
     });
 
-    testWidgets('configures slider from adjustment definition', (tester) async {
+    testWidgets('configures slider from interaction step', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -54,10 +56,12 @@ void main() {
       expect(slider.value, 0.0);
       expect(slider.min, -5.0);
       expect(slider.max, 5.0);
+
+      // -5 to +5 using 0.1 interaction increments.
       expect(slider.divisions, 100);
     });
 
-    testWidgets('emits sanitized slider values', (tester) async {
+    testWidgets('sanitizes emitted values to precision step', (tester) async {
       double? changedValue;
 
       await tester.pumpWidget(
@@ -78,12 +82,14 @@ void main() {
         find.byKey(const ValueKey('adjustment-exposure-slider')),
       );
 
-      slider.onChanged?.call(1.24);
+      slider.onChanged?.call(1.237);
 
-      expect(changedValue, 1.2);
+      expect(changedValue, 1.24);
     });
 
-    testWidgets('shows positive values with plus sign', (tester) async {
+    testWidgets('shows positive values with plus sign and precision', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -96,7 +102,7 @@ void main() {
         ),
       );
 
-      expect(find.text('+1.5'), findsOneWidget);
+      expect(find.text('+1.50'), findsOneWidget);
     });
 
     testWidgets('shows reset action for non-default values', (tester) async {
@@ -168,7 +174,7 @@ void main() {
       expect(slider.onChanged, isNull);
     });
 
-    testWidgets('mouse wheel increases adjustment while over slider', (
+    testWidgets('mouse wheel increases by normal interaction step', (
       tester,
     ) async {
       double? changedValue;
@@ -198,7 +204,7 @@ void main() {
       expect(changedValue, 0.1);
     });
 
-    testWidgets('mouse wheel decreases adjustment while over slider', (
+    testWidgets('mouse wheel decreases by normal interaction step', (
       tester,
     ) async {
       double? changedValue;
@@ -228,7 +234,9 @@ void main() {
       expect(changedValue, -0.1);
     });
 
-    testWidgets('arrow up increases focused slider', (tester) async {
+    testWidgets('arrow up increases by normal interaction step', (
+      tester,
+    ) async {
       double? changedValue;
 
       await tester.pumpWidget(
@@ -254,7 +262,9 @@ void main() {
       expect(changedValue, 0.1);
     });
 
-    testWidgets('arrow down decreases focused slider', (tester) async {
+    testWidgets('arrow down decreases by normal interaction step', (
+      tester,
+    ) async {
       double? changedValue;
 
       await tester.pumpWidget(
@@ -276,6 +286,62 @@ void main() {
       );
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+
+      expect(changedValue, -0.1);
+    });
+
+    testWidgets('arrow right increases by normal interaction step', (
+      tester,
+    ) async {
+      double? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdjustmentControl(
+              definition: exposureDefinition,
+              value: 0.0,
+              onChanged: (value) {
+                changedValue = value;
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('adjustment-exposure-slider')),
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+
+      expect(changedValue, 0.1);
+    });
+
+    testWidgets('arrow left decreases by normal interaction step', (
+      tester,
+    ) async {
+      double? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdjustmentControl(
+              definition: exposureDefinition,
+              value: 0.0,
+              onChanged: (value) {
+                changedValue = value;
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('adjustment-exposure-slider')),
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
 
       expect(changedValue, -0.1);
     });
@@ -307,7 +373,7 @@ void main() {
 
       expect(input, findsOneWidget);
 
-      await tester.enterText(input, '1.7');
+      await tester.enterText(input, '1.70');
 
       await tester.testTextInput.receiveAction(TextInputAction.done);
 
@@ -316,7 +382,9 @@ void main() {
       expect(changedValue, 1.7);
     });
 
-    testWidgets('sanitizes manually entered values', (tester) async {
+    testWidgets('preserves hundredth precision in manually entered values', (
+      tester,
+    ) async {
       double? changedValue;
 
       await tester.pumpWidget(
@@ -347,7 +415,41 @@ void main() {
 
       await tester.pump();
 
-      expect(changedValue, 1.3);
+      expect(changedValue, 1.27);
+    });
+
+    testWidgets('rounds manual input to canonical precision', (tester) async {
+      double? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdjustmentControl(
+              definition: exposureDefinition,
+              value: 0.0,
+              onChanged: (value) {
+                changedValue = value;
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('adjustment-exposure-value')));
+
+      await tester.pump();
+
+      final input = find.byKey(
+        const ValueKey('adjustment-exposure-value-input'),
+      );
+
+      await tester.enterText(input, '1.276');
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+
+      await tester.pump();
+
+      expect(changedValue, 1.28);
     });
 
     testWidgets('clamps manually entered values to adjustment range', (
@@ -411,14 +513,15 @@ void main() {
         const ValueKey('adjustment-exposure-value-input'),
       );
 
-      await tester.enterText(input, '-2.0');
+      await tester.enterText(input, '-2.00');
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
 
       await tester.pump();
 
       expect(changedValue, isNull);
-      expect(find.text('+1.5'), findsOneWidget);
+
+      expect(find.text('+1.50'), findsOneWidget);
     });
   });
 }

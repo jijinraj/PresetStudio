@@ -65,6 +65,7 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
   @override
   Widget build(BuildContext context) {
     final definition = widget.definition;
+
     final sanitizedValue = definition.sanitize(widget.value);
 
     final isDefault = sanitizedValue == definition.defaultValue;
@@ -102,6 +103,7 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
             ],
           ],
         ),
+
         Listener(
           key: ValueKey(
             'adjustment-${definition.type.name}-slider-interaction',
@@ -126,15 +128,16 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
                 : null,
           ),
         ),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              _formatLimit(definition.minValue, definition.step),
+              _formatLimit(definition.minValue, definition.precisionStep),
               style: Theme.of(context).textTheme.labelSmall,
             ),
             Text(
-              _formatLimit(definition.maxValue, definition.step),
+              _formatLimit(definition.maxValue, definition.precisionStep),
               style: Theme.of(context).textTheme.labelSmall,
             ),
           ],
@@ -187,7 +190,7 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
             child: Text(
-              _formatValue(sanitizedValue, definition.step),
+              _formatValue(sanitizedValue, definition.precisionStep),
               key: ValueKey('adjustment-${definition.type.name}-value'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -209,9 +212,9 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
     _sliderFocusNode.requestFocus();
 
     if (event.scrollDelta.dy < 0) {
-      _adjustByStep(1);
+      _adjustByInteractionStep(1);
     } else {
-      _adjustByStep(-1);
+      _adjustByInteractionStep(-1);
     }
   }
 
@@ -228,13 +231,15 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
 
     if (key == LogicalKeyboardKey.arrowUp ||
         key == LogicalKeyboardKey.arrowRight) {
-      _adjustByStep(1);
+      _adjustByInteractionStep(1);
+
       return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.arrowDown ||
         key == LogicalKeyboardKey.arrowLeft) {
-      _adjustByStep(-1);
+      _adjustByInteractionStep(-1);
+
       return KeyEventResult.handled;
     }
 
@@ -252,18 +257,21 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
     return KeyEventResult.ignored;
   }
 
-  void _adjustByStep(int direction) {
+  void _adjustByInteractionStep(int direction) {
     final definition = widget.definition;
 
     final nextValue = definition.sanitize(
-      widget.value + (definition.step * direction),
+      widget.value + (definition.interactionStep * direction),
     );
 
     widget.onChanged(nextValue);
   }
 
   void _beginValueEditing(double value) {
-    _valueController.text = _formatNumber(value, widget.definition.step);
+    _valueController.text = _formatNumber(
+      value,
+      widget.definition.precisionStep,
+    );
 
     _valueController.selection = TextSelection(
       baseOffset: 0,
@@ -311,6 +319,7 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
     });
 
     _syncValueController();
+
     _valueFocusNode.unfocus();
   }
 
@@ -323,18 +332,18 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
   void _syncValueController() {
     _valueController.text = _formatNumber(
       widget.definition.sanitize(widget.value),
-      widget.definition.step,
+      widget.definition.precisionStep,
     );
   }
 
   int _calculateDivisions(AdjustmentDefinition definition) {
     final range = definition.maxValue - definition.minValue;
 
-    return (range / definition.step).round();
+    return (range / definition.interactionStep).round();
   }
 
-  String _formatValue(double value, double step) {
-    final formatted = _formatNumber(value, step);
+  String _formatValue(double value, double precisionStep) {
+    final formatted = _formatNumber(value, precisionStep);
 
     if (value > 0) {
       return '+$formatted';
@@ -343,8 +352,8 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
     return formatted;
   }
 
-  String _formatLimit(double value, double step) {
-    final formatted = _formatNumber(value, step);
+  String _formatLimit(double value, double precisionStep) {
+    final formatted = _formatNumber(value, precisionStep);
 
     if (value > 0) {
       return '+$formatted';
@@ -353,11 +362,19 @@ class _AdjustmentControlState extends State<AdjustmentControl> {
     return formatted;
   }
 
-  String _formatNumber(double value, double step) {
-    if (step >= 1.0) {
-      return value.round().toString();
+  String _formatNumber(double value, double precisionStep) {
+    final decimalPlaces = _decimalPlaces(precisionStep);
+
+    return value.toStringAsFixed(decimalPlaces);
+  }
+
+  int _decimalPlaces(double value) {
+    final text = value.toString();
+
+    if (!text.contains('.')) {
+      return 0;
     }
 
-    return value.toStringAsFixed(1);
+    return text.split('.').last.length;
   }
 }

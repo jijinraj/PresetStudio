@@ -9,7 +9,9 @@ class AdjustmentDefinition {
     required this.minValue,
     required this.maxValue,
     required this.defaultValue,
-    required this.step,
+    required this.precisionStep,
+    required this.interactionStep,
+    required this.coarseStep,
   });
 
   final AdjustmentType type;
@@ -18,7 +20,19 @@ class AdjustmentDefinition {
   final double minValue;
   final double maxValue;
   final double defaultValue;
-  final double step;
+
+  /// Smallest value PresetStudio can represent for this adjustment.
+  ///
+  /// This controls sanitization, direct numeric entry precision,
+  /// and fine keyboard/mouse interaction.
+  final double precisionStep;
+
+  /// Standard increment used by normal keyboard, mouse-wheel,
+  /// and slider interaction.
+  final double interactionStep;
+
+  /// Larger increment intended for accelerated desktop interaction.
+  final double coarseStep;
 
   double clamp(double value) {
     return value.clamp(minValue, maxValue).toDouble();
@@ -27,14 +41,16 @@ class AdjustmentDefinition {
   double sanitize(double value) {
     final clampedValue = clamp(value);
 
-    if (step <= 0) {
+    if (precisionStep <= 0) {
       return clampedValue;
     }
 
-    final steps = ((clampedValue - minValue) / step).round();
-    final snappedValue = minValue + (steps * step);
+    final steps = ((clampedValue - minValue) / precisionStep).round();
 
-    final decimalPlaces = _decimalPlaces(step);
+    final snappedValue = minValue + (steps * precisionStep);
+
+    final decimalPlaces = _decimalPlaces(precisionStep);
+
     final factor = math.pow(10, decimalPlaces).toDouble();
 
     final roundedValue = (snappedValue * factor).round() / factor;
@@ -89,7 +105,9 @@ class AdjustmentDefinitions {
       minValue: -5,
       maxValue: 5,
       defaultValue: 0,
-      step: 0.1,
+      precisionStep: 0.01,
+      interactionStep: 0.1,
+      coarseStep: 0.5,
     ),
     AdjustmentType.contrast: AdjustmentDefinition(
       type: AdjustmentType.contrast,
@@ -97,7 +115,9 @@ class AdjustmentDefinitions {
       minValue: -100,
       maxValue: 100,
       defaultValue: 0,
-      step: 1,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
     ),
     AdjustmentType.highlights: AdjustmentDefinition(
       type: AdjustmentType.highlights,
@@ -105,7 +125,9 @@ class AdjustmentDefinitions {
       minValue: -100,
       maxValue: 100,
       defaultValue: 0,
-      step: 1,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
     ),
     AdjustmentType.shadows: AdjustmentDefinition(
       type: AdjustmentType.shadows,
@@ -113,7 +135,9 @@ class AdjustmentDefinitions {
       minValue: -100,
       maxValue: 100,
       defaultValue: 0,
-      step: 1,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
     ),
     AdjustmentType.whites: AdjustmentDefinition(
       type: AdjustmentType.whites,
@@ -121,7 +145,9 @@ class AdjustmentDefinitions {
       minValue: -100,
       maxValue: 100,
       defaultValue: 0,
-      step: 1,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
     ),
     AdjustmentType.blacks: AdjustmentDefinition(
       type: AdjustmentType.blacks,
@@ -129,7 +155,9 @@ class AdjustmentDefinitions {
       minValue: -100,
       maxValue: 100,
       defaultValue: 0,
-      step: 1,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
     ),
     AdjustmentType.temperature: AdjustmentDefinition(
       type: AdjustmentType.temperature,
@@ -137,7 +165,9 @@ class AdjustmentDefinitions {
       minValue: -100,
       maxValue: 100,
       defaultValue: 0,
-      step: 1,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
     ),
     AdjustmentType.tint: AdjustmentDefinition(
       type: AdjustmentType.tint,
@@ -145,7 +175,9 @@ class AdjustmentDefinitions {
       minValue: -100,
       maxValue: 100,
       defaultValue: 0,
-      step: 1,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
     ),
     AdjustmentType.vibrance: AdjustmentDefinition(
       type: AdjustmentType.vibrance,
@@ -153,7 +185,9 @@ class AdjustmentDefinitions {
       minValue: -100,
       maxValue: 100,
       defaultValue: 0,
-      step: 1,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
     ),
     AdjustmentType.saturation: AdjustmentDefinition(
       type: AdjustmentType.saturation,
@@ -161,7 +195,9 @@ class AdjustmentDefinitions {
       minValue: -100,
       maxValue: 100,
       defaultValue: 0,
-      step: 1,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
     ),
   };
 

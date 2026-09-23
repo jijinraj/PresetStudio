@@ -56,13 +56,14 @@ void main() {
 
       expect(slider.onChanged, isNotNull);
 
-      slider.onChanged?.call(1.24);
+      // The UI slider moves in 0.10 EV interaction increments.
+      slider.onChanged?.call(1.2);
 
       await tester.pump();
 
       expect(controller.session.adjustments.exposure, 1.2);
 
-      expect(find.text('+1.2'), findsOneWidget);
+      expect(find.text('+1.20'), findsOneWidget);
     });
 
     testWidgets('mobile does not expose adjustment controls without an image', (
@@ -114,13 +115,14 @@ void main() {
 
       expect(slider.onChanged, isNotNull);
 
-      slider.onChanged?.call(-1.26);
+      // The mobile slider uses the same 0.10 EV interaction step.
+      slider.onChanged?.call(-1.3);
 
       await tester.pump();
 
       expect(controller.session.adjustments.exposure, -1.3);
 
-      expect(find.text('-1.3'), findsOneWidget);
+      expect(find.text('-1.30'), findsOneWidget);
     });
   });
 }
