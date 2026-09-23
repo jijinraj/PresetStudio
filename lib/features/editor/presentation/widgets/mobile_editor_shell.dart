@@ -10,6 +10,7 @@ import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
 import 'adjustment_control.dart';
 import 'editor_image_viewport.dart';
+import 'flip_control.dart';
 import 'rotation_control.dart';
 
 class MobileEditorShell extends StatelessWidget {
@@ -198,10 +199,21 @@ class _MobileToolBar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Crop & Transform', style: AppTypography.title),
+
                     const SizedBox(height: AppSpacing.lg),
-                    const Text('Rotation', style: AppTypography.label),
-                    const SizedBox(height: AppSpacing.md),
+
                     RotationControl(
+                      transform: session.transform,
+                      onChanged: controller.updateTransform,
+                    ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    const Divider(height: 1),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    FlipControl(
                       transform: session.transform,
                       onChanged: controller.updateTransform,
                     ),
