@@ -6,7 +6,7 @@ import 'package:presetstudio/features/editor/presentation/widgets/mobile_editor_
 
 void main() {
   group('Exposure editor integration', () {
-    testWidgets('desktop shows exposure control disabled without an image', (
+    testWidgets('desktop hides exposure control without an image', (
       tester,
     ) async {
       final controller = EditorController();
@@ -21,13 +21,14 @@ void main() {
         ),
       );
 
-      expect(find.text('Exposure'), findsOneWidget);
+      expect(find.text('Select an image to start editing.'), findsOneWidget);
 
-      final slider = tester.widget<Slider>(
+      expect(find.text('Exposure'), findsNothing);
+
+      expect(
         find.byKey(const ValueKey('adjustment-exposure-slider')),
+        findsNothing,
       );
-
-      expect(slider.onChanged, isNull);
     });
 
     testWidgets('desktop exposure control updates editor state', (
@@ -47,6 +48,8 @@ void main() {
         ),
       );
 
+      expect(find.text('Exposure'), findsOneWidget);
+
       final slider = tester.widget<Slider>(
         find.byKey(const ValueKey('adjustment-exposure-slider')),
       );
@@ -60,6 +63,28 @@ void main() {
       expect(controller.session.adjustments.exposure, 1.2);
 
       expect(find.text('+1.2'), findsOneWidget);
+    });
+
+    testWidgets('mobile does not expose adjustment controls without an image', (
+      tester,
+    ) async {
+      final controller = EditorController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MobileEditorShell(
+            controller: controller,
+            onImportImage: () async {},
+            isImporting: false,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Edit'));
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Exposure'), findsNothing);
     });
 
     testWidgets('mobile Edit tool opens exposure controls', (tester) async {

@@ -131,22 +131,30 @@ class _AdjustmentsPanel extends StatelessWidget {
         animation: controller,
         builder: (context, _) {
           final session = controller.session;
+          final hasImage = session.sourceImagePath != null;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Adjustments', style: AppTypography.title),
               const SizedBox(height: AppSpacing.lg),
-              const Text('Light', style: AppTypography.label),
-              const SizedBox(height: AppSpacing.md),
-              AdjustmentControl(
-                definition: exposureDefinition,
-                value: session.adjustments.exposure,
-                enabled: session.sourceImagePath != null,
-                onChanged: (value) {
-                  controller.updateAdjustment(AdjustmentType.exposure, value);
-                },
-              ),
+
+              if (!hasImage)
+                const Text(
+                  'Select an image to start editing.',
+                  style: AppTypography.bodyMuted,
+                )
+              else ...[
+                const Text('Light', style: AppTypography.label),
+                const SizedBox(height: AppSpacing.md),
+                AdjustmentControl(
+                  definition: exposureDefinition,
+                  value: session.adjustments.exposure,
+                  onChanged: (value) {
+                    controller.updateAdjustment(AdjustmentType.exposure, value);
+                  },
+                ),
+              ],
             ],
           );
         },

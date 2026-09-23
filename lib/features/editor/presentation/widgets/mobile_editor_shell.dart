@@ -58,37 +58,47 @@ class _MobileToolBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: AppDimensions.mobileBottomBarHeight,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            const Expanded(
-              child: _MobileTool(
-                icon: Icons.auto_awesome_outlined,
-                label: 'Looks',
-              ),
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final hasImage = controller.session.sourceImagePath != null;
+
+        return Container(
+          height: AppDimensions.mobileBottomBarHeight,
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            border: Border(top: BorderSide(color: AppColors.border)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Row(
+              children: [
+                const Expanded(
+                  child: _MobileTool(
+                    icon: Icons.auto_awesome_outlined,
+                    label: 'Looks',
+                  ),
+                ),
+                Expanded(
+                  child: _MobileTool(
+                    icon: Icons.tune,
+                    label: 'Edit',
+                    enabled: hasImage,
+                    onTap: hasImage
+                        ? () {
+                            _showEditSheet(context);
+                          }
+                        : null,
+                  ),
+                ),
+                const Expanded(
+                  child: _MobileTool(icon: Icons.crop, label: 'Crop'),
+                ),
+              ],
             ),
-            Expanded(
-              child: _MobileTool(
-                icon: Icons.tune,
-                label: 'Edit',
-                onTap: () {
-                  _showEditSheet(context);
-                },
-              ),
-            ),
-            const Expanded(
-              child: _MobileTool(icon: Icons.crop, label: 'Crop'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -127,7 +137,6 @@ class _MobileToolBar extends StatelessWidget {
                     AdjustmentControl(
                       definition: exposureDefinition,
                       value: session.adjustments.exposure,
-                      enabled: session.sourceImagePath != null,
                       onChanged: (value) {
                         controller.updateAdjustment(
                           AdjustmentType.exposure,
@@ -147,26 +156,30 @@ class _MobileToolBar extends StatelessWidget {
 }
 
 class _MobileTool extends StatelessWidget {
-  const _MobileTool({required this.icon, required this.label, this.onTap});
+  const _MobileTool({
+    required this.icon,
+    required this.label,
+    this.onTap,
+    this.enabled = true,
+  });
 
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
+    final color = enabled ? AppColors.textSecondary : AppColors.textDisabled;
+
     return InkWell(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            size: AppDimensions.iconMd,
-            color: AppColors.textSecondary,
-          ),
+          Icon(icon, size: AppDimensions.iconMd, color: color),
           const SizedBox(height: AppSpacing.xxs),
-          Text(label, style: AppTypography.label),
+          Text(label, style: AppTypography.label.copyWith(color: color)),
         ],
       ),
     );
