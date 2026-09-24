@@ -11,7 +11,10 @@ class EditorRenderPlan {
   final ImageAdjustments adjustments;
   final ImageTransform transform;
 
-  /// A Flutter-compatible 4x5 color matrix derived from the
-  /// supported non-destructive color adjustments.
+  /// Flutter-compatible fallback matrix for the linear adjustment stage.
+  ///
+  /// Exposure, contrast, and saturation can be represented here. Luminance-
+  /// dependent tonal controls such as highlights, shadows, whites, and blacks
+  /// are evaluated by the GPU tonal shader when shader filters are available.
   final List<double> colorMatrix;
 }

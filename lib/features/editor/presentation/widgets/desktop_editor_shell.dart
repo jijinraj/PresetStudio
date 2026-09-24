@@ -169,6 +169,16 @@ class _AdjustmentsPanel extends StatelessWidget {
       AdjustmentType.contrast,
     );
 
+    final highlightsDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.highlights,
+    );
+
+    final shadowsDefinition = AdjustmentDefinitions.of(AdjustmentType.shadows);
+
+    final whitesDefinition = AdjustmentDefinitions.of(AdjustmentType.whites);
+
+    final blacksDefinition = AdjustmentDefinitions.of(AdjustmentType.blacks);
+
     final saturationDefinition = AdjustmentDefinitions.of(
       AdjustmentType.saturation,
     );
@@ -246,6 +256,52 @@ class _AdjustmentsPanel extends StatelessWidget {
                         AdjustmentType.contrast,
                         value,
                       );
+                    },
+                    onInteractionStart: controller.beginEditTransaction,
+                    onInteractionEnd: controller.endEditTransaction,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  AdjustmentControl(
+                    definition: highlightsDefinition,
+                    value: session.adjustments.highlights,
+                    onChanged: (value) {
+                      controller.updateAdjustment(
+                        AdjustmentType.highlights,
+                        value,
+                      );
+                    },
+                    onInteractionStart: controller.beginEditTransaction,
+                    onInteractionEnd: controller.endEditTransaction,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  AdjustmentControl(
+                    definition: shadowsDefinition,
+                    value: session.adjustments.shadows,
+                    onChanged: (value) {
+                      controller.updateAdjustment(
+                        AdjustmentType.shadows,
+                        value,
+                      );
+                    },
+                    onInteractionStart: controller.beginEditTransaction,
+                    onInteractionEnd: controller.endEditTransaction,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  AdjustmentControl(
+                    definition: whitesDefinition,
+                    value: session.adjustments.whites,
+                    onChanged: (value) {
+                      controller.updateAdjustment(AdjustmentType.whites, value);
+                    },
+                    onInteractionStart: controller.beginEditTransaction,
+                    onInteractionEnd: controller.endEditTransaction,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  AdjustmentControl(
+                    definition: blacksDefinition,
+                    value: session.adjustments.blacks,
+                    onChanged: (value) {
+                      controller.updateAdjustment(AdjustmentType.blacks, value);
                     },
                     onInteractionStart: controller.beginEditTransaction,
                     onInteractionEnd: controller.endEditTransaction,

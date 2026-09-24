@@ -211,6 +211,16 @@ class _MobileToolBar extends StatelessWidget {
       AdjustmentType.contrast,
     );
 
+    final highlightsDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.highlights,
+    );
+
+    final shadowsDefinition = AdjustmentDefinitions.of(AdjustmentType.shadows);
+
+    final whitesDefinition = AdjustmentDefinitions.of(AdjustmentType.whites);
+
+    final blacksDefinition = AdjustmentDefinitions.of(AdjustmentType.blacks);
+
     final saturationDefinition = AdjustmentDefinitions.of(
       AdjustmentType.saturation,
     );
@@ -387,6 +397,70 @@ class _MobileToolBar extends StatelessWidget {
                                         },
                                       ),
                                       const SizedBox(height: AppSpacing.lg),
+                                      AdjustmentControl(
+                                        definition: highlightsDefinition,
+                                        value: session.adjustments.highlights,
+                                        onChanged: (value) {
+                                          controller.updateAdjustment(
+                                            AdjustmentType.highlights,
+                                            value,
+                                          );
+                                        },
+                                        onInteractionStart: () {
+                                          focusAdjustment(
+                                            AdjustmentType.highlights,
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
+                                      AdjustmentControl(
+                                        definition: shadowsDefinition,
+                                        value: session.adjustments.shadows,
+                                        onChanged: (value) {
+                                          controller.updateAdjustment(
+                                            AdjustmentType.shadows,
+                                            value,
+                                          );
+                                        },
+                                        onInteractionStart: () {
+                                          focusAdjustment(
+                                            AdjustmentType.shadows,
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
+                                      AdjustmentControl(
+                                        definition: whitesDefinition,
+                                        value: session.adjustments.whites,
+                                        onChanged: (value) {
+                                          controller.updateAdjustment(
+                                            AdjustmentType.whites,
+                                            value,
+                                          );
+                                        },
+                                        onInteractionStart: () {
+                                          focusAdjustment(
+                                            AdjustmentType.whites,
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
+                                      AdjustmentControl(
+                                        definition: blacksDefinition,
+                                        value: session.adjustments.blacks,
+                                        onChanged: (value) {
+                                          controller.updateAdjustment(
+                                            AdjustmentType.blacks,
+                                            value,
+                                          );
+                                        },
+                                        onInteractionStart: () {
+                                          focusAdjustment(
+                                            AdjustmentType.blacks,
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
                                       const Divider(height: 1),
                                       const SizedBox(height: AppSpacing.lg),
                                       const Text(
@@ -427,15 +501,9 @@ class _MobileToolBar extends StatelessWidget {
 
                         final definition = AdjustmentDefinitions.of(type);
 
-                        final value = switch (type) {
-                          AdjustmentType.exposure =>
-                            controller.session.adjustments.exposure,
-                          AdjustmentType.contrast =>
-                            controller.session.adjustments.contrast,
-                          AdjustmentType.saturation =>
-                            controller.session.adjustments.saturation,
-                          _ => definition.defaultValue,
-                        };
+                        final value = controller.session.adjustments.valueFor(
+                          type,
+                        );
 
                         return _MobileFocusedAdjustmentBar(
                           definition: definition,

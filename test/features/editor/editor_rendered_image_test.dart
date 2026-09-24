@@ -171,7 +171,32 @@ void main() {
 
       expect(flip.transform.storage[5], -1.0);
 
-      expect(find.byType(ColorFiltered), findsOneWidget);
+      expect(find.byKey(const ValueKey('editor-color-filter')), findsOneWidget);
+    });
+    testWidgets('accepts tonal range adjustments in the color stage', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EditorRenderedImage(
+              sourceImagePath: 'missing-test-image.jpg',
+              adjustments: const ImageAdjustments(
+                highlights: 35,
+                shadows: -25,
+                whites: 20,
+                blacks: -15,
+              ),
+              transform: ImageTransform.initial,
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const ValueKey('editor-color-filter')), findsOneWidget);
     });
   });
 }

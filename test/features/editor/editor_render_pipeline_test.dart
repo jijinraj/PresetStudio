@@ -192,6 +192,22 @@ void main() {
       expect(plan.adjustments.saturation, 100.0);
     });
 
+    test('sanitizes tonal range values before rendering', () {
+      const adjustments = ImageAdjustments(
+        highlights: 180.0,
+        shadows: -240.0,
+        whites: 37.0,
+        blacks: -22.0,
+      );
+
+      final plan = pipeline.buildPlan(adjustments);
+
+      expect(plan.adjustments.highlights, 100.0);
+      expect(plan.adjustments.shadows, -100.0);
+      expect(plan.adjustments.whites, 37.0);
+      expect(plan.adjustments.blacks, -22.0);
+    });
+
     test('does not mutate supplied adjustment state', () {
       const adjustments = ImageAdjustments(exposure: 500.0);
 
