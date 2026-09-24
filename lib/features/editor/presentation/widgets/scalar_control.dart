@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -58,13 +60,18 @@ class _ScalarControlState extends State<ScalarControl> {
   late final FocusNode _valueFocusNode;
   late final TextEditingController _valueController;
 
+  static const Duration _wheelInteractionEndDelay = Duration(milliseconds: 300);
+
   bool _isEditingValue = false;
+  bool _isDeferredInteractionActive = false;
+  Timer? _deferredInteractionEndTimer;
 
   @override
   void initState() {
     super.initState();
 
     _sliderFocusNode = FocusNode(onKeyEvent: _handleSliderKeyEvent);
+    _sliderFocusNode.addListener(_handleSliderFocusChange);
 
     _valueFocusNode = FocusNode(onKeyEvent: _handleValueKeyEvent);
 
@@ -84,6 +91,9 @@ class _ScalarControlState extends State<ScalarControl> {
 
   @override
   void dispose() {
+    _deferredInteractionEndTimer?.cancel();
+
+    _sliderFocusNode.removeListener(_handleSliderFocusChange);
     _valueFocusNode.removeListener(_handleValueFocusChange);
 
     _sliderFocusNode.dispose();
@@ -151,6 +161,7 @@ class _ScalarControlState extends State<ScalarControl> {
             focusNode: _sliderFocusNode,
             onChangeStart: widget.enabled && widget.onInteractionStart != null
                 ? (_) {
+                    _finishDeferredInteraction();
                     widget.onInteractionStart!();
                   }
                 : null,
@@ -261,11 +272,15 @@ class _ScalarControlState extends State<ScalarControl> {
 
     _sliderFocusNode.requestFocus();
 
+    _beginDeferredInteraction();
+
     if (event.scrollDelta.dy < 0) {
       _adjustByCurrentStep(1);
     } else {
       _adjustByCurrentStep(-1);
     }
+
+    _scheduleDeferredInteractionEnd();
   }
 
   KeyEventResult _handleSliderKeyEvent(FocusNode node, KeyEvent event) {
@@ -273,27 +288,90 @@ class _ScalarControlState extends State<ScalarControl> {
       return KeyEventResult.ignored;
     }
 
+    final key = event.logicalKey;
+    final isIncrementKey =
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowRight;
+    final isDecrementKey =
+        key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowLeft;
+
+    if (!isIncrementKey && !isDecrementKey) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event is KeyUpEvent) {
+      _finishDeferredInteraction();
+      return KeyEventResult.handled;
+    }
+
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
 
-    final key = event.logicalKey;
+    _beginDeferredInteraction();
 
-    if (key == LogicalKeyboardKey.arrowUp ||
-        key == LogicalKeyboardKey.arrowRight) {
+    if (isIncrementKey) {
       _adjustByCurrentStep(1);
-
-      return KeyEventResult.handled;
-    }
-
-    if (key == LogicalKeyboardKey.arrowDown ||
-        key == LogicalKeyboardKey.arrowLeft) {
+    } else {
       _adjustByCurrentStep(-1);
-
-      return KeyEventResult.handled;
     }
 
-    return KeyEventResult.ignored;
+    return KeyEventResult.handled;
+  }
+
+  void _beginDeferredInteraction() {
+    if (_isDeferredInteractionActive) {
+      return;
+    }
+
+    final onInteractionStart = widget.onInteractionStart;
+
+    if (onInteractionStart == null) {
+      return;
+    }
+
+    onInteractionStart();
+
+    // Some mobile flows intentionally provide only an interaction-start
+    // callback and keep the controller transaction open until focused mode
+    // closes. In that case there is nothing for this control to debounce.
+    if (widget.onInteractionEnd == null) {
+      return;
+    }
+
+    _isDeferredInteractionActive = true;
+  }
+
+  void _scheduleDeferredInteractionEnd() {
+    if (!_isDeferredInteractionActive) {
+      return;
+    }
+
+    _deferredInteractionEndTimer?.cancel();
+
+    _deferredInteractionEndTimer = Timer(
+      _wheelInteractionEndDelay,
+      _finishDeferredInteraction,
+    );
+  }
+
+  void _finishDeferredInteraction() {
+    _deferredInteractionEndTimer?.cancel();
+    _deferredInteractionEndTimer = null;
+
+    if (!_isDeferredInteractionActive) {
+      return;
+    }
+
+    _isDeferredInteractionActive = false;
+    widget.onInteractionEnd?.call();
+  }
+
+  void _handleSliderFocusChange() {
+    if (!_sliderFocusNode.hasFocus) {
+      _finishDeferredInteraction();
+    }
   }
 
   KeyEventResult _handleValueKeyEvent(FocusNode node, KeyEvent event) {

@@ -37,10 +37,10 @@
 ## History v2
 
 - [ ] Make desktop History collapsible
-- [ ] Coalesce mouse-wheel adjustment changes into one meaningful history entry
-- [ ] Coalesce continuous keyboard adjustment changes
-- [ ] Keep slider drags grouped as one history entry
-- [ ] Suppress no-op transactions that finish at their starting state
+- [x] Coalesce mouse-wheel adjustment changes into one meaningful history entry
+- [x] Coalesce continuous keyboard adjustment changes
+- [x] Keep slider drags grouped as one history entry
+- [x] Suppress no-op transactions that finish at their starting state
 - [ ] Add semantic/logical history groups for compound editor actions
 - [ ] Add Hide / Show hidden history entries
 - [ ] Add safe History cleanup actions
