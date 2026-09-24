@@ -8,14 +8,16 @@ import '../../../../theme/tokens/app_typography.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
+import '../../domain/image_adjustments.dart';
 import 'adjustment_control.dart';
 import 'before_after_button.dart';
 import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
+import 'editor_viewport_controller.dart';
 import 'flip_control.dart';
 import 'rotation_control.dart';
 
-class DesktopEditorShell extends StatelessWidget {
+class DesktopEditorShell extends StatefulWidget {
   const DesktopEditorShell({
     required this.controller,
     required this.onImportImage,
@@ -28,11 +30,46 @@ class DesktopEditorShell extends StatelessWidget {
   final bool isImporting;
 
   @override
+  State<DesktopEditorShell> createState() => _DesktopEditorShellState();
+}
+
+class _DesktopEditorShellState extends State<DesktopEditorShell> {
+  late final EditorViewportController _viewportController;
+
+  bool _isSideBySide = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewportController = EditorViewportController();
+  }
+
+  @override
+  void dispose() {
+    _viewportController.dispose();
+    super.dispose();
+  }
+
+  void _toggleSideBySide() {
+    _viewportController.reset();
+
+    setState(() {
+      _isSideBySide = !_isSideBySide;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
+
     return Scaffold(
       body: Column(
         children: [
-          _DesktopTopBar(controller: controller),
+          _DesktopTopBar(
+            controller: controller,
+            isSideBySide: _isSideBySide,
+            onToggleSideBySide: _toggleSideBySide,
+          ),
           const Divider(height: 1),
           Expanded(
             child: Row(
@@ -49,13 +86,22 @@ class DesktopEditorShell extends StatelessWidget {
                     builder: (context, _) {
                       return ColoredBox(
                         color: AppColors.canvas,
-                        child: EditorImageViewport(
-                          sourceImagePath: controller.session.sourceImagePath,
-                          adjustments: controller.previewAdjustments,
-                          transform: controller.session.transform,
-                          onImportImage: onImportImage,
-                          isImporting: isImporting,
-                        ),
+                        child: _isSideBySide && controller.session.hasImage
+                            ? _DesktopComparisonViewport(
+                                controller: controller,
+                                viewportController: _viewportController,
+                                onImportImage: widget.onImportImage,
+                                isImporting: widget.isImporting,
+                              )
+                            : EditorImageViewport(
+                                sourceImagePath:
+                                    controller.session.sourceImagePath,
+                                adjustments: controller.previewAdjustments,
+                                transform: controller.session.transform,
+                                onImportImage: widget.onImportImage,
+                                isImporting: widget.isImporting,
+                                viewportController: _viewportController,
+                              ),
                       );
                     },
                   ),
@@ -74,16 +120,75 @@ class DesktopEditorShell extends StatelessWidget {
   }
 }
 
-class _DesktopTopBar extends StatelessWidget {
-  const _DesktopTopBar({required this.controller});
+class _DesktopComparisonViewport extends StatelessWidget {
+  const _DesktopComparisonViewport({
+    required this.controller,
+    required this.viewportController,
+    required this.onImportImage,
+    required this.isImporting,
+  });
 
   final EditorController controller;
+  final EditorViewportController viewportController;
+  final Future<void> Function() onImportImage;
+  final bool isImporting;
+
+  @override
+  Widget build(BuildContext context) {
+    final sourceImagePath = controller.session.sourceImagePath;
+    final transform = controller.session.transform;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: EditorImageViewport(
+            sourceImagePath: sourceImagePath,
+            adjustments: ImageAdjustments.initial,
+            transform: transform,
+            onImportImage: onImportImage,
+            isImporting: isImporting,
+            viewportController: viewportController,
+            showChangeImageAction: false,
+            showZoomControls: false,
+            viewportLabel: 'BEFORE',
+          ),
+        ),
+        const VerticalDivider(width: 1),
+        Expanded(
+          child: EditorImageViewport(
+            sourceImagePath: sourceImagePath,
+            adjustments: controller.previewAdjustments,
+            transform: transform,
+            onImportImage: onImportImage,
+            isImporting: isImporting,
+            viewportController: viewportController,
+            viewportLabel: 'AFTER',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopTopBar extends StatelessWidget {
+  const _DesktopTopBar({
+    required this.controller,
+    required this.isSideBySide,
+    required this.onToggleSideBySide,
+  });
+
+  final EditorController controller;
+  final bool isSideBySide;
+  final VoidCallback onToggleSideBySide;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
+        final canToggleSideBySide = isSideBySide || controller.canCompareBefore;
+
         return Container(
           height: AppDimensions.toolbarHeight,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -110,6 +215,20 @@ class _DesktopTopBar extends StatelessWidget {
                 isShowingBefore: controller.isShowingBefore,
                 onPreviewStart: controller.beginBeforePreview,
                 onPreviewEnd: controller.endBeforePreview,
+              ),
+              IconButton(
+                key: const ValueKey('desktop-side-by-side'),
+                tooltip: isSideBySide
+                    ? 'Exit side-by-side comparison'
+                    : 'Compare before and after side by side',
+                onPressed: canToggleSideBySide ? onToggleSideBySide : null,
+                style: IconButton.styleFrom(
+                  foregroundColor: isSideBySide
+                      ? AppColors.accent
+                      : AppColors.textSecondary,
+                  backgroundColor: isSideBySide ? AppColors.accentMuted : null,
+                ),
+                icon: const Icon(Icons.compare),
               ),
               const Spacer(),
               const FilledButton(onPressed: null, child: Text('Export')),

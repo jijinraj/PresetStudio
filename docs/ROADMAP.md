@@ -24,15 +24,27 @@
 - [x] Desktop + mobile zoom
 - [x] Viewport pan
 - [x] Fix adjustment-slider mouse-wheel propagation
+- [x] Invert vertical mouse panning on desktop
 
 ## Immediate UX work
 
-- [ ] Invert vertical mouse panning on desktop
-- [ ] Move mobile Before / After beside Change Image
-- [ ] Keep desktop hold Before / After in toolbar
-- [ ] Add desktop side-by-side Before / After
-- [ ] Synchronize zoom / pan between Before and After
+- [x] Move mobile Before / After beside Change Image
+- [x] Keep desktop hold Before / After in toolbar
+- [x] Add desktop side-by-side Before / After
+- [x] Synchronize zoom / pan between Before and After
+- [ ] History v2
+
+## History v2
+
 - [ ] Make desktop History collapsible
+- [ ] Coalesce mouse-wheel adjustment changes into one meaningful history entry
+- [ ] Coalesce continuous keyboard adjustment changes
+- [ ] Keep slider drags grouped as one history entry
+- [ ] Suppress no-op transactions that finish at their starting state
+- [ ] Add semantic/logical history groups for compound editor actions
+- [ ] Add Hide / Show hidden history entries
+- [ ] Add safe History cleanup actions
+- [ ] Design replay/rebase semantics before allowing arbitrary removal of past edits
 
 ## Crop & geometry
 
@@ -81,8 +93,9 @@
 - [ ] Add Settings feature
 - [ ] Persist app preferences locally
 - [ ] Add "Invert vertical mouse panning"
-  - Default: ON
+  - Current default: ON
   - Desktop only
+  - Allow user to disable it
   - Must not affect EditorSession, History, presets, or exports
 - [ ] Consider mouse-wheel zoom preference
 - [ ] Consider editor grid preferences

@@ -97,6 +97,14 @@ class MobileEditorShell extends StatelessWidget {
               onImportImage: onImportImage,
               isImporting: isImporting,
               compactZoomControls: true,
+              topAction: BeforeAfterButton(
+                key: const ValueKey('mobile-before-after'),
+                enabled: controller.canCompareBefore,
+                isShowingBefore: controller.isShowingBefore,
+                onPreviewStart: controller.beginBeforePreview,
+                onPreviewEnd: controller.endBeforePreview,
+                compact: true,
+              ),
             ),
           );
         },
@@ -344,20 +352,6 @@ class _MobileToolBar extends StatelessWidget {
                                                 : null,
                                             child: const Text('Reset'),
                                           ),
-                                          BeforeAfterButton(
-                                            key: const ValueKey(
-                                              'mobile-before-after',
-                                            ),
-                                            enabled:
-                                                controller.canCompareBefore,
-                                            isShowingBefore:
-                                                controller.isShowingBefore,
-                                            onPreviewStart:
-                                                controller.beginBeforePreview,
-                                            onPreviewEnd:
-                                                controller.endBeforePreview,
-                                            compact: true,
-                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: AppSpacing.lg),
@@ -513,10 +507,6 @@ class _MobileToolBar extends StatelessWidget {
                             controller.updateAdjustment(type, nextValue);
                           },
                           onClose: leaveFocusedMode,
-                          canCompareBefore: controller.canCompareBefore,
-                          isShowingBefore: controller.isShowingBefore,
-                          onBeforeStart: controller.beginBeforePreview,
-                          onBeforeEnd: controller.endBeforePreview,
                         );
                       },
                     ),
@@ -596,20 +586,12 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
     required this.value,
     required this.onChanged,
     required this.onClose,
-    required this.canCompareBefore,
-    required this.isShowingBefore,
-    required this.onBeforeStart,
-    required this.onBeforeEnd,
   });
 
   final AdjustmentDefinition definition;
   final double value;
   final ValueChanged<double> onChanged;
   final VoidCallback onClose;
-  final bool canCompareBefore;
-  final bool isShowingBefore;
-  final VoidCallback onBeforeStart;
-  final VoidCallback onBeforeEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -643,17 +625,7 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
                 height: 32,
                 child: Row(
                   children: [
-                    SizedBox(
-                      width: 40,
-                      child: BeforeAfterButton(
-                        key: const ValueKey('mobile-focused-before-after'),
-                        enabled: canCompareBefore,
-                        isShowingBefore: isShowingBefore,
-                        onPreviewStart: onBeforeStart,
-                        onPreviewEnd: onBeforeEnd,
-                        compact: true,
-                      ),
-                    ),
+                    const SizedBox(width: 40),
                     Expanded(
                       child: Text(
                         definition.label,

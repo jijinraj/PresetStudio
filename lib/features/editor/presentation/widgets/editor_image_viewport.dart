@@ -21,6 +21,10 @@ class EditorImageViewport extends StatefulWidget {
     this.viewportController,
     this.compactZoomControls = false,
     this.invertDesktopVerticalPan = true,
+    this.topAction,
+    this.showChangeImageAction = true,
+    this.showZoomControls = true,
+    this.viewportLabel,
     super.key,
   });
 
@@ -45,6 +49,18 @@ class EditorImageViewport extends StatefulWidget {
   /// This stays outside editor state so a future preference can disable it
   /// without affecting history, presets, dirty state, or exports.
   final bool invertDesktopVerticalPan;
+
+  /// Optional action rendered immediately before Change image.
+  final Widget? topAction;
+
+  /// Whether the Change image action is shown in the loaded viewport.
+  final bool showChangeImageAction;
+
+  /// Whether the zoom controls are shown in the loaded viewport.
+  final bool showZoomControls;
+
+  /// Optional small label shown in the top-left of the loaded viewport.
+  final String? viewportLabel;
 
   @override
   State<EditorImageViewport> createState() => _EditorImageViewportState();
@@ -111,6 +127,10 @@ class _EditorImageViewportState extends State<EditorImageViewport> {
       viewportController: _viewportController,
       compactZoomControls: widget.compactZoomControls,
       invertDesktopVerticalPan: widget.invertDesktopVerticalPan,
+      topAction: widget.topAction,
+      showChangeImageAction: widget.showChangeImageAction,
+      showZoomControls: widget.showZoomControls,
+      viewportLabel: widget.viewportLabel,
     );
   }
 }
@@ -168,6 +188,10 @@ class _LoadedViewport extends StatefulWidget {
     required this.viewportController,
     required this.compactZoomControls,
     required this.invertDesktopVerticalPan,
+    required this.topAction,
+    required this.showChangeImageAction,
+    required this.showZoomControls,
+    required this.viewportLabel,
   });
 
   final String sourceImagePath;
@@ -180,6 +204,10 @@ class _LoadedViewport extends StatefulWidget {
   final EditorViewportController viewportController;
   final bool compactZoomControls;
   final bool invertDesktopVerticalPan;
+  final Widget? topAction;
+  final bool showChangeImageAction;
+  final bool showZoomControls;
+  final String? viewportLabel;
 
   @override
   State<_LoadedViewport> createState() => _LoadedViewportState();
@@ -308,40 +336,104 @@ class _LoadedViewportState extends State<_LoadedViewport> {
                 ),
               ),
             ),
-            Positioned(
-              top: AppSpacing.md,
-              right: AppSpacing.md,
-              child: _ChangeImageButton(
-                onImportImage: widget.onImportImage,
-                isImporting: widget.isImporting,
+            if (widget.viewportLabel != null)
+              Positioned(
+                top: AppSpacing.md,
+                left: AppSpacing.md,
+                child: _ViewportLabel(label: widget.viewportLabel!),
               ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: AppSpacing.md,
-              child: Center(
-                child: AnimatedBuilder(
-                  animation: widget.viewportController,
-                  builder: (context, _) {
-                    if (widget.compactZoomControls) {
-                      return _CompactZoomControl(
-                        controller: widget.viewportController,
-                      );
-                    }
-
-                    return _DesktopZoomControls(
-                      controller: widget.viewportController,
-                      viewportCenter: viewportCenter,
-                      viewportSize: viewportSize,
-                    );
-                  },
+            if (widget.topAction != null || widget.showChangeImageAction)
+              Positioned(
+                top: AppSpacing.md,
+                right: AppSpacing.md,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.topAction != null) ...[
+                      _ViewportActionSurface(child: widget.topAction!),
+                      if (widget.showChangeImageAction)
+                        const SizedBox(width: AppSpacing.xs),
+                    ],
+                    if (widget.showChangeImageAction)
+                      _ChangeImageButton(
+                        onImportImage: widget.onImportImage,
+                        isImporting: widget.isImporting,
+                      ),
+                  ],
                 ),
               ),
-            ),
+            if (widget.showZoomControls)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: AppSpacing.md,
+                child: Center(
+                  child: AnimatedBuilder(
+                    animation: widget.viewportController,
+                    builder: (context, _) {
+                      if (widget.compactZoomControls) {
+                        return _CompactZoomControl(
+                          controller: widget.viewportController,
+                        );
+                      }
+
+                      return _DesktopZoomControls(
+                        controller: widget.viewportController,
+                        viewportCenter: viewportCenter,
+                        viewportSize: viewportSize,
+                      );
+                    },
+                  ),
+                ),
+              ),
           ],
         );
       },
+    );
+  }
+}
+
+class _ViewportActionSurface extends StatelessWidget {
+  const _ViewportActionSurface({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+      ),
+      child: SizedBox(width: 36, height: 36, child: child),
+    );
+  }
+}
+
+class _ViewportLabel extends StatelessWidget {
+  const _ViewportLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        child: Text(
+          label,
+          style: AppTypography.label.copyWith(color: AppColors.textPrimary),
+        ),
+      ),
     );
   }
 }
