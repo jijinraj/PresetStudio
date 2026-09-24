@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../theme/tokens/app_colors.dart';
@@ -18,6 +20,7 @@ class EditorImageViewport extends StatefulWidget {
     required this.isImporting,
     this.viewportController,
     this.compactZoomControls = false,
+    this.invertDesktopVerticalPan = true,
     super.key,
   });
 
@@ -36,6 +39,12 @@ class EditorImageViewport extends StatefulWidget {
 
   /// Uses a smaller Fit / percentage control intended for mobile.
   final bool compactZoomControls;
+
+  /// Reverses only the vertical axis of mouse-drag panning on desktop.
+  ///
+  /// This stays outside editor state so a future preference can disable it
+  /// without affecting history, presets, dirty state, or exports.
+  final bool invertDesktopVerticalPan;
 
   @override
   State<EditorImageViewport> createState() => _EditorImageViewportState();
@@ -101,6 +110,7 @@ class _EditorImageViewportState extends State<EditorImageViewport> {
       isImporting: widget.isImporting,
       viewportController: _viewportController,
       compactZoomControls: widget.compactZoomControls,
+      invertDesktopVerticalPan: widget.invertDesktopVerticalPan,
     );
   }
 }
@@ -157,6 +167,7 @@ class _LoadedViewport extends StatefulWidget {
     required this.isImporting,
     required this.viewportController,
     required this.compactZoomControls,
+    required this.invertDesktopVerticalPan,
   });
 
   final String sourceImagePath;
@@ -168,6 +179,7 @@ class _LoadedViewport extends StatefulWidget {
 
   final EditorViewportController viewportController;
   final bool compactZoomControls;
+  final bool invertDesktopVerticalPan;
 
   @override
   State<_LoadedViewport> createState() => _LoadedViewportState();
@@ -175,6 +187,52 @@ class _LoadedViewport extends StatefulWidget {
 
 class _LoadedViewportState extends State<_LoadedViewport> {
   Offset _doubleTapPosition = Offset.zero;
+  int? _desktopPanPointer;
+
+  bool get _usesCustomDesktopMousePan {
+    if (!widget.invertDesktopVerticalPan) {
+      return false;
+    }
+
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.windows ||
+      TargetPlatform.macOS ||
+      TargetPlatform.linux => true,
+      _ => false,
+    };
+  }
+
+  void _handleDesktopPointerDown(PointerDownEvent event) {
+    if (!_usesCustomDesktopMousePan ||
+        event.kind != PointerDeviceKind.mouse ||
+        event.buttons & kPrimaryMouseButton == 0 ||
+        widget.viewportController.isFitted) {
+      return;
+    }
+
+    _desktopPanPointer = event.pointer;
+  }
+
+  void _handleDesktopPointerMove(PointerMoveEvent event, Size viewportSize) {
+    if (_desktopPanPointer != event.pointer ||
+        event.kind != PointerDeviceKind.mouse ||
+        event.buttons & kPrimaryMouseButton == 0) {
+      return;
+    }
+
+    final pointerDelta = event.delta;
+
+    widget.viewportController.panBy(
+      Offset(pointerDelta.dx, -pointerDelta.dy),
+      viewportSize: viewportSize,
+    );
+  }
+
+  void _handleDesktopPointerEnd(PointerEvent event) {
+    if (_desktopPanPointer == event.pointer) {
+      _desktopPanPointer = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -190,47 +248,60 @@ class _LoadedViewportState extends State<_LoadedViewport> {
         return Stack(
           fit: StackFit.expand,
           children: [
-            GestureDetector(
-              key: const ValueKey('editor-viewport-gesture-surface'),
+            Listener(
+              key: const ValueKey('editor-viewport-pointer-surface'),
               behavior: HitTestBehavior.opaque,
-              onDoubleTapDown: (details) {
-                _doubleTapPosition = details.localPosition;
+              onPointerDown: _handleDesktopPointerDown,
+              onPointerMove: (event) {
+                _handleDesktopPointerMove(event, viewportSize);
               },
-              onDoubleTap: () {
-                widget.viewportController.toggleDoubleTapZoom(
-                  focalPoint: _doubleTapPosition,
-                  viewportSize: viewportSize,
-                );
-              },
-              child: InteractiveViewer(
-                key: const ValueKey('editor-viewport-interactive'),
-                transformationController:
-                    widget.viewportController.transformationController,
-                minScale: EditorViewportController.minimumScale,
-                maxScale: EditorViewportController.maximumScale,
-                panEnabled: true,
-                scaleEnabled: true,
-                trackpadScrollCausesScale: true,
-                scaleFactor: 320,
-                clipBehavior: Clip.hardEdge,
-                child: SizedBox(
-                  width: viewportSize.width,
-                  height: viewportSize.height,
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Center(
-                      child: EditorRenderedImage(
-                        sourceImagePath: widget.sourceImagePath,
-                        adjustments: widget.adjustments,
-                        transform: widget.transform,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.medium,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _ImageLoadError(
-                            onImportImage: widget.onImportImage,
-                            isImporting: widget.isImporting,
-                          );
-                        },
+              onPointerUp: _handleDesktopPointerEnd,
+              onPointerCancel: _handleDesktopPointerEnd,
+              child: GestureDetector(
+                key: const ValueKey('editor-viewport-gesture-surface'),
+                behavior: HitTestBehavior.opaque,
+                onDoubleTapDown: (details) {
+                  _doubleTapPosition = details.localPosition;
+                },
+                onDoubleTap: () {
+                  widget.viewportController.toggleDoubleTapZoom(
+                    focalPoint: _doubleTapPosition,
+                    viewportSize: viewportSize,
+                  );
+                },
+                child: InteractiveViewer(
+                  key: const ValueKey('editor-viewport-interactive'),
+                  transformationController:
+                      widget.viewportController.transformationController,
+                  minScale: EditorViewportController.minimumScale,
+                  maxScale: EditorViewportController.maximumScale,
+                  // When inverted desktop panning is enabled, mouse-drag pan
+                  // is handled by the Listener above. Mobile/touch keeps
+                  // Flutter's normal direct-manipulation behavior.
+                  panEnabled: !_usesCustomDesktopMousePan,
+                  scaleEnabled: true,
+                  trackpadScrollCausesScale: true,
+                  scaleFactor: 320,
+                  clipBehavior: Clip.hardEdge,
+                  child: SizedBox(
+                    width: viewportSize.width,
+                    height: viewportSize.height,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Center(
+                        child: EditorRenderedImage(
+                          sourceImagePath: widget.sourceImagePath,
+                          adjustments: widget.adjustments,
+                          transform: widget.transform,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.medium,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _ImageLoadError(
+                              onImportImage: widget.onImportImage,
+                              isImporting: widget.isImporting,
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),

@@ -88,6 +88,35 @@ class EditorViewportController extends ChangeNotifier {
       ..setTranslationRaw(translation.dx, translation.dy, 0.0);
   }
 
+  void panBy(Offset delta, {required Size viewportSize}) {
+    if (isFitted || delta == Offset.zero) {
+      return;
+    }
+
+    final currentMatrix = transformationController.value;
+    final currentTranslation = Offset(
+      currentMatrix.storage[12],
+      currentMatrix.storage[13],
+    );
+
+    final maxTranslationX = (scale - 1.0) * viewportSize.width;
+    final maxTranslationY = (scale - 1.0) * viewportSize.height;
+
+    final nextTranslation = Offset(
+      (currentTranslation.dx + delta.dx)
+          .clamp(-maxTranslationX, 0.0)
+          .toDouble(),
+      (currentTranslation.dy + delta.dy)
+          .clamp(-maxTranslationY, 0.0)
+          .toDouble(),
+    );
+
+    final nextMatrix = currentMatrix.clone()
+      ..setTranslationRaw(nextTranslation.dx, nextTranslation.dy, 0.0);
+
+    transformationController.value = nextMatrix;
+  }
+
   void reset() {
     transformationController.value = Matrix4.identity();
   }
