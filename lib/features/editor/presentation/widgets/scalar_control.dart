@@ -244,6 +244,21 @@ class _ScalarControlState extends State<ScalarControl> {
       return;
     }
 
+    GestureBinding.instance.pointerSignalResolver.register(
+      event,
+      _handleResolvedPointerSignal,
+    );
+  }
+
+  void _handleResolvedPointerSignal(PointerSignalEvent event) {
+    if (!widget.enabled || event is! PointerScrollEvent) {
+      return;
+    }
+
+    if (event.scrollDelta.dy == 0) {
+      return;
+    }
+
     _sliderFocusNode.requestFocus();
 
     if (event.scrollDelta.dy < 0) {

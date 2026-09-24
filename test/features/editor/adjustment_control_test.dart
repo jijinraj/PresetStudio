@@ -193,13 +193,18 @@ void main() {
         ),
       );
 
-      final interaction = tester.widget<Listener>(
-        find.byKey(const ValueKey('adjustment-exposure-slider-interaction')),
+      final interaction = find.byKey(
+        const ValueKey('adjustment-exposure-slider-interaction'),
       );
 
-      interaction.onPointerSignal?.call(
-        const PointerScrollEvent(scrollDelta: Offset(0, -20)),
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: tester.getCenter(interaction),
+          scrollDelta: const Offset(0, -20),
+        ),
       );
+
+      await tester.pump();
 
       expect(changedValue, 0.1);
     });
@@ -223,13 +228,18 @@ void main() {
         ),
       );
 
-      final interaction = tester.widget<Listener>(
-        find.byKey(const ValueKey('adjustment-exposure-slider-interaction')),
+      final interaction = find.byKey(
+        const ValueKey('adjustment-exposure-slider-interaction'),
       );
 
-      interaction.onPointerSignal?.call(
-        const PointerScrollEvent(scrollDelta: Offset(0, 20)),
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: tester.getCenter(interaction),
+          scrollDelta: const Offset(0, 20),
+        ),
       );
+
+      await tester.pump();
 
       expect(changedValue, -0.1);
     });
@@ -732,17 +742,22 @@ void main() {
         ),
       );
 
-      final interaction = tester.widget<Listener>(
-        find.byKey(const ValueKey('adjustment-exposure-slider-interaction')),
+      final interaction = find.byKey(
+        const ValueKey('adjustment-exposure-slider-interaction'),
       );
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
 
-      interaction.onPointerSignal?.call(
-        const PointerScrollEvent(scrollDelta: Offset(0, -20)),
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: tester.getCenter(interaction),
+          scrollDelta: const Offset(0, -20),
+        ),
       );
 
       await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+      await tester.pump();
 
       expect(changedValue, 1.28);
     });
@@ -764,19 +779,74 @@ void main() {
         ),
       );
 
-      final interaction = tester.widget<Listener>(
-        find.byKey(const ValueKey('adjustment-exposure-slider-interaction')),
+      final interaction = find.byKey(
+        const ValueKey('adjustment-exposure-slider-interaction'),
       );
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
 
-      interaction.onPointerSignal?.call(
-        const PointerScrollEvent(scrollDelta: Offset(0, -20)),
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: tester.getCenter(interaction),
+          scrollDelta: const Offset(0, -20),
+        ),
       );
 
       await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
 
+      await tester.pump();
+
       expect(changedValue, 1.77);
+    });
+
+    testWidgets('mouse wheel over slider does not scroll parent panel', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+
+      double? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 240,
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  children: [
+                    AdjustmentControl(
+                      definition: exposureDefinition,
+                      value: 0.0,
+                      onChanged: (value) {
+                        changedValue = value;
+                      },
+                    ),
+                    const SizedBox(height: 1200),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final interaction = find.byKey(
+        const ValueKey('adjustment-exposure-slider-interaction'),
+      );
+
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: tester.getCenter(interaction),
+          scrollDelta: const Offset(0, 40),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(changedValue, -0.1);
+      expect(scrollController.offset, 0.0);
     });
   });
 }

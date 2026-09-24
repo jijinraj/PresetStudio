@@ -96,6 +96,7 @@ class MobileEditorShell extends StatelessWidget {
               transform: controller.session.transform,
               onImportImage: onImportImage,
               isImporting: isImporting,
+              compactZoomControls: true,
             ),
           );
         },
