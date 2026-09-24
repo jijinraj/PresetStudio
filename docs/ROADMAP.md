@@ -51,7 +51,12 @@
 
 ## Crop & geometry
 
-- [ ] Add non-destructive crop model
+- [x] Add non-destructive crop model
+  - [x] Normalized crop rectangle
+  - [x] Free / constrained aspect-ratio state
+  - [x] Fine straighten state
+  - [x] Crop scale and normalized image offset
+  - [x] History replay / enable-disable support
 - [ ] Add interactive crop viewport
 - [ ] Add free crop
 - [ ] Add resize handles

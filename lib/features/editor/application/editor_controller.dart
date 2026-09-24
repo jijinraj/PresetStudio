@@ -150,7 +150,7 @@ class EditorController extends ChangeNotifier {
 
   void updateCrop(CropState crop) {
     _applyEdit(
-      _session.copyWith(crop: crop),
+      _session.copyWith(crop: crop.sanitized()),
       label: 'Crop',
       action: EditorHistoryAction.crop,
     );
@@ -596,7 +596,7 @@ class EditorController extends ChangeNotifier {
 
     var crop = current.crop;
 
-    if (before.crop.aspectRatio != after.crop.aspectRatio) {
+    if (before.crop != after.crop) {
       crop = after.crop;
     }
 
@@ -724,7 +724,7 @@ class EditorController extends ChangeNotifier {
     return a.sourceImagePath == b.sourceImagePath &&
         _sameAdjustments(a.adjustments, b.adjustments) &&
         _sameTransform(a.transform, b.transform) &&
-        a.crop.aspectRatio == b.crop.aspectRatio &&
+        a.crop == b.crop &&
         a.activePresetId == b.activePresetId;
   }
 
