@@ -11,6 +11,7 @@ import '../../domain/adjustment_type.dart';
 import '../../domain/image_adjustments.dart';
 import 'adjustment_control.dart';
 import 'before_after_button.dart';
+import 'crop_workspace.dart';
 import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
 import 'editor_viewport_controller.dart';
@@ -39,6 +40,7 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
   late final EditorViewportController _viewportController;
 
   bool _isSideBySide = false;
+  bool _isCropping = false;
 
   @override
   void initState() {
@@ -53,10 +55,39 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
   }
 
   void _toggleSideBySide() {
+    if (_isCropping) {
+      return;
+    }
+
     _viewportController.reset();
 
     setState(() {
       _isSideBySide = !_isSideBySide;
+    });
+  }
+
+  void _openCropWorkspace() {
+    if (_isCropping || !widget.controller.session.hasImage) {
+      return;
+    }
+
+    _viewportController.reset();
+
+    setState(() {
+      _isSideBySide = false;
+      _isCropping = true;
+    });
+  }
+
+  void _closeCropWorkspace() {
+    if (!mounted) {
+      return;
+    }
+
+    _viewportController.reset();
+
+    setState(() {
+      _isCropping = false;
     });
   }
 
@@ -70,6 +101,7 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
           _DesktopTopBar(
             controller: controller,
             isSideBySide: _isSideBySide,
+            isCropping: _isCropping,
             onToggleSideBySide: _toggleSideBySide,
           ),
           const Divider(height: 1),
@@ -79,7 +111,10 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
               children: [
                 SizedBox(
                   width: AppDimensions.libraryPanelWidth,
-                  child: _LibraryPanel(controller: controller),
+                  child: IgnorePointer(
+                    ignoring: _isCropping,
+                    child: _LibraryPanel(controller: controller),
+                  ),
                 ),
                 const VerticalDivider(width: 1),
                 Expanded(
@@ -88,7 +123,13 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
                     builder: (context, _) {
                       return ColoredBox(
                         color: AppColors.canvas,
-                        child: _isSideBySide && controller.session.hasImage
+                        child: _isCropping && controller.session.hasImage
+                            ? CropWorkspace(
+                                controller: controller,
+                                onCancel: _closeCropWorkspace,
+                                onDone: _closeCropWorkspace,
+                              )
+                            : _isSideBySide && controller.session.hasImage
                             ? _DesktopComparisonViewport(
                                 controller: controller,
                                 viewportController: _viewportController,
@@ -100,6 +141,7 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
                                     controller.session.sourceImagePath,
                                 adjustments: controller.previewAdjustments,
                                 transform: controller.session.transform,
+                                crop: controller.session.crop,
                                 onImportImage: widget.onImportImage,
                                 isImporting: widget.isImporting,
                                 viewportController: _viewportController,
@@ -108,11 +150,17 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
                     },
                   ),
                 ),
-                const VerticalDivider(width: 1),
-                SizedBox(
-                  width: AppDimensions.adjustmentsPanelWidth,
-                  child: _AdjustmentsPanel(controller: controller),
-                ),
+                if (!_isCropping) ...[
+                  const VerticalDivider(width: 1),
+                  SizedBox(
+                    width: AppDimensions.adjustmentsPanelWidth,
+                    child: _AdjustmentsPanel(
+                      controller: controller,
+                      onOpenCrop: _openCropWorkspace,
+                      isCropping: _isCropping,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -139,6 +187,7 @@ class _DesktopComparisonViewport extends StatelessWidget {
   Widget build(BuildContext context) {
     final sourceImagePath = controller.session.sourceImagePath;
     final transform = controller.session.transform;
+    final crop = controller.session.crop;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -148,6 +197,7 @@ class _DesktopComparisonViewport extends StatelessWidget {
             sourceImagePath: sourceImagePath,
             adjustments: ImageAdjustments.initial,
             transform: transform,
+            crop: crop,
             onImportImage: onImportImage,
             isImporting: isImporting,
             viewportController: viewportController,
@@ -162,6 +212,7 @@ class _DesktopComparisonViewport extends StatelessWidget {
             sourceImagePath: sourceImagePath,
             adjustments: controller.previewAdjustments,
             transform: transform,
+            crop: crop,
             onImportImage: onImportImage,
             isImporting: isImporting,
             viewportController: viewportController,
@@ -177,11 +228,13 @@ class _DesktopTopBar extends StatelessWidget {
   const _DesktopTopBar({
     required this.controller,
     required this.isSideBySide,
+    required this.isCropping,
     required this.onToggleSideBySide,
   });
 
   final EditorController controller;
   final bool isSideBySide;
+  final bool isCropping;
   final VoidCallback onToggleSideBySide;
 
   @override
@@ -189,7 +242,8 @@ class _DesktopTopBar extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        final canToggleSideBySide = isSideBySide || controller.canCompareBefore;
+        final canToggleSideBySide =
+            !isCropping && (isSideBySide || controller.canCompareBefore);
 
         return Container(
           height: AppDimensions.toolbarHeight,
@@ -213,7 +267,7 @@ class _DesktopTopBar extends StatelessWidget {
               ),
               BeforeAfterButton(
                 key: const ValueKey('desktop-before-after'),
-                enabled: controller.canCompareBefore,
+                enabled: !isCropping && controller.canCompareBefore,
                 isShowingBefore: controller.isShowingBefore,
                 onPreviewStart: controller.beginBeforePreview,
                 onPreviewEnd: controller.endBeforePreview,
@@ -449,9 +503,15 @@ class _DesktopHistoryHeader extends StatelessWidget {
 }
 
 class _AdjustmentsPanel extends StatelessWidget {
-  const _AdjustmentsPanel({required this.controller});
+  const _AdjustmentsPanel({
+    required this.controller,
+    required this.onOpenCrop,
+    required this.isCropping,
+  });
 
   final EditorController controller;
+  final VoidCallback onOpenCrop;
+  final bool isCropping;
 
   @override
   Widget build(BuildContext context) {
@@ -512,6 +572,16 @@ class _AdjustmentsPanel extends StatelessWidget {
                   )
                 else ...[
                   const Text('Transform', style: AppTypography.label),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('desktop-open-crop'),
+                      onPressed: isCropping ? null : onOpenCrop,
+                      icon: const Icon(Icons.crop),
+                      label: const Text('Crop & Straighten'),
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.md),
                   RotationControl(
                     transform: session.transform,

@@ -6,9 +6,10 @@ import '../../../../theme/tokens/app_colors.dart';
 import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
+import '../../domain/crop_state.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
-import 'editor_rendered_image.dart';
+import 'editor_crop_preview.dart';
 import 'editor_viewport_controller.dart';
 
 class EditorImageViewport extends StatefulWidget {
@@ -18,6 +19,7 @@ class EditorImageViewport extends StatefulWidget {
     required this.transform,
     required this.onImportImage,
     required this.isImporting,
+    this.crop = CropState.initial,
     this.viewportController,
     this.compactZoomControls = false,
     this.invertDesktopVerticalPan = true,
@@ -31,6 +33,7 @@ class EditorImageViewport extends StatefulWidget {
   final String? sourceImagePath;
   final ImageAdjustments adjustments;
   final ImageTransform transform;
+  final CropState crop;
 
   final Future<void> Function() onImportImage;
   final bool isImporting;
@@ -85,7 +88,8 @@ class _EditorImageViewportState extends State<EditorImageViewport> {
       _attachViewportController(widget.viewportController);
     }
 
-    if (oldWidget.sourceImagePath != widget.sourceImagePath) {
+    if (oldWidget.sourceImagePath != widget.sourceImagePath ||
+        oldWidget.crop != widget.crop) {
       _viewportController.reset();
     }
   }
@@ -122,6 +126,7 @@ class _EditorImageViewportState extends State<EditorImageViewport> {
       sourceImagePath: path,
       adjustments: widget.adjustments,
       transform: widget.transform,
+      crop: widget.crop,
       onImportImage: widget.onImportImage,
       isImporting: widget.isImporting,
       viewportController: _viewportController,
@@ -183,6 +188,7 @@ class _LoadedViewport extends StatefulWidget {
     required this.sourceImagePath,
     required this.adjustments,
     required this.transform,
+    required this.crop,
     required this.onImportImage,
     required this.isImporting,
     required this.viewportController,
@@ -197,6 +203,7 @@ class _LoadedViewport extends StatefulWidget {
   final String sourceImagePath;
   final ImageAdjustments adjustments;
   final ImageTransform transform;
+  final CropState crop;
 
   final Future<void> Function() onImportImage;
   final bool isImporting;
@@ -317,11 +324,11 @@ class _LoadedViewportState extends State<_LoadedViewport> {
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       child: Center(
-                        child: EditorRenderedImage(
+                        child: EditorCropPreview(
                           sourceImagePath: widget.sourceImagePath,
                           adjustments: widget.adjustments,
                           transform: widget.transform,
-                          fit: BoxFit.contain,
+                          crop: widget.crop,
                           filterQuality: FilterQuality.medium,
                           errorBuilder: (context, error, stackTrace) {
                             return _ImageLoadError(

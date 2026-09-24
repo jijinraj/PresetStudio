@@ -57,24 +57,34 @@
   - [x] Fine straighten state
   - [x] Crop scale and normalized image offset
   - [x] History replay / enable-disable support
-- [ ] Add interactive crop viewport
+- [x] Add interactive crop viewport
+- [x] Render committed crop composition in normal desktop/mobile preview
+- [x] Keep committed crop visible in Before/After and side-by-side views
 - [ ] Add free crop
 - [ ] Add resize handles
-- [ ] Add image repositioning inside crop
-- [ ] Add Tilt / Straighten
-- [ ] Keep crop frame stable while straightening
-- [ ] Add crop grid while interacting
-- [ ] Add aspect ratios
-  - [ ] Original
-  - [ ] Free
-  - [ ] 1:1
-  - [ ] 4:5
-  - [ ] 3:4
-  - [ ] 2:3
-  - [ ] 3:2
-  - [ ] 16:9
-  - [ ] 9:16
-- [ ] Group crop gestures into single History transactions
+- [x] Add image repositioning inside crop
+- [x] Add image zoom with desktop wheel and mobile pinch
+- [x] Clamp crop pan so the frame never exposes empty pixels
+- [x] Add Tilt / Straighten
+- [x] Keep crop frame stable while straightening
+  - [x] Guarantee image coverage for portrait/landscape ratio changes
+  - [x] Auto-scale coverage for ordinary rotation + straighten
+  - [x] Use focused desktop crop mode with read-only surrounding UI
+- [x] Add crop grid while interacting
+- [x] Add aspect ratios
+- [x] Swap fixed crop ratios between portrait and landscape orientation
+- [x] Speed up desktop crop panning while preserving inverse vertical motion
+- [x] Remove misaligned ghost background from the crop workspace
+  - [x] Original
+  - [x] Free
+  - [x] 1:1
+  - [x] 4:5
+  - [x] 3:4
+  - [x] 2:3
+  - [x] 3:2
+  - [x] 16:9
+  - [x] 9:16
+- [x] Group crop gestures into single History transactions
 - [ ] Improve crop UI toward Adobe-style workflow
 
 ## Color controls

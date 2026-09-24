@@ -11,10 +11,9 @@ import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
 import 'adjustment_control.dart';
 import 'before_after_button.dart';
+import 'crop_workspace.dart';
 import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
-import 'flip_control.dart';
-import 'rotation_control.dart';
 
 enum _MobileMenuAction { history }
 
@@ -94,6 +93,7 @@ class MobileEditorShell extends StatelessWidget {
               sourceImagePath: controller.session.sourceImagePath,
               adjustments: controller.previewAdjustments,
               transform: controller.session.transform,
+              crop: controller.session.crop,
               onImportImage: onImportImage,
               isImporting: isImporting,
               compactZoomControls: true,
@@ -197,7 +197,7 @@ class _MobileToolBar extends StatelessWidget {
                       enabled: hasImage,
                       onTap: hasImage
                           ? () {
-                              _showCropSheet(context);
+                              _showCropWorkspace(context);
                             }
                           : null,
                     ),
@@ -523,60 +523,30 @@ class _MobileToolBar extends StatelessWidget {
     });
   }
 
-  void _showCropSheet(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) {
-        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+  Future<void> _showCropWorkspace(BuildContext context) async {
+    if (controller.isEditTransactionActive) {
+      controller.endEditTransaction();
+    }
 
-        return SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.sm,
-              AppSpacing.md,
-              AppSpacing.lg + bottomInset,
-            ),
-            child: AnimatedBuilder(
-              animation: controller,
-              builder: (context, _) {
-                final session = controller.session;
-
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Crop & Transform', style: AppTypography.title),
-                    const SizedBox(height: AppSpacing.lg),
-                    RotationControl(
-                      transform: session.transform,
-                      onChanged: controller.updateTransform,
-                      onInteractionStart: controller.beginEditTransaction,
-                      onInteractionEnd: controller.endEditTransaction,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    const Divider(height: 1),
-                    const SizedBox(height: AppSpacing.lg),
-                    FlipControl(
-                      transform: session.transform,
-                      onChanged: controller.updateTransform,
-                    ),
-                  ],
-                );
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (routeContext) {
+          return Scaffold(
+            backgroundColor: AppColors.canvas,
+            body: CropWorkspace(
+              controller: controller,
+              compact: true,
+              onCancel: () {
+                Navigator.of(routeContext).pop();
+              },
+              onDone: () {
+                Navigator.of(routeContext).pop();
               },
             ),
-          ),
-        );
-      },
-    ).whenComplete(() {
-      if (controller.isEditTransactionActive) {
-        controller.endEditTransaction();
-      }
-    });
+          );
+        },
+      ),
+    );
   }
 }
 
