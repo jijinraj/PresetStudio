@@ -53,11 +53,10 @@ vec3 applySaturation(vec3 rgb, float saturation) {
 }
 
 void main() {
+  // FlutterFragCoord() already uses the correct image-filter coordinate
+  // orientation for this runtime effect. Flipping Y again on Impeller/OpenGLES
+  // mirrors the source vertically on Windows.
   vec2 uv = FlutterFragCoord().xy / u_size;
-
-#ifdef IMPELLER_TARGET_OPENGLES
-  uv.y = 1.0 - uv.y;
-#endif
 
   vec4 sampled = texture(u_texture, uv);
 

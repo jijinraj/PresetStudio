@@ -40,8 +40,14 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey('crop-frame')), findsOneWidget);
-    expect(find.byKey(const ValueKey('crop-ratio-free')), findsOneWidget);
+    expect(find.byKey(const ValueKey('crop-ratio-free')), findsNothing);
+    expect(find.byKey(const ValueKey('crop-ratio-original')), findsOneWidget);
     expect(find.byKey(const ValueKey('crop-ratio-4x5')), findsOneWidget);
+
+    final originalChip = tester.widget<ChoiceChip>(
+      find.byKey(const ValueKey('crop-ratio-original')),
+    );
+    expect(originalChip.selected, isTrue);
     expect(
       find.byKey(const ValueKey('crop-swap-ratio-orientation')),
       findsOneWidget,

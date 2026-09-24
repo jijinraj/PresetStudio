@@ -60,7 +60,7 @@
 - [x] Add interactive crop viewport
 - [x] Render committed crop composition in normal desktop/mobile preview
 - [x] Keep committed crop visible in Before/After and side-by-side views
-- [ ] Add free crop
+- [ ] Add free crop (deferred; hidden from the current UI until arbitrary crop geometry is stable)
 - [ ] Add resize handles
 - [x] Add image repositioning inside crop
 - [x] Add image zoom with desktop wheel and mobile pinch

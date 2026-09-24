@@ -36,7 +36,6 @@ class CropWorkspace extends StatefulWidget {
 
 class _CropWorkspaceState extends State<CropWorkspace> {
   static const List<_CropRatioOption> _ratioOptions = [
-    _CropRatioOption(id: 'free', label: 'Free'),
     _CropRatioOption(id: 'original', label: 'Original'),
     _CropRatioOption(id: '1x1', label: '1:1', ratio: 1),
     _CropRatioOption(id: '4x5', label: '4:5', ratio: 4 / 5),
@@ -54,7 +53,7 @@ class _CropWorkspaceState extends State<CropWorkspace> {
   ImageStreamListener? _imageStreamListener;
 
   double? _originalAspectRatio;
-  String _selectedRatioId = 'free';
+  String _selectedRatioId = 'original';
 
   bool _ownsTransaction = false;
   bool _finalized = false;
@@ -131,8 +130,7 @@ class _CropWorkspaceState extends State<CropWorkspace> {
         setState(() {
           _originalAspectRatio = ratio;
 
-          if (_selectedRatioId == 'free' &&
-              _initialCrop.aspectRatio != null &&
+          if (_initialCrop.aspectRatio == null ||
               _isClose(_initialCrop.aspectRatio!, ratio)) {
             _selectedRatioId = 'original';
           }
@@ -228,9 +226,7 @@ class _CropWorkspaceState extends State<CropWorkspace> {
 
     CropState next;
 
-    if (option.id == 'free') {
-      next = current.copyWith(clearAspectRatio: true);
-    } else if (option.id == 'original') {
+    if (option.id == 'original') {
       final originalRatio = _originalAspectRatio;
 
       if (originalRatio == null) {
@@ -309,7 +305,7 @@ class _CropWorkspaceState extends State<CropWorkspace> {
     final ratio = crop.aspectRatio;
 
     if (ratio == null) {
-      return 'free';
+      return 'original';
     }
 
     // Prefer an exact listed orientation first.
@@ -330,14 +326,14 @@ class _CropWorkspaceState extends State<CropWorkspace> {
       }
     }
 
-    return 'free';
+    return 'original';
   }
 
   String _selectedRatioLabel() {
     final cropRatio = controller.session.crop.aspectRatio;
 
     if (cropRatio == null) {
-      return 'Free';
+      return 'Original';
     }
 
     for (final option in _ratioOptions) {
