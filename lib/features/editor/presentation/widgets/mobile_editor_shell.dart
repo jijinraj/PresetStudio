@@ -10,6 +10,7 @@ import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
 import 'adjustment_control.dart';
+import 'before_after_button.dart';
 import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
 import 'flip_control.dart';
@@ -91,7 +92,7 @@ class MobileEditorShell extends StatelessWidget {
             color: AppColors.canvas,
             child: EditorImageViewport(
               sourceImagePath: controller.session.sourceImagePath,
-              adjustments: controller.session.adjustments,
+              adjustments: controller.previewAdjustments,
               transform: controller.session.transform,
               onImportImage: onImportImage,
               isImporting: isImporting,
@@ -314,9 +315,39 @@ class _MobileToolBar extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(height: AppSpacing.md),
-                                      const Text(
-                                        'Edit',
-                                        style: AppTypography.title,
+                                      Row(
+                                        children: [
+                                          const Expanded(
+                                            child: Text(
+                                              'Edit',
+                                              style: AppTypography.title,
+                                            ),
+                                          ),
+                                          TextButton(
+                                            key: const ValueKey(
+                                              'mobile-reset-adjustments',
+                                            ),
+                                            onPressed:
+                                                controller.canResetAdjustments
+                                                ? controller.resetAdjustments
+                                                : null,
+                                            child: const Text('Reset'),
+                                          ),
+                                          BeforeAfterButton(
+                                            key: const ValueKey(
+                                              'mobile-before-after',
+                                            ),
+                                            enabled:
+                                                controller.canCompareBefore,
+                                            isShowingBefore:
+                                                controller.isShowingBefore,
+                                            onPreviewStart:
+                                                controller.beginBeforePreview,
+                                            onPreviewEnd:
+                                                controller.endBeforePreview,
+                                            compact: true,
+                                          ),
+                                        ],
                                       ),
                                       const SizedBox(height: AppSpacing.lg),
                                       const Text(
@@ -413,6 +444,10 @@ class _MobileToolBar extends StatelessWidget {
                             controller.updateAdjustment(type, nextValue);
                           },
                           onClose: leaveFocusedMode,
+                          canCompareBefore: controller.canCompareBefore,
+                          isShowingBefore: controller.isShowingBefore,
+                          onBeforeStart: controller.beginBeforePreview,
+                          onBeforeEnd: controller.endBeforePreview,
                         );
                       },
                     ),
@@ -492,12 +527,20 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
     required this.value,
     required this.onChanged,
     required this.onClose,
+    required this.canCompareBefore,
+    required this.isShowingBefore,
+    required this.onBeforeStart,
+    required this.onBeforeEnd,
   });
 
   final AdjustmentDefinition definition;
   final double value;
   final ValueChanged<double> onChanged;
   final VoidCallback onClose;
+  final bool canCompareBefore;
+  final bool isShowingBefore;
+  final VoidCallback onBeforeStart;
+  final VoidCallback onBeforeEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -531,7 +574,17 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
                 height: 32,
                 child: Row(
                   children: [
-                    const SizedBox(width: 40),
+                    SizedBox(
+                      width: 40,
+                      child: BeforeAfterButton(
+                        key: const ValueKey('mobile-focused-before-after'),
+                        enabled: canCompareBefore,
+                        isShowingBefore: isShowingBefore,
+                        onPreviewStart: onBeforeStart,
+                        onPreviewEnd: onBeforeEnd,
+                        compact: true,
+                      ),
+                    ),
                     Expanded(
                       child: Text(
                         definition.label,

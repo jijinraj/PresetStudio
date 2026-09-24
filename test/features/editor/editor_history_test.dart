@@ -206,6 +206,47 @@ void main() {
       expect(controller.session.isDirty, isFalse);
     });
 
+    test('reset adjustments creates one undoable history entry', () {
+      final controller = EditorController();
+
+      controller.setSourceImage('photo.jpg');
+      controller.updateAdjustment(AdjustmentType.exposure, 1.2);
+      controller.updateAdjustment(AdjustmentType.contrast, 25);
+      controller.updateAdjustment(AdjustmentType.saturation, -18);
+
+      final historyLengthBeforeReset = controller.history.length;
+
+      controller.resetAdjustments();
+
+      expect(controller.session.adjustments.isDefault, isTrue);
+      expect(controller.history, hasLength(historyLengthBeforeReset + 1));
+      expect(controller.history.last.label, 'Reset Adjustments');
+      expect(controller.history.last.action, EditorHistoryAction.reset);
+
+      controller.undo();
+
+      expect(controller.session.adjustments.exposure, 1.2);
+      expect(controller.session.adjustments.contrast, 25);
+      expect(controller.session.adjustments.saturation, -18);
+
+      controller.redo();
+
+      expect(controller.session.adjustments.isDefault, isTrue);
+    });
+
+    test('reset at default state does not create history', () {
+      final controller = EditorController();
+
+      controller.setSourceImage('photo.jpg');
+
+      final historyLength = controller.history.length;
+
+      controller.resetAdjustments();
+
+      expect(controller.history, hasLength(historyLength));
+      expect(controller.historyIndex, 0);
+    });
+
     test('ninety degree rotation gets descriptive history label', () {
       final controller = EditorController();
 
@@ -215,13 +256,13 @@ void main() {
         controller.session.transform.rotateClockwise(),
       );
 
-      expect(controller.history.last.label, 'Rotate Right 90°');
+      expect(controller.history.last.label, 'Rotate Right 90Â°');
 
       controller.updateTransform(
         controller.session.transform.rotateCounterClockwise(),
       );
 
-      expect(controller.history.last.label, 'Rotate Left 90°');
+      expect(controller.history.last.label, 'Rotate Left 90Â°');
     });
   });
 }

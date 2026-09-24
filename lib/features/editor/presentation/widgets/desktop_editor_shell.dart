@@ -9,6 +9,7 @@ import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
 import 'adjustment_control.dart';
+import 'before_after_button.dart';
 import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
 import 'flip_control.dart';
@@ -50,7 +51,7 @@ class DesktopEditorShell extends StatelessWidget {
                         color: AppColors.canvas,
                         child: EditorImageViewport(
                           sourceImagePath: controller.session.sourceImagePath,
-                          adjustments: controller.session.adjustments,
+                          adjustments: controller.previewAdjustments,
                           transform: controller.session.transform,
                           onImportImage: onImportImage,
                           isImporting: isImporting,
@@ -102,6 +103,13 @@ class _DesktopTopBar extends StatelessWidget {
                 tooltip: 'Redo (Ctrl+Shift+Z)',
                 onPressed: controller.canRedo ? controller.redo : null,
                 icon: const Icon(Icons.redo),
+              ),
+              BeforeAfterButton(
+                key: const ValueKey('desktop-before-after'),
+                enabled: controller.canCompareBefore,
+                isShowingBefore: controller.isShowingBefore,
+                onPreviewStart: controller.beginBeforePreview,
+                onPreviewEnd: controller.endBeforePreview,
               ),
               const Spacer(),
               const FilledButton(onPressed: null, child: Text('Export')),
@@ -178,7 +186,20 @@ class _AdjustmentsPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Adjustments', style: AppTypography.title),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text('Adjustments', style: AppTypography.title),
+                    ),
+                    TextButton(
+                      key: const ValueKey('desktop-reset-adjustments'),
+                      onPressed: controller.canResetAdjustments
+                          ? controller.resetAdjustments
+                          : null,
+                      child: const Text('Reset'),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: AppSpacing.lg),
                 if (!hasImage)
                   const Text(

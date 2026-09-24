@@ -182,6 +182,80 @@ void main() {
       expect(controller.session.isDirty, isFalse);
     });
 
+    test(
+      'before preview uses default adjustments without changing session',
+      () {
+        final controller = EditorController();
+
+        controller.setSourceImage('photo.jpg');
+        controller.updateAdjustment(AdjustmentType.exposure, 1.5);
+
+        final historyLength = controller.history.length;
+        final historyIndex = controller.historyIndex;
+        final dirtyState = controller.session.isDirty;
+
+        expect(controller.canCompareBefore, isTrue);
+        expect(controller.previewAdjustments.exposure, 1.5);
+
+        controller.beginBeforePreview();
+
+        expect(controller.isShowingBefore, isTrue);
+        expect(controller.previewAdjustments.isDefault, isTrue);
+        expect(controller.session.adjustments.exposure, 1.5);
+        expect(controller.session.isDirty, dirtyState);
+        expect(controller.history.length, historyLength);
+        expect(controller.historyIndex, historyIndex);
+
+        controller.endBeforePreview();
+
+        expect(controller.isShowingBefore, isFalse);
+        expect(controller.previewAdjustments.exposure, 1.5);
+        expect(controller.history.length, historyLength);
+        expect(controller.historyIndex, historyIndex);
+      },
+    );
+
+    test('before preview is unavailable when adjustments are default', () {
+      final controller = EditorController();
+
+      controller.setSourceImage('photo.jpg');
+
+      expect(controller.canCompareBefore, isFalse);
+
+      controller.beginBeforePreview();
+
+      expect(controller.isShowingBefore, isFalse);
+      expect(controller.previewAdjustments.isDefault, isTrue);
+    });
+
+    test('loading another image ends before preview', () {
+      final controller = EditorController();
+
+      controller.setSourceImage('first.jpg');
+      controller.updateAdjustment(AdjustmentType.exposure, 1);
+      controller.beginBeforePreview();
+
+      expect(controller.isShowingBefore, isTrue);
+
+      controller.setSourceImage('second.jpg');
+
+      expect(controller.isShowingBefore, isFalse);
+      expect(controller.previewAdjustments.isDefault, isTrue);
+    });
+
+    test('clearing the image ends before preview', () {
+      final controller = EditorController();
+
+      controller.setSourceImage('photo.jpg');
+      controller.updateAdjustment(AdjustmentType.exposure, 1);
+      controller.beginBeforePreview();
+
+      controller.clearSourceImage();
+
+      expect(controller.isShowingBefore, isFalse);
+      expect(controller.session.hasImage, isFalse);
+    });
+
     test('mark saved clears dirty state', () {
       final controller = EditorController();
 

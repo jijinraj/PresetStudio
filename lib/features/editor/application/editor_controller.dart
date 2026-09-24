@@ -39,6 +39,20 @@ class EditorController extends ChangeNotifier {
   String? _transactionLabel;
   EditorHistoryAction? _transactionAction;
 
+  bool _isShowingBefore = false;
+
+  bool get isShowingBefore => _isShowingBefore;
+
+  bool get canCompareBefore =>
+      _session.hasImage && !_session.adjustments.isDefault;
+
+  bool get canResetAdjustments =>
+      _session.hasImage &&
+      (!_session.adjustments.isDefault || _session.activePresetId != null);
+
+  ImageAdjustments get previewAdjustments =>
+      _isShowingBefore ? ImageAdjustments.initial : _session.adjustments;
+
   EditorSession get session => _session;
 
   List<EditorHistoryEntry> get history => List.unmodifiable(_history);
@@ -87,6 +101,7 @@ class EditorController extends ChangeNotifier {
     _historyIndex = 0;
 
     _clearTransaction();
+    _isShowingBefore = false;
 
     notifyListeners();
   }
@@ -99,6 +114,7 @@ class EditorController extends ChangeNotifier {
     _historyIndex = -1;
 
     _clearTransaction();
+    _isShowingBefore = false;
 
     notifyListeners();
   }
@@ -162,7 +178,28 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void beginBeforePreview() {
+    if (!canCompareBefore || _isShowingBefore) {
+      return;
+    }
+
+    _isShowingBefore = true;
+
+    notifyListeners();
+  }
+
+  void endBeforePreview() {
+    if (!_isShowingBefore) {
+      return;
+    }
+
+    _isShowingBefore = false;
+
+    notifyListeners();
+  }
+
   void resetAdjustments() {
+    _isShowingBefore = false;
     _applyEdit(
       _session.copyWith(
         adjustments: ImageAdjustments.initial,
@@ -363,16 +400,16 @@ class EditorController extends ChangeNotifier {
       final delta = _normalizeRotationDelta(nextRotation - previousRotation);
 
       if (delta == 90.0) {
-        return 'Rotate Right 90°';
+        return 'Rotate Right 90Â°';
       }
 
       if (delta == -90.0) {
-        return 'Rotate Left 90°';
+        return 'Rotate Left 90Â°';
       }
 
       final value = _formatRotation(nextRotation);
 
-      return 'Rotation $value°';
+      return 'Rotation $valueÂ°';
     }
 
     if (previous.flipHorizontal != next.flipHorizontal &&
