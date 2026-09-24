@@ -18,6 +18,7 @@ class EditorController extends ChangeNotifier {
         EditorHistoryEntry(
           label: 'Original',
           action: EditorHistoryAction.original,
+          beforeSession: session,
           session: session,
         ),
       );
@@ -59,6 +60,9 @@ class EditorController extends ChangeNotifier {
 
   int get historyIndex => _historyIndex;
 
+  int get disabledHistoryCount =>
+      _history.skip(1).where((entry) => !entry.isEnabled).length;
+
   EditorHistoryEntry? get currentHistoryEntry {
     if (_historyIndex < 0 || _historyIndex >= _history.length) {
       return null;
@@ -94,6 +98,7 @@ class EditorController extends ChangeNotifier {
         EditorHistoryEntry(
           label: 'Original',
           action: EditorHistoryAction.original,
+          beforeSession: _session,
           session: _session,
         ),
       );
@@ -241,7 +246,12 @@ class EditorController extends ChangeNotifier {
       _truncateFutureHistory();
 
       _appendHistory(
-        EditorHistoryEntry(label: label, action: action, session: _session),
+        EditorHistoryEntry(
+          label: label,
+          action: action,
+          beforeSession: start,
+          session: _session,
+        ),
       );
     }
 
@@ -255,7 +265,7 @@ class EditorController extends ChangeNotifier {
 
     _historyIndex -= 1;
 
-    _restoreHistoryEntry(_history[_historyIndex]);
+    _rebuildSessionThroughHistoryIndex();
 
     notifyListeners();
   }
@@ -267,7 +277,7 @@ class EditorController extends ChangeNotifier {
 
     _historyIndex += 1;
 
-    _restoreHistoryEntry(_history[_historyIndex]);
+    _rebuildSessionThroughHistoryIndex();
 
     notifyListeners();
   }
@@ -283,7 +293,77 @@ class EditorController extends ChangeNotifier {
 
     _historyIndex = index;
 
-    _restoreHistoryEntry(_history[_historyIndex]);
+    _rebuildSessionThroughHistoryIndex();
+
+    notifyListeners();
+  }
+
+  void setHistoryEntryEnabled(int index, bool enabled) {
+    if (isEditTransactionActive || index <= 0 || index >= _history.length) {
+      return;
+    }
+
+    final entry = _history[index];
+
+    if (entry.action == EditorHistoryAction.original ||
+        entry.action == EditorHistoryAction.checkpoint ||
+        entry.isEnabled == enabled) {
+      return;
+    }
+
+    _history[index] = entry.copyWith(isEnabled: enabled);
+
+    if (index <= _historyIndex) {
+      _rebuildSessionThroughHistoryIndex();
+    }
+
+    notifyListeners();
+  }
+
+  void enableAllHistoryEntries() {
+    if (isEditTransactionActive || disabledHistoryCount == 0) {
+      return;
+    }
+
+    var changed = false;
+
+    for (var index = 1; index < _history.length; index += 1) {
+      final entry = _history[index];
+
+      if (entry.isEnabled) {
+        continue;
+      }
+
+      _history[index] = entry.copyWith(isEnabled: true);
+      changed = true;
+    }
+
+    if (!changed) {
+      return;
+    }
+
+    _rebuildSessionThroughHistoryIndex();
+
+    notifyListeners();
+  }
+
+  void clearHistoryKeepingCurrent() {
+    if (isEditTransactionActive || !_session.hasImage) {
+      return;
+    }
+
+    _history
+      ..clear()
+      ..add(
+        EditorHistoryEntry(
+          label: 'Current state',
+          action: EditorHistoryAction.checkpoint,
+          beforeSession: _session,
+          session: _session,
+        ),
+      );
+
+    _historyIndex = 0;
 
     notifyListeners();
   }
@@ -305,6 +385,8 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
+    final before = _session;
+
     _session = _withDerivedDirtyState(candidate);
 
     if (_transactionStart != null) {
@@ -319,7 +401,12 @@ class EditorController extends ChangeNotifier {
     _truncateFutureHistory();
 
     _appendHistory(
-      EditorHistoryEntry(label: label, action: action, session: _session),
+      EditorHistoryEntry(
+        label: label,
+        action: action,
+        beforeSession: before,
+        session: _session,
+      ),
     );
 
     notifyListeners();
@@ -353,18 +440,132 @@ class EditorController extends ChangeNotifier {
     _history.removeRange(_historyIndex + 1, _history.length);
   }
 
-  void _restoreHistoryEntry(EditorHistoryEntry entry) {
-    final snapshot = entry.session;
+  void _rebuildSessionThroughHistoryIndex() {
+    if (_historyIndex < 0 || _history.isEmpty) {
+      return;
+    }
 
-    final restored = _session.copyWith(
-      adjustments: snapshot.adjustments,
-      transform: snapshot.transform,
-      crop: snapshot.crop,
-      activePresetId: snapshot.activePresetId,
-      clearActivePreset: snapshot.activePresetId == null,
+    final baseline = _history.first.session;
+
+    var rebuilt = _session.copyWith(
+      adjustments: baseline.adjustments,
+      transform: baseline.transform,
+      crop: baseline.crop,
+      activePresetId: baseline.activePresetId,
+      clearActivePreset: baseline.activePresetId == null,
     );
 
-    _session = _withDerivedDirtyState(restored);
+    for (var index = 1; index <= _historyIndex; index += 1) {
+      final entry = _history[index];
+
+      if (!entry.isEnabled) {
+        continue;
+      }
+
+      rebuilt = _applyHistoryOperation(rebuilt, entry);
+    }
+
+    _session = _withDerivedDirtyState(rebuilt);
+  }
+
+  EditorSession _applyHistoryOperation(
+    EditorSession current,
+    EditorHistoryEntry entry,
+  ) {
+    final before = entry.beforeSession;
+    final after = entry.session;
+
+    var adjustments = current.adjustments;
+
+    if (before.adjustments.exposure != after.adjustments.exposure) {
+      adjustments = adjustments.copyWith(exposure: after.adjustments.exposure);
+    }
+
+    if (before.adjustments.contrast != after.adjustments.contrast) {
+      adjustments = adjustments.copyWith(contrast: after.adjustments.contrast);
+    }
+
+    if (before.adjustments.highlights != after.adjustments.highlights) {
+      adjustments = adjustments.copyWith(
+        highlights: after.adjustments.highlights,
+      );
+    }
+
+    if (before.adjustments.shadows != after.adjustments.shadows) {
+      adjustments = adjustments.copyWith(shadows: after.adjustments.shadows);
+    }
+
+    if (before.adjustments.whites != after.adjustments.whites) {
+      adjustments = adjustments.copyWith(whites: after.adjustments.whites);
+    }
+
+    if (before.adjustments.blacks != after.adjustments.blacks) {
+      adjustments = adjustments.copyWith(blacks: after.adjustments.blacks);
+    }
+
+    if (before.adjustments.temperature != after.adjustments.temperature) {
+      adjustments = adjustments.copyWith(
+        temperature: after.adjustments.temperature,
+      );
+    }
+
+    if (before.adjustments.tint != after.adjustments.tint) {
+      adjustments = adjustments.copyWith(tint: after.adjustments.tint);
+    }
+
+    if (before.adjustments.vibrance != after.adjustments.vibrance) {
+      adjustments = adjustments.copyWith(vibrance: after.adjustments.vibrance);
+    }
+
+    if (before.adjustments.saturation != after.adjustments.saturation) {
+      adjustments = adjustments.copyWith(
+        saturation: after.adjustments.saturation,
+      );
+    }
+
+    var transform = current.transform;
+
+    final beforeRotation = before.transform.normalizedRotationDegrees;
+    final afterRotation = after.transform.normalizedRotationDegrees;
+
+    if (beforeRotation != afterRotation) {
+      final delta = _normalizeRotationDelta(afterRotation - beforeRotation);
+      transform = transform.rotateBy(delta);
+    }
+
+    if (before.transform.flipHorizontal != after.transform.flipHorizontal) {
+      transform = transform.toggleFlipHorizontal();
+    }
+
+    if (before.transform.flipVertical != after.transform.flipVertical) {
+      transform = transform.toggleFlipVertical();
+    }
+
+    var crop = current.crop;
+
+    if (before.crop.aspectRatio != after.crop.aspectRatio) {
+      crop = after.crop;
+    }
+
+    var activePresetId = current.activePresetId;
+    var clearActivePreset = false;
+
+    if (before.activePresetId != after.activePresetId) {
+      if (after.activePresetId == null) {
+        clearActivePreset = true;
+        activePresetId = null;
+      } else {
+        activePresetId = after.activePresetId;
+      }
+    }
+
+    return current.copyWith(
+      adjustments: adjustments,
+      transform: transform,
+      crop: crop,
+      activePresetId: activePresetId,
+      clearActivePreset: clearActivePreset,
+    );
   }
 
   EditorSession _withDerivedDirtyState(EditorSession candidate) {
@@ -400,16 +601,16 @@ class EditorController extends ChangeNotifier {
       final delta = _normalizeRotationDelta(nextRotation - previousRotation);
 
       if (delta == 90.0) {
-        return 'Rotate Right 90Â°';
+        return 'Rotate Right 90°';
       }
 
       if (delta == -90.0) {
-        return 'Rotate Left 90Â°';
+        return 'Rotate Left 90°';
       }
 
       final value = _formatRotation(nextRotation);
 
-      return 'Rotation $valueÂ°';
+      return 'Rotation $value°';
     }
 
     if (previous.flipHorizontal != next.flipHorizontal &&

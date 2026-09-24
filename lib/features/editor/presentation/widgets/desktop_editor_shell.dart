@@ -17,6 +17,8 @@ import 'editor_viewport_controller.dart';
 import 'flip_control.dart';
 import 'rotation_control.dart';
 
+enum _DesktopHistoryMenuAction { enableAll, clearHistory }
+
 class DesktopEditorShell extends StatefulWidget {
   const DesktopEditorShell({
     required this.controller,
@@ -240,35 +242,208 @@ class _DesktopTopBar extends StatelessWidget {
   }
 }
 
-class _LibraryPanel extends StatelessWidget {
+class _LibraryPanel extends StatefulWidget {
   const _LibraryPanel({required this.controller});
 
   final EditorController controller;
+
+  @override
+  State<_LibraryPanel> createState() => _LibraryPanelState();
+}
+
+class _LibraryPanelState extends State<_LibraryPanel> {
+  bool _historyExpanded = true;
+
+  EditorController get controller => widget.controller;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.surface,
       padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Library', style: AppTypography.title),
-          const SizedBox(height: AppSpacing.lg),
-          const Text('Presets', style: AppTypography.label),
-          const SizedBox(height: AppSpacing.sm),
-          const Text(
-            'Your preset library will appear here.',
-            style: AppTypography.bodyMuted,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          const Divider(height: 1),
-          const SizedBox(height: AppSpacing.lg),
-          const Text('History', style: AppTypography.label),
-          const SizedBox(height: AppSpacing.sm),
-          Expanded(child: EditorHistoryList(controller: controller)),
-        ],
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          final editCount = controller.history.isEmpty
+              ? 0
+              : controller.history.length - 1;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Library', style: AppTypography.title),
+              const SizedBox(height: AppSpacing.lg),
+              const Text('Presets', style: AppTypography.label),
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'Your preset library will appear here.',
+                style: AppTypography.bodyMuted,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              const Divider(height: 1),
+              const SizedBox(height: AppSpacing.md),
+              _DesktopHistoryHeader(
+                isExpanded: _historyExpanded,
+                editCount: editCount,
+                disabledCount: controller.disabledHistoryCount,
+                canClearHistory: editCount > 0,
+                onToggleExpanded: () {
+                  setState(() {
+                    _historyExpanded = !_historyExpanded;
+                  });
+                },
+                onMenuAction: _handleHistoryMenuAction,
+              ),
+              if (_historyExpanded) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Expanded(
+                  child: EditorHistoryList(
+                    controller: controller,
+                    allowEditToggles: true,
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
       ),
+    );
+  }
+
+  Future<void> _handleHistoryMenuAction(
+    _DesktopHistoryMenuAction action,
+  ) async {
+    switch (action) {
+      case _DesktopHistoryMenuAction.enableAll:
+        controller.enableAllHistoryEntries();
+
+      case _DesktopHistoryMenuAction.clearHistory:
+        final shouldClear = await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Clear history?'),
+              content: const Text(
+                'The current image will stay exactly as it is, but all '
+                'previous undo and redo steps will be removed.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  key: const ValueKey('desktop-history-clear-confirm'),
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text('Clear history'),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (shouldClear == true && mounted) {
+          controller.clearHistoryKeepingCurrent();
+        }
+    }
+  }
+}
+
+class _DesktopHistoryHeader extends StatelessWidget {
+  const _DesktopHistoryHeader({
+    required this.isExpanded,
+    required this.editCount,
+    required this.disabledCount,
+    required this.canClearHistory,
+    required this.onToggleExpanded,
+    required this.onMenuAction,
+  });
+
+  final bool isExpanded;
+  final int editCount;
+  final int disabledCount;
+  final bool canClearHistory;
+  final VoidCallback onToggleExpanded;
+  final ValueChanged<_DesktopHistoryMenuAction> onMenuAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            key: const ValueKey('desktop-history-toggle'),
+            borderRadius: BorderRadius.circular(4),
+            onTap: onToggleExpanded,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+              child: Row(
+                children: [
+                  Icon(
+                    isExpanded
+                        ? Icons.keyboard_arrow_down
+                        : Icons.keyboard_arrow_right,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: AppSpacing.xxs),
+                  const Expanded(
+                    child: Text(
+                      'History',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.label,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xxs),
+                  Text('$editCount', style: AppTypography.bodyMuted),
+                  if (disabledCount > 0) ...[
+                    const SizedBox(width: AppSpacing.xxs),
+                    const Icon(
+                      Icons.visibility_off_outlined,
+                      size: 12,
+                      color: AppColors.textDisabled,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 28,
+          height: 28,
+          child: PopupMenuButton<_DesktopHistoryMenuAction>(
+            key: const ValueKey('desktop-history-menu'),
+            tooltip: 'History options',
+            iconSize: 16,
+            padding: EdgeInsets.zero,
+            splashRadius: 16,
+            onSelected: onMenuAction,
+            itemBuilder: (context) {
+              return [
+                PopupMenuItem(
+                  key: const ValueKey('history-menu-enable-all'),
+                  value: _DesktopHistoryMenuAction.enableAll,
+                  enabled: disabledCount > 0,
+                  child: const Text('Enable all edits'),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  key: const ValueKey('history-menu-clear'),
+                  value: _DesktopHistoryMenuAction.clearHistory,
+                  enabled: canClearHistory,
+                  child: const Text('Clear history…'),
+                ),
+              ];
+            },
+          ),
+        ),
+      ],
     );
   }
 }

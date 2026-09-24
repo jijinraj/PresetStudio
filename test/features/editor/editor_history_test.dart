@@ -256,13 +256,13 @@ void main() {
         controller.session.transform.rotateClockwise(),
       );
 
-      expect(controller.history.last.label, 'Rotate Right 90Â°');
+      expect(controller.history.last.label, 'Rotate Right 90°');
 
       controller.updateTransform(
         controller.session.transform.rotateCounterClockwise(),
       );
 
-      expect(controller.history.last.label, 'Rotate Left 90Â°');
+      expect(controller.history.last.label, 'Rotate Left 90°');
     });
   });
 }

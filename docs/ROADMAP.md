@@ -36,15 +36,18 @@
 
 ## History v2
 
-- [ ] Make desktop History collapsible
+- [x] Make desktop History collapsible
 - [x] Coalesce mouse-wheel adjustment changes into one meaningful history entry
 - [x] Coalesce continuous keyboard adjustment changes
 - [x] Keep slider drags grouped as one history entry
 - [x] Suppress no-op transactions that finish at their starting state
-- [ ] Add semantic/logical history groups for compound editor actions
-- [ ] Add Hide / Show hidden history entries
-- [ ] Add safe History cleanup actions
-- [ ] Design replay/rebase semantics before allowing arbitrary removal of past edits
+- [x] Store replayable before/after state for history operations
+- [x] Add non-destructive enable / disable toggles for individual edits
+- [x] Rebuild the current image from enabled history operations
+- [x] Keep Undo / Redo chronological while edits are disabled
+- [x] Add Enable all edits and safe Clear history actions
+- [ ] Add semantic/logical history groups for future compound actions
+- [ ] Design permanent delete/rebase semantics separately from enable/disable
 
 ## Crop & geometry
 
