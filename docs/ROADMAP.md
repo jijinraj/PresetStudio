@@ -32,7 +32,7 @@
 - [x] Keep desktop hold Before / After in toolbar
 - [x] Add desktop side-by-side Before / After
 - [x] Synchronize zoom / pan between Before and After
-- [ ] History v2
+- [x] History v2
 
 ## History v2
 
@@ -46,8 +46,8 @@
 - [x] Rebuild the current image from enabled history operations
 - [x] Keep Undo / Redo chronological while edits are disabled
 - [x] Add Enable all edits and safe Clear history actions
-- [ ] Add semantic/logical history groups for future compound actions
-- [ ] Design permanent delete/rebase semantics separately from enable/disable
+- [x] Add semantic/logical history groups for future compound actions
+- [ ] Later: design permanent delete/rebase semantics separately from enable/disable
 
 ## Crop & geometry
 

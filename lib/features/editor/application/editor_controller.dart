@@ -39,6 +39,7 @@ class EditorController extends ChangeNotifier {
   EditorSession? _transactionStart;
   String? _transactionLabel;
   EditorHistoryAction? _transactionAction;
+  bool _transactionDescriptorLocked = false;
 
   bool _isShowingBefore = false;
 
@@ -216,13 +217,46 @@ class EditorController extends ChangeNotifier {
   }
 
   void beginEditTransaction() {
-    if (_transactionStart != null) {
+    _beginEditTransaction();
+  }
+
+  /// Starts one logical History operation that may contain several internal
+  /// editor-state updates.
+  ///
+  /// Child calls such as [updateCrop], [updateTransform], or
+  /// [updateAdjustment] can still update the live preview, but they cannot
+  /// replace this transaction's semantic History label/action.
+  void beginSemanticEditTransaction({
+    required String label,
+    required EditorHistoryAction action,
+  }) {
+    _beginEditTransaction(label: label, action: action, lockDescriptor: true);
+  }
+
+  /// Updates the final label for an active semantic transaction.
+  ///
+  /// This is intended for interactions whose useful label is only known when
+  /// the gesture finishes, for example `Straighten +1.4°`.
+  void updateSemanticEditTransactionLabel(String label) {
+    if (_transactionStart == null || !_transactionDescriptorLocked) {
       return;
     }
 
-    _transactionStart = _session;
-    _transactionLabel = null;
-    _transactionAction = null;
+    _transactionLabel = label;
+  }
+
+  /// Cancels the active interaction and restores the exact state from before
+  /// it began without creating a History entry.
+  void cancelEditTransaction() {
+    final start = _transactionStart;
+
+    if (start == null) {
+      return;
+    }
+
+    _session = start;
+
+    _clearTransaction();
 
     notifyListeners();
   }
@@ -376,6 +410,23 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _beginEditTransaction({
+    String? label,
+    EditorHistoryAction? action,
+    bool lockDescriptor = false,
+  }) {
+    if (_transactionStart != null) {
+      return;
+    }
+
+    _transactionStart = _session;
+    _transactionLabel = label;
+    _transactionAction = action;
+    _transactionDescriptorLocked = lockDescriptor;
+
+    notifyListeners();
+  }
+
   void _applyEdit(
     EditorSession candidate, {
     required String label,
@@ -390,8 +441,10 @@ class EditorController extends ChangeNotifier {
     _session = _withDerivedDirtyState(candidate);
 
     if (_transactionStart != null) {
-      _transactionLabel = label;
-      _transactionAction = action;
+      if (!_transactionDescriptorLocked) {
+        _transactionLabel = label;
+        _transactionAction = action;
+      }
 
       notifyListeners();
 
@@ -578,6 +631,7 @@ class EditorController extends ChangeNotifier {
     _transactionStart = null;
     _transactionLabel = null;
     _transactionAction = null;
+    _transactionDescriptorLocked = false;
   }
 
   String _adjustmentHistoryLabel(AdjustmentType type, double value) {
