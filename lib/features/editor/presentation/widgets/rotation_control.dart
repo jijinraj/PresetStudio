@@ -8,12 +8,18 @@ class RotationControl extends StatelessWidget {
   const RotationControl({
     required this.transform,
     required this.onChanged,
+    this.onInteractionStart,
+    this.onInteractionEnd,
     this.enabled = true,
     super.key,
   });
 
   final ImageTransform transform;
   final ValueChanged<ImageTransform> onChanged;
+
+  final VoidCallback? onInteractionStart;
+  final VoidCallback? onInteractionEnd;
+
   final bool enabled;
 
   @override
@@ -36,6 +42,8 @@ class RotationControl extends StatelessWidget {
           onChanged: (value) {
             onChanged(transform.copyWith(rotationDegrees: value));
           },
+          onInteractionStart: onInteractionStart,
+          onInteractionEnd: onInteractionEnd,
           enabled: enabled,
         ),
         const SizedBox(height: AppSpacing.sm),

@@ -124,12 +124,16 @@ void main() {
       expect(controller.session.isDirty, isTrue);
     });
 
-    test('reset adjustments restores defaults', () {
+    test('reset adjustments restores defaults and saved dirty state', () {
       final controller = EditorController();
 
-      controller.updateAdjustment(AdjustmentType.exposure, 2);
+      controller.setSourceImage('photo.jpg');
 
-      controller.updateAdjustment(AdjustmentType.saturation, 40);
+      controller.updateAdjustment(AdjustmentType.exposure, 1.5);
+
+      expect(controller.session.adjustments.exposure, 1.5);
+
+      expect(controller.session.isDirty, isTrue);
 
       controller.resetAdjustments();
 
@@ -137,7 +141,7 @@ void main() {
 
       expect(controller.session.activePresetId, isNull);
 
-      expect(controller.session.isDirty, isTrue);
+      expect(controller.session.isDirty, isFalse);
     });
 
     test('clear source image resets the session', () {

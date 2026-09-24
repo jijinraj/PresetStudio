@@ -9,6 +9,7 @@ import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
 import 'adjustment_control.dart';
+import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
 import 'flip_control.dart';
 import 'rotation_control.dart';
@@ -30,15 +31,15 @@ class DesktopEditorShell extends StatelessWidget {
     return Scaffold(
       body: Column(
         children: [
-          const _DesktopTopBar(),
+          _DesktopTopBar(controller: controller),
           const Divider(height: 1),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(
+                SizedBox(
                   width: AppDimensions.libraryPanelWidth,
-                  child: _LibraryPanel(),
+                  child: _LibraryPanel(controller: controller),
                 ),
                 const VerticalDivider(width: 1),
                 Expanded(
@@ -73,44 +74,72 @@ class DesktopEditorShell extends StatelessWidget {
 }
 
 class _DesktopTopBar extends StatelessWidget {
-  const _DesktopTopBar();
+  const _DesktopTopBar({required this.controller});
+
+  final EditorController controller;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: AppDimensions.toolbarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      color: AppColors.surface,
-      child: Row(
-        children: [
-          const Text(AppConstants.appName, style: AppTypography.title),
-          const Spacer(),
-          FilledButton(onPressed: null, child: const Text('Export')),
-        ],
-      ),
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return Container(
+          height: AppDimensions.toolbarHeight,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          color: AppColors.surface,
+          child: Row(
+            children: [
+              const Text(AppConstants.appName, style: AppTypography.title),
+              const SizedBox(width: AppSpacing.md),
+              IconButton(
+                key: const ValueKey('desktop-undo'),
+                tooltip: 'Undo (Ctrl+Z)',
+                onPressed: controller.canUndo ? controller.undo : null,
+                icon: const Icon(Icons.undo),
+              ),
+              IconButton(
+                key: const ValueKey('desktop-redo'),
+                tooltip: 'Redo (Ctrl+Shift+Z)',
+                onPressed: controller.canRedo ? controller.redo : null,
+                icon: const Icon(Icons.redo),
+              ),
+              const Spacer(),
+              const FilledButton(onPressed: null, child: Text('Export')),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
 class _LibraryPanel extends StatelessWidget {
-  const _LibraryPanel();
+  const _LibraryPanel({required this.controller});
+
+  final EditorController controller;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.surface,
       padding: const EdgeInsets.all(AppSpacing.md),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Library', style: AppTypography.title),
-          SizedBox(height: AppSpacing.lg),
-          Text('Presets', style: AppTypography.label),
-          SizedBox(height: AppSpacing.sm),
-          Text(
+          const Text('Library', style: AppTypography.title),
+          const SizedBox(height: AppSpacing.lg),
+          const Text('Presets', style: AppTypography.label),
+          const SizedBox(height: AppSpacing.sm),
+          const Text(
             'Your preset library will appear here.',
             style: AppTypography.bodyMuted,
           ),
+          const SizedBox(height: AppSpacing.lg),
+          const Divider(height: 1),
+          const SizedBox(height: AppSpacing.lg),
+          const Text('History', style: AppTypography.label),
+          const SizedBox(height: AppSpacing.sm),
+          Expanded(child: EditorHistoryList(controller: controller)),
         ],
       ),
     );
@@ -143,17 +172,14 @@ class _AdjustmentsPanel extends StatelessWidget {
         animation: controller,
         builder: (context, _) {
           final session = controller.session;
-
-          final hasImage = session.sourceImagePath != null;
+          final hasImage = session.hasImage;
 
           return SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Adjustments', style: AppTypography.title),
-
                 const SizedBox(height: AppSpacing.lg),
-
                 if (!hasImage)
                   const Text(
                     'Select an image to start editing.',
@@ -161,31 +187,23 @@ class _AdjustmentsPanel extends StatelessWidget {
                   )
                 else ...[
                   const Text('Transform', style: AppTypography.label),
-
                   const SizedBox(height: AppSpacing.md),
-
                   RotationControl(
                     transform: session.transform,
                     onChanged: controller.updateTransform,
+                    onInteractionStart: controller.beginEditTransaction,
+                    onInteractionEnd: controller.endEditTransaction,
                   ),
-
                   const SizedBox(height: AppSpacing.lg),
-
                   FlipControl(
                     transform: session.transform,
                     onChanged: controller.updateTransform,
                   ),
-
                   const SizedBox(height: AppSpacing.lg),
-
                   const Divider(height: 1),
-
                   const SizedBox(height: AppSpacing.lg),
-
                   const Text('Light', style: AppTypography.label),
-
                   const SizedBox(height: AppSpacing.md),
-
                   AdjustmentControl(
                     definition: exposureDefinition,
                     value: session.adjustments.exposure,
@@ -195,10 +213,10 @@ class _AdjustmentsPanel extends StatelessWidget {
                         value,
                       );
                     },
+                    onInteractionStart: controller.beginEditTransaction,
+                    onInteractionEnd: controller.endEditTransaction,
                   ),
-
                   const SizedBox(height: AppSpacing.lg),
-
                   AdjustmentControl(
                     definition: contrastDefinition,
                     value: session.adjustments.contrast,
@@ -208,18 +226,14 @@ class _AdjustmentsPanel extends StatelessWidget {
                         value,
                       );
                     },
+                    onInteractionStart: controller.beginEditTransaction,
+                    onInteractionEnd: controller.endEditTransaction,
                   ),
-
                   const SizedBox(height: AppSpacing.lg),
-
                   const Divider(height: 1),
-
                   const SizedBox(height: AppSpacing.lg),
-
                   const Text('Color', style: AppTypography.label),
-
                   const SizedBox(height: AppSpacing.md),
-
                   AdjustmentControl(
                     definition: saturationDefinition,
                     value: session.adjustments.saturation,
@@ -229,6 +243,8 @@ class _AdjustmentsPanel extends StatelessWidget {
                         value,
                       );
                     },
+                    onInteractionStart: controller.beginEditTransaction,
+                    onInteractionEnd: controller.endEditTransaction,
                   ),
                 ],
               ],

@@ -10,9 +10,12 @@ import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
 import 'adjustment_control.dart';
+import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
 import 'flip_control.dart';
 import 'rotation_control.dart';
+
+enum _MobileMenuAction { history }
 
 class MobileEditorShell extends StatelessWidget {
   const MobileEditorShell({
@@ -32,7 +35,53 @@ class MobileEditorShell extends StatelessWidget {
       appBar: AppBar(
         title: const Text(AppConstants.appName),
         actions: [
-          IconButton(onPressed: null, icon: const Icon(Icons.more_vert)),
+          AnimatedBuilder(
+            animation: controller,
+            builder: (context, _) {
+              final hasImage = controller.session.hasImage;
+
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    key: const ValueKey('mobile-undo'),
+                    tooltip: 'Undo',
+                    onPressed: controller.canUndo ? controller.undo : null,
+                    icon: const Icon(Icons.undo),
+                  ),
+                  IconButton(
+                    key: const ValueKey('mobile-redo'),
+                    tooltip: 'Redo',
+                    onPressed: controller.canRedo ? controller.redo : null,
+                    icon: const Icon(Icons.redo),
+                  ),
+                  PopupMenuButton<_MobileMenuAction>(
+                    enabled: hasImage,
+                    onSelected: (action) {
+                      switch (action) {
+                        case _MobileMenuAction.history:
+                          _showHistorySheet(context);
+                      }
+                    },
+                    itemBuilder: (context) {
+                      return const [
+                        PopupMenuItem(
+                          value: _MobileMenuAction.history,
+                          child: Row(
+                            children: [
+                              Icon(Icons.history),
+                              SizedBox(width: AppSpacing.sm),
+                              Text('History'),
+                            ],
+                          ),
+                        ),
+                      ];
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
         ],
       ),
       body: AnimatedBuilder(
@@ -53,6 +102,41 @@ class MobileEditorShell extends StatelessWidget {
       bottomNavigationBar: _MobileToolBar(controller: controller),
     );
   }
+
+  void _showHistorySheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        final height = MediaQuery.sizeOf(context).height * 0.55;
+
+        return SafeArea(
+          top: false,
+          child: SizedBox(
+            height: height,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('History', style: AppTypography.title),
+                  const SizedBox(height: AppSpacing.md),
+                  Expanded(child: EditorHistoryList(controller: controller)),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _MobileToolBar extends StatelessWidget {
@@ -65,7 +149,7 @@ class _MobileToolBar extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        final hasImage = controller.session.sourceImagePath != null;
+        final hasImage = controller.session.hasImage;
 
         return Container(
           decoration: const BoxDecoration(
@@ -152,6 +236,10 @@ class _MobileToolBar extends StatelessWidget {
                 return;
               }
 
+              if (!controller.isEditTransactionActive) {
+                controller.beginEditTransaction();
+              }
+
               setSheetState(() {
                 activeAdjustment = type;
               });
@@ -160,6 +248,10 @@ class _MobileToolBar extends StatelessWidget {
             void leaveFocusedMode() {
               if (activeAdjustment == null) {
                 return;
+              }
+
+              if (controller.isEditTransactionActive) {
+                controller.endEditTransaction();
               }
 
               setSheetState(() {
@@ -221,23 +313,17 @@ class _MobileToolBar extends StatelessWidget {
                                           ),
                                         ),
                                       ),
-
                                       const SizedBox(height: AppSpacing.md),
-
                                       const Text(
                                         'Edit',
                                         style: AppTypography.title,
                                       ),
-
                                       const SizedBox(height: AppSpacing.lg),
-
                                       const Text(
                                         'Light',
                                         style: AppTypography.label,
                                       ),
-
                                       const SizedBox(height: AppSpacing.md),
-
                                       AdjustmentControl(
                                         definition: exposureDefinition,
                                         value: session.adjustments.exposure,
@@ -253,9 +339,7 @@ class _MobileToolBar extends StatelessWidget {
                                           );
                                         },
                                       ),
-
                                       const SizedBox(height: AppSpacing.lg),
-
                                       AdjustmentControl(
                                         definition: contrastDefinition,
                                         value: session.adjustments.contrast,
@@ -271,20 +355,14 @@ class _MobileToolBar extends StatelessWidget {
                                           );
                                         },
                                       ),
-
                                       const SizedBox(height: AppSpacing.lg),
-
                                       const Divider(height: 1),
-
                                       const SizedBox(height: AppSpacing.lg),
-
                                       const Text(
                                         'Color',
                                         style: AppTypography.label,
                                       ),
-
                                       const SizedBox(height: AppSpacing.md),
-
                                       AdjustmentControl(
                                         definition: saturationDefinition,
                                         value: session.adjustments.saturation,
@@ -310,7 +388,6 @@ class _MobileToolBar extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   if (isFocused)
                     AnimatedBuilder(
                       animation: controller,
@@ -345,7 +422,11 @@ class _MobileToolBar extends StatelessWidget {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      if (controller.isEditTransactionActive) {
+        controller.endEditTransaction();
+      }
+    });
   }
 
   void _showCropSheet(BuildContext context) {
@@ -376,20 +457,16 @@ class _MobileToolBar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Crop & Transform', style: AppTypography.title),
-
                     const SizedBox(height: AppSpacing.lg),
-
                     RotationControl(
                       transform: session.transform,
                       onChanged: controller.updateTransform,
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
                     ),
-
                     const SizedBox(height: AppSpacing.lg),
-
                     const Divider(height: 1),
-
                     const SizedBox(height: AppSpacing.lg),
-
                     FlipControl(
                       transform: session.transform,
                       onChanged: controller.updateTransform,
@@ -401,7 +478,11 @@ class _MobileToolBar extends StatelessWidget {
           ),
         );
       },
-    );
+    ).whenComplete(() {
+      if (controller.isEditTransactionActive) {
+        controller.endEditTransaction();
+      }
+    });
   }
 }
 
@@ -451,7 +532,6 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
                 child: Row(
                   children: [
                     const SizedBox(width: 40),
-
                     Expanded(
                       child: Text(
                         definition.label,
@@ -459,7 +539,6 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
                         style: AppTypography.label,
                       ),
                     ),
-
                     SizedBox(
                       width: 40,
                       child: IconButton(
@@ -474,15 +553,12 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
                   ],
                 ),
               ),
-
               Text(
                 _formatValue(definition, sanitizedValue),
                 key: const ValueKey('mobile-focused-value'),
                 style: AppTypography.title,
               ),
-
               const SizedBox(height: AppSpacing.xxs),
-
               Row(
                 children: [
                   SizedBox(
@@ -504,7 +580,6 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
                       icon: const Icon(Icons.remove, size: 20),
                     ),
                   ),
-
                   Expanded(
                     child: Slider(
                       key: const ValueKey('mobile-focused-slider'),
@@ -517,7 +592,6 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
                       },
                     ),
                   ),
-
                   SizedBox(
                     width: 40,
                     height: 40,
@@ -555,6 +629,10 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
   }
 
   static int _decimalPlaces(double value) {
+    if (value == value.roundToDouble()) {
+      return 0;
+    }
+
     final text = value.toString();
 
     if (!text.contains('.')) {

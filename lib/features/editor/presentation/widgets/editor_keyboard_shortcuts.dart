@@ -17,21 +17,36 @@ class EditorKeyboardShortcuts extends StatelessWidget {
   Widget build(BuildContext context) {
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): _undo,
         const SingleActivator(
-          LogicalKeyboardKey.bracketLeft,
+          LogicalKeyboardKey.keyZ,
           control: true,
-        ): () {
-          _rotateCounterClockwise();
-        },
-        const SingleActivator(
-          LogicalKeyboardKey.bracketRight,
-          control: true,
-        ): () {
-          _rotateClockwise();
-        },
+          shift: true,
+        ): _redo,
+        const SingleActivator(LogicalKeyboardKey.keyY, control: true): _redo,
+        const SingleActivator(LogicalKeyboardKey.bracketLeft, control: true):
+            _rotateCounterClockwise,
+        const SingleActivator(LogicalKeyboardKey.bracketRight, control: true):
+            _rotateClockwise,
       },
       child: Focus(autofocus: true, child: child),
     );
+  }
+
+  void _undo() {
+    if (!_canHandleShortcut()) {
+      return;
+    }
+
+    controller.undo();
+  }
+
+  void _redo() {
+    if (!_canHandleShortcut()) {
+      return;
+    }
+
+    controller.redo();
   }
 
   void _rotateCounterClockwise() {
@@ -53,7 +68,7 @@ class EditorKeyboardShortcuts extends StatelessWidget {
   }
 
   bool _canHandleShortcut() {
-    if (controller.session.sourceImagePath == null) {
+    if (!controller.session.hasImage) {
       return false;
     }
 
