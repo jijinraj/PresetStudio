@@ -14,6 +14,34 @@ enum CompositionGuideType {
   goldenTriangle,
 }
 
+enum CompositionGuideColor { white, yellow, cyan, red, green, magenta }
+
+extension CompositionGuideColorPresentation on CompositionGuideColor {
+  String get id => name;
+
+  String get label {
+    return switch (this) {
+      CompositionGuideColor.white => 'White',
+      CompositionGuideColor.yellow => 'Yellow',
+      CompositionGuideColor.cyan => 'Cyan',
+      CompositionGuideColor.red => 'Red',
+      CompositionGuideColor.green => 'Green',
+      CompositionGuideColor.magenta => 'Magenta',
+    };
+  }
+
+  Color get color {
+    return switch (this) {
+      CompositionGuideColor.white => const Color(0xFFFFFFFF),
+      CompositionGuideColor.yellow => const Color(0xFFFFD54F),
+      CompositionGuideColor.cyan => const Color(0xFF4DD0E1),
+      CompositionGuideColor.red => const Color(0xFFFF5252),
+      CompositionGuideColor.green => const Color(0xFF69F0AE),
+      CompositionGuideColor.magenta => const Color(0xFFFF4081),
+    };
+  }
+}
+
 extension CompositionGuideTypeLabel on CompositionGuideType {
   String get id {
     return switch (this) {
@@ -118,64 +146,73 @@ class CompositionGuideOverlay extends StatelessWidget {
     required this.guide,
     required this.emphasize,
     this.orientation = const CompositionGuideOrientation(),
+    this.color = CompositionGuideColor.white,
+    this.opacity = 1.0,
     super.key,
   });
 
   final CompositionGuideType guide;
   final bool emphasize;
   final CompositionGuideOrientation orientation;
+  final CompositionGuideColor color;
+  final double opacity;
 
   @override
   Widget build(BuildContext context) {
     final key = ValueKey('composition-guide-${guide.id}-overlay');
 
-    return switch (guide) {
-      CompositionGuideType.none => SizedBox.shrink(key: key),
+    if (guide == CompositionGuideType.none) {
+      return SizedBox.shrink(key: key);
+    }
+
+    final overlay = switch (guide) {
+      CompositionGuideType.none => const SizedBox.shrink(),
       CompositionGuideType.ruleOfThirds => CustomPaint(
-        key: key,
         painter: _RuleOfThirdsGuidePainter(emphasize: emphasize),
       ),
       CompositionGuideType.centerSymmetry => CustomPaint(
-        key: key,
         painter: _CenterSymmetryGuidePainter(emphasize: emphasize),
       ),
       CompositionGuideType.squareGrid => CustomPaint(
-        key: key,
         painter: _SquareGridGuidePainter(emphasize: emphasize),
       ),
       CompositionGuideType.fineGrid => CustomPaint(
-        key: key,
         painter: _FineGridGuidePainter(emphasize: emphasize),
       ),
       CompositionGuideType.phiGrid => CustomPaint(
-        key: key,
         painter: _PhiGridGuidePainter(emphasize: emphasize),
       ),
       CompositionGuideType.diagonalMethod => CustomPaint(
-        key: key,
         painter: _DiagonalMethodGuidePainter(emphasize: emphasize),
       ),
       CompositionGuideType.goldenSpiral => CustomPaint(
-        key: key,
         painter: _GoldenSpiralGuidePainter(
           emphasize: emphasize,
           orientation: orientation,
         ),
       ),
       CompositionGuideType.goldenTriangle => CustomPaint(
-        key: key,
         painter: _GoldenTriangleGuidePainter(
           emphasize: emphasize,
           orientation: orientation,
         ),
       ),
     };
+
+    return Opacity(
+      key: key,
+      opacity: opacity.clamp(0.0, 1.0).toDouble(),
+      child: ColorFiltered(
+        colorFilter: ColorFilter.mode(color.color, BlendMode.srcIn),
+        child: overlay,
+      ),
+    );
   }
 }
 
 Paint _guidePaint(bool emphasize) {
   return Paint()
-    ..color = emphasize ? const Color(0x70FFFFFF) : const Color(0x2AFFFFFF)
+    ..color = emphasize ? const Color(0xFFFFFFFF) : const Color(0xC0FFFFFF)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 1;
 }

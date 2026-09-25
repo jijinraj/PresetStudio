@@ -100,7 +100,8 @@
 - [x] Add Golden Triangle
 - [x] Add Diagonal Method
 - [x] Add guide orientation controls where relevant
-- [ ] Add guide opacity control
+- [x] Add guide opacity control
+- [x] Add guide color control
 
 ## Color controls
 

@@ -59,6 +59,8 @@ class _CropWorkspaceState extends State<CropWorkspace> {
   CompositionGuideType _selectedGuide = CompositionGuideType.ruleOfThirds;
   CompositionGuideOrientation _guideOrientation =
       const CompositionGuideOrientation();
+  CompositionGuideColor _guideColor = CompositionGuideColor.white;
+  double _guideOpacity = 1.0;
 
   bool _ownsTransaction = false;
   bool _finalized = false;
@@ -410,6 +412,22 @@ class _CropWorkspaceState extends State<CropWorkspace> {
     });
   }
 
+  void _updateCompositionGuideColor(CompositionGuideColor color) {
+    if (_guideColor == color) {
+      return;
+    }
+
+    setState(() {
+      _guideColor = color;
+    });
+  }
+
+  void _updateCompositionGuideOpacity(double opacity) {
+    setState(() {
+      _guideOpacity = opacity.clamp(0.1, 1.0).toDouble();
+    });
+  }
+
   void _updateStraighten(double degrees) {
     _ensureTransactionStarted();
 
@@ -493,6 +511,8 @@ class _CropWorkspaceState extends State<CropWorkspace> {
                     sourceAspectRatio: _originalAspectRatio ?? 4 / 3,
                     compositionGuide: _selectedGuide,
                     compositionGuideOrientation: _guideOrientation,
+                    compositionGuideColor: _guideColor,
+                    compositionGuideOpacity: _guideOpacity,
                     onCropChanged: (nextCrop) {
                       _ensureTransactionStarted();
                       controller.updateCrop(nextCrop);
@@ -509,8 +529,12 @@ class _CropWorkspaceState extends State<CropWorkspace> {
                   ratioOptions: _ratioOptions,
                   selectedGuide: _selectedGuide,
                   guideOrientation: _guideOrientation,
+                  guideColor: _guideColor,
+                  guideOpacity: _guideOpacity,
                   onSelectRatio: _selectRatio,
                   onSelectGuide: _selectCompositionGuide,
+                  onGuideColorChanged: _updateCompositionGuideColor,
+                  onGuideOpacityChanged: _updateCompositionGuideOpacity,
                   onRotateGuide: _rotateCompositionGuide,
                   onFlipGuideHorizontal: _flipCompositionGuideHorizontal,
                   onFlipGuideVertical: _flipCompositionGuideVertical,
@@ -607,6 +631,8 @@ class _CropCanvas extends StatefulWidget {
     required this.sourceAspectRatio,
     required this.compositionGuide,
     required this.compositionGuideOrientation,
+    required this.compositionGuideColor,
+    required this.compositionGuideOpacity,
     required this.onCropChanged,
   });
 
@@ -617,6 +643,8 @@ class _CropCanvas extends StatefulWidget {
   final double sourceAspectRatio;
   final CompositionGuideType compositionGuide;
   final CompositionGuideOrientation compositionGuideOrientation;
+  final CompositionGuideColor compositionGuideColor;
+  final double compositionGuideOpacity;
   final ValueChanged<CropState> onCropChanged;
 
   @override
@@ -1177,6 +1205,8 @@ class _CropCanvasState extends State<_CropCanvas> {
                                         guide: widget.compositionGuide,
                                         orientation:
                                             widget.compositionGuideOrientation,
+                                        color: widget.compositionGuideColor,
+                                        opacity: widget.compositionGuideOpacity,
                                         emphasize:
                                             _isManipulatingImage ||
                                             _isResizingCrop,
@@ -1570,8 +1600,12 @@ class _CropWorkspaceControls extends StatelessWidget {
     required this.ratioOptions,
     required this.selectedGuide,
     required this.guideOrientation,
+    required this.guideColor,
+    required this.guideOpacity,
     required this.onSelectRatio,
     required this.onSelectGuide,
+    required this.onGuideColorChanged,
+    required this.onGuideOpacityChanged,
     required this.onRotateGuide,
     required this.onFlipGuideHorizontal,
     required this.onFlipGuideVertical,
@@ -1591,8 +1625,12 @@ class _CropWorkspaceControls extends StatelessWidget {
   final List<_CropRatioOption> ratioOptions;
   final CompositionGuideType selectedGuide;
   final CompositionGuideOrientation guideOrientation;
+  final CompositionGuideColor guideColor;
+  final double guideOpacity;
   final ValueChanged<_CropRatioOption> onSelectRatio;
   final ValueChanged<CompositionGuideType> onSelectGuide;
+  final ValueChanged<CompositionGuideColor> onGuideColorChanged;
+  final ValueChanged<double> onGuideOpacityChanged;
   final VoidCallback onRotateGuide;
   final VoidCallback onFlipGuideHorizontal;
   final VoidCallback onFlipGuideVertical;
@@ -1681,6 +1719,105 @@ class _CropWorkspaceControls extends StatelessWidget {
                         )
                         .toList(growable: false),
                   ),
+                  if (selectedGuide != CompositionGuideType.none)
+                    PopupMenuButton<CompositionGuideColor>(
+                      key: const ValueKey('composition-guide-style-menu'),
+                      tooltip:
+                          'Guide style: ${guideColor.label}, ${(guideOpacity * 100).round()}%',
+                      initialValue: guideColor,
+                      onSelected: onGuideColorChanged,
+                      icon: Icon(
+                        Icons.palette_outlined,
+                        color: guideColor.color,
+                      ),
+                      itemBuilder: (context) {
+                        var popupOpacity = guideOpacity;
+
+                        return [
+                          ...CompositionGuideColor.values.map(
+                            (colorOption) =>
+                                CheckedPopupMenuItem<CompositionGuideColor>(
+                                  key: ValueKey(
+                                    'composition-guide-color-${colorOption.id}',
+                                  ),
+                                  value: colorOption,
+                                  checked: guideColor == colorOption,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 14,
+                                        height: 14,
+                                        decoration: BoxDecoration(
+                                          color: colorOption.color,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: const Color(0x40FFFFFF),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Text(colorOption.label),
+                                    ],
+                                  ),
+                                ),
+                          ),
+                          PopupMenuItem<CompositionGuideColor>(
+                            enabled: false,
+                            child: StatefulBuilder(
+                              builder: (context, setMenuState) {
+                                return SizedBox(
+                                  width: 220,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Opacity',
+                                        style: AppTypography.label,
+                                      ),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Slider(
+                                              key: const ValueKey(
+                                                'composition-guide-opacity-slider',
+                                              ),
+                                              min: 0.1,
+                                              max: 1.0,
+                                              divisions: 18,
+                                              value: popupOpacity,
+                                              onChanged: (value) {
+                                                setMenuState(() {
+                                                  popupOpacity = value;
+                                                });
+                                                onGuideOpacityChanged(value);
+                                              },
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            key: const ValueKey(
+                                              'composition-guide-opacity-value',
+                                            ),
+                                            width: 46,
+                                            child: Text(
+                                              '${(popupOpacity * 100).round()}%',
+                                              textAlign: TextAlign.right,
+                                              style: AppTypography.label,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ];
+                      },
+                    ),
                   if (selectedGuide.supportsOrientation)
                     PopupMenuButton<_CompositionGuideOrientationAction>(
                       key: const ValueKey('composition-guide-orientation-menu'),

@@ -62,6 +62,10 @@ void main() {
       find.byKey(const ValueKey('composition-guide-rule-of-thirds-overlay')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const ValueKey('composition-guide-style-menu')),
+      findsOneWidget,
+    );
 
     final originalChip = tester.widget<ChoiceChip>(
       find.byKey(const ValueKey('crop-ratio-original')),
@@ -151,6 +155,83 @@ void main() {
       await tester.pump();
 
       expect(controller.isEditTransactionActive, isFalse);
+      expect(controller.session, initialSession);
+      expect(controller.history, hasLength(initialHistoryLength));
+    },
+  );
+
+  testWidgets(
+    'composition guide opacity stays workspace-only and out of History',
+    (tester) async {
+      final controller = EditorController();
+      addTearDown(controller.dispose);
+
+      controller.setSourceImage('missing-test-image.jpg');
+
+      final initialSession = controller.session;
+      final initialHistoryLength = controller.history.length;
+
+      await tester.pumpWidget(buildWorkspace(controller));
+      await tester.pump();
+
+      var overlay = tester.widget<CompositionGuideOverlay>(
+        find.byType(CompositionGuideOverlay),
+      );
+      expect(overlay.opacity, 1.0);
+
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-style-menu')),
+      );
+      await tester.pumpAndSettle();
+
+      final opacitySlider = tester.widget<Slider>(
+        find.byKey(const ValueKey('composition-guide-opacity-slider')),
+      );
+      opacitySlider.onChanged?.call(0.5);
+      await tester.pump();
+
+      overlay = tester.widget<CompositionGuideOverlay>(
+        find.byType(CompositionGuideOverlay),
+      );
+      expect(overlay.opacity, 0.5);
+      expect(controller.session, initialSession);
+      expect(controller.history, hasLength(initialHistoryLength));
+
+      await tester.tapAt(const Offset(8, 8));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-style-menu')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-color-cyan')),
+      );
+      await tester.pumpAndSettle();
+
+      overlay = tester.widget<CompositionGuideOverlay>(
+        find.byType(CompositionGuideOverlay),
+      );
+      expect(overlay.color, CompositionGuideColor.cyan);
+      expect(controller.session, initialSession);
+      expect(controller.history, hasLength(initialHistoryLength));
+
+      await tester.tapAt(const Offset(8, 8));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('composition-guide-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('composition-guide-none')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('composition-guide-style-menu')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('composition-guide-style-menu')),
+        findsNothing,
+      );
       expect(controller.session, initialSession);
       expect(controller.history, hasLength(initialHistoryLength));
     },
@@ -423,12 +504,19 @@ void main() {
     // Missing test images use the workspace's 4:3 geometry fallback. A 16:9
     // crop must therefore scale beyond 1.0 to cover the full fixed frame.
     //
-    // The ratio strip is horizontally scrollable, so invoke the chip callback
-    // directly instead of making this geometry regression depend on whether
-    // 16:9 happens to be inside the current test viewport.
-    final ratioChip = tester.widget<ChoiceChip>(
-      find.byKey(const ValueKey('crop-ratio-16x9')),
+    // The ratio strip is horizontally scrollable and lazily builds off-screen
+    // chips. Scroll 16:9 into view before selecting it so this geometry test
+    // does not depend on the current toolbar width.
+    final ratioFinder = find.byKey(const ValueKey('crop-ratio-16x9'));
+    await tester.scrollUntilVisible(
+      ratioFinder,
+      160,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('crop-ratio-list')),
+        matching: find.byType(Scrollable),
+      ),
     );
+    final ratioChip = tester.widget<ChoiceChip>(ratioFinder);
     ratioChip.onSelected?.call(true);
     await tester.pump();
 

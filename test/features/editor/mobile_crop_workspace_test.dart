@@ -73,12 +73,18 @@ void main() {
     await tester.pumpAndSettle();
 
     // This regression is about committed-crop rendering after Done, not the
-    // scroll position of the compact horizontal ratio strip. Invoke the chip
-    // callback directly so the test remains stable as controls are added beside
-    // that strip.
-    final ratioChip = tester.widget<ChoiceChip>(
-      find.byKey(const ValueKey('crop-ratio-1x1')),
+    // current viewport of the lazily built horizontal ratio strip. Scroll the
+    // target ratio into view before selecting it.
+    final ratioFinder = find.byKey(const ValueKey('crop-ratio-1x1'));
+    await tester.scrollUntilVisible(
+      ratioFinder,
+      120,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('crop-ratio-list')),
+        matching: find.byType(Scrollable),
+      ),
     );
+    final ratioChip = tester.widget<ChoiceChip>(ratioFinder);
     ratioChip.onSelected?.call(true);
     await tester.pump();
 
@@ -139,6 +145,33 @@ void main() {
       find.byKey(const ValueKey('composition-guide-orientation-menu')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const ValueKey('composition-guide-style-menu')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('composition-guide-style-menu')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('composition-guide-color-yellow')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('composition-guide-style-menu')),
+    );
+    await tester.pumpAndSettle();
+
+    final opacitySlider = tester.widget<Slider>(
+      find.byKey(const ValueKey('composition-guide-opacity-slider')),
+    );
+    opacitySlider.onChanged?.call(0.55);
+    await tester.pump();
+
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pumpAndSettle();
 
     await tester.tap(
       find.byKey(const ValueKey('composition-guide-orientation-menu')),
