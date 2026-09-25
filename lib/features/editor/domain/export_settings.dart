@@ -13,6 +13,12 @@ extension ExportFormatX on ExportFormat {
     ExportFormat.webp => 'webp',
   };
 
+  String get mimeType => switch (this) {
+    ExportFormat.jpeg => 'image/jpeg',
+    ExportFormat.png => 'image/png',
+    ExportFormat.webp => 'image/webp',
+  };
+
   bool get supportsQuality => switch (this) {
     ExportFormat.jpeg || ExportFormat.webp => true,
     ExportFormat.png => false,

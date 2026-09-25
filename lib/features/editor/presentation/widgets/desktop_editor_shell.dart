@@ -27,12 +27,16 @@ class DesktopEditorShell extends StatefulWidget {
     required this.controller,
     required this.onImportImage,
     required this.isImporting,
+    this.onExportImage,
+    this.isExporting = false,
     super.key,
   });
 
   final EditorController controller;
   final Future<void> Function() onImportImage;
   final bool isImporting;
+  final Future<void> Function()? onExportImage;
+  final bool isExporting;
 
   @override
   State<DesktopEditorShell> createState() => _DesktopEditorShellState();
@@ -105,6 +109,8 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
             isSideBySide: _isSideBySide,
             isCropping: _isCropping,
             onToggleSideBySide: _toggleSideBySide,
+            onExportImage: widget.onExportImage,
+            isExporting: widget.isExporting,
           ),
           const Divider(height: 1),
           Expanded(
@@ -232,12 +238,16 @@ class _DesktopTopBar extends StatelessWidget {
     required this.isSideBySide,
     required this.isCropping,
     required this.onToggleSideBySide,
+    required this.onExportImage,
+    required this.isExporting,
   });
 
   final EditorController controller;
   final bool isSideBySide;
   final bool isCropping;
   final VoidCallback onToggleSideBySide;
+  final Future<void> Function()? onExportImage;
+  final bool isExporting;
 
   @override
   Widget build(BuildContext context) {
@@ -246,6 +256,11 @@ class _DesktopTopBar extends StatelessWidget {
       builder: (context, _) {
         final canToggleSideBySide =
             !isCropping && (isSideBySide || controller.canCompareBefore);
+        final canExport =
+            !isCropping &&
+            !isExporting &&
+            controller.session.hasImage &&
+            onExportImage != null;
 
         return Container(
           height: AppDimensions.toolbarHeight,
@@ -289,7 +304,21 @@ class _DesktopTopBar extends StatelessWidget {
                 icon: const Icon(Icons.compare),
               ),
               const Spacer(),
-              const FilledButton(onPressed: null, child: Text('Export')),
+              FilledButton.icon(
+                key: const ValueKey('desktop-export'),
+                onPressed: canExport
+                    ? () {
+                        unawaited(onExportImage!());
+                      }
+                    : null,
+                icon: isExporting
+                    ? const SizedBox.square(
+                        dimension: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.file_download_outlined, size: 18),
+                label: Text(isExporting ? 'Exporting…' : 'Export'),
+              ),
             ],
           ),
         );

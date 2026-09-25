@@ -16,14 +16,17 @@ void main() {
     test('format metadata covers JPEG PNG and WebP', () {
       expect(ExportFormat.jpeg.label, 'JPEG');
       expect(ExportFormat.jpeg.fileExtension, 'jpg');
+      expect(ExportFormat.jpeg.mimeType, 'image/jpeg');
       expect(ExportFormat.jpeg.supportsQuality, isTrue);
 
       expect(ExportFormat.png.label, 'PNG');
       expect(ExportFormat.png.fileExtension, 'png');
+      expect(ExportFormat.png.mimeType, 'image/png');
       expect(ExportFormat.png.supportsQuality, isFalse);
 
       expect(ExportFormat.webp.label, 'WebP');
       expect(ExportFormat.webp.fileExtension, 'webp');
+      expect(ExportFormat.webp.mimeType, 'image/webp');
       expect(ExportFormat.webp.supportsQuality, isTrue);
     });
 

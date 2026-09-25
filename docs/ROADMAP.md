@@ -154,13 +154,13 @@
   - [x] Original resolution
   - [x] Optional longest-edge limit
   - [x] Quality preference for JPEG / WebP
-- [ ] Full-resolution export renderer
+- [x] Full-resolution export renderer
 - [ ] Ensure exported output matches editor preview
-- [ ] JPEG encoding
-- [ ] PNG encoding
-- [ ] WebP encoding
-- [ ] Save As / export destination flow
-- [ ] Export preferences UI
+- [x] JPEG encoding
+- [x] PNG encoding
+- [x] WebP encoding
+- [x] Save As / export destination flow
+- [x] Export preferences UI
 
 ## Community
 

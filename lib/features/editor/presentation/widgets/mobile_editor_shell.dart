@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_constants.dart';
@@ -22,12 +24,16 @@ class MobileEditorShell extends StatelessWidget {
     required this.controller,
     required this.onImportImage,
     required this.isImporting,
+    this.onExportImage,
+    this.isExporting = false,
     super.key,
   });
 
   final EditorController controller;
   final Future<void> Function() onImportImage;
   final bool isImporting;
+  final Future<void> Function()? onExportImage;
+  final bool isExporting;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +60,21 @@ class MobileEditorShell extends StatelessWidget {
                     tooltip: 'Redo',
                     onPressed: controller.canRedo ? controller.redo : null,
                     icon: const Icon(Icons.redo),
+                  ),
+                  IconButton(
+                    key: const ValueKey('mobile-export'),
+                    tooltip: 'Export',
+                    onPressed: hasImage && !isExporting && onExportImage != null
+                        ? () {
+                            unawaited(onExportImage!());
+                          }
+                        : null,
+                    icon: isExporting
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.file_download_outlined),
                   ),
                   PopupMenuButton<_MobileMenuAction>(
                     enabled: hasImage,

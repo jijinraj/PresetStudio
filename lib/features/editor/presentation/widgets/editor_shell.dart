@@ -11,12 +11,16 @@ class EditorShell extends StatelessWidget {
     required this.controller,
     required this.onImportImage,
     required this.isImporting,
+    this.onExportImage,
+    this.isExporting = false,
     super.key,
   });
 
   final EditorController controller;
   final Future<void> Function() onImportImage;
   final bool isImporting;
+  final Future<void> Function()? onExportImage;
+  final bool isExporting;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +36,8 @@ class EditorShell extends StatelessWidget {
               controller: controller,
               onImportImage: onImportImage,
               isImporting: isImporting,
+              onExportImage: onExportImage,
+              isExporting: isExporting,
             );
           }
 
@@ -39,6 +45,8 @@ class EditorShell extends StatelessWidget {
             controller: controller,
             onImportImage: onImportImage,
             isImporting: isImporting,
+            onExportImage: onExportImage,
+            isExporting: isExporting,
           );
         },
       ),
