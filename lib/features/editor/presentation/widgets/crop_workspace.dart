@@ -15,6 +15,7 @@ import '../../domain/crop_resize_geometry.dart';
 import '../../domain/crop_state.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
+import 'composition_guide_overlay.dart';
 import 'editor_rendered_image.dart';
 
 class CropWorkspace extends StatefulWidget {
@@ -55,6 +56,7 @@ class _CropWorkspaceState extends State<CropWorkspace> {
 
   double? _originalAspectRatio;
   String _selectedRatioId = 'original';
+  CompositionGuideType _selectedGuide = CompositionGuideType.ruleOfThirds;
 
   bool _ownsTransaction = false;
   bool _finalized = false;
@@ -378,6 +380,16 @@ class _CropWorkspaceState extends State<CropWorkspace> {
     return '${parts[1]}:${parts[0]}';
   }
 
+  void _selectCompositionGuide(CompositionGuideType guide) {
+    if (_selectedGuide == guide) {
+      return;
+    }
+
+    setState(() {
+      _selectedGuide = guide;
+    });
+  }
+
   void _updateStraighten(double degrees) {
     _ensureTransactionStarted();
 
@@ -459,6 +471,7 @@ class _CropWorkspaceState extends State<CropWorkspace> {
                     transform: session.transform,
                     crop: crop,
                     sourceAspectRatio: _originalAspectRatio ?? 4 / 3,
+                    compositionGuide: _selectedGuide,
                     onCropChanged: (nextCrop) {
                       _ensureTransactionStarted();
                       controller.updateCrop(nextCrop);
@@ -473,7 +486,9 @@ class _CropWorkspaceState extends State<CropWorkspace> {
                   originalAspectRatio: _originalAspectRatio,
                   selectedRatioId: _selectedRatioId,
                   ratioOptions: _ratioOptions,
+                  selectedGuide: _selectedGuide,
                   onSelectRatio: _selectRatio,
+                  onSelectGuide: _selectCompositionGuide,
                   onSwapRatioOrientation: _swapRatioOrientation,
                   onStraightenChanged: _updateStraighten,
                   onRotateLeft: _rotateLeft,
@@ -565,6 +580,7 @@ class _CropCanvas extends StatefulWidget {
     required this.transform,
     required this.crop,
     required this.sourceAspectRatio,
+    required this.compositionGuide,
     required this.onCropChanged,
   });
 
@@ -573,6 +589,7 @@ class _CropCanvas extends StatefulWidget {
   final ImageTransform transform;
   final CropState crop;
   final double sourceAspectRatio;
+  final CompositionGuideType compositionGuide;
   final ValueChanged<CropState> onCropChanged;
 
   @override
@@ -1129,12 +1146,16 @@ class _CropCanvasState extends State<_CropCanvas> {
                                           widget.sourceAspectRatio,
                                     ),
                                     IgnorePointer(
+                                      child: CompositionGuideOverlay(
+                                        guide: widget.compositionGuide,
+                                        emphasize:
+                                            _isManipulatingImage ||
+                                            _isResizingCrop,
+                                      ),
+                                    ),
+                                    const IgnorePointer(
                                       child: CustomPaint(
-                                        painter: _CropFramePainter(
-                                          emphasizeGrid:
-                                              _isManipulatingImage ||
-                                              _isResizingCrop,
-                                        ),
+                                        painter: _CropFramePainter(),
                                       ),
                                     ),
                                     Positioned(
@@ -1444,26 +1465,16 @@ class _CropZoomBadge extends StatelessWidget {
 }
 
 class _CropFramePainter extends CustomPainter {
-  const _CropFramePainter({required this.emphasizeGrid});
-
-  final bool emphasizeGrid;
+  const _CropFramePainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     const borderColor = Color(0xD9FFFFFF);
-    final gridColor = emphasizeGrid
-        ? const Color(0x70FFFFFF)
-        : const Color(0x2AFFFFFF);
 
     final borderPaint = Paint()
       ..color = borderColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.25;
-
-    final gridPaint = Paint()
-      ..color = gridColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
 
     final handlePaint = Paint()
       ..color = borderColor
@@ -1474,23 +1485,6 @@ class _CropFramePainter extends CustomPainter {
       Rect.fromLTWH(0.75, 0.75, size.width - 1.5, size.height - 1.5),
       borderPaint,
     );
-
-    final thirdWidth = size.width / 3;
-    final thirdHeight = size.height / 3;
-
-    for (var index = 1; index <= 2; index += 1) {
-      canvas.drawLine(
-        Offset(thirdWidth * index, 0),
-        Offset(thirdWidth * index, size.height),
-        gridPaint,
-      );
-
-      canvas.drawLine(
-        Offset(0, thirdHeight * index),
-        Offset(size.width, thirdHeight * index),
-        gridPaint,
-      );
-    }
 
     const handleLength = 18.0;
 
@@ -1532,9 +1526,7 @@ class _CropFramePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CropFramePainter oldDelegate) {
-    return oldDelegate.emphasizeGrid != emphasizeGrid;
-  }
+  bool shouldRepaint(covariant _CropFramePainter oldDelegate) => false;
 }
 
 class _CropWorkspaceControls extends StatelessWidget {
@@ -1545,7 +1537,9 @@ class _CropWorkspaceControls extends StatelessWidget {
     required this.originalAspectRatio,
     required this.selectedRatioId,
     required this.ratioOptions,
+    required this.selectedGuide,
     required this.onSelectRatio,
+    required this.onSelectGuide,
     required this.onSwapRatioOrientation,
     required this.onStraightenChanged,
     required this.onRotateLeft,
@@ -1560,7 +1554,9 @@ class _CropWorkspaceControls extends StatelessWidget {
   final double? originalAspectRatio;
   final String selectedRatioId;
   final List<_CropRatioOption> ratioOptions;
+  final CompositionGuideType selectedGuide;
   final ValueChanged<_CropRatioOption> onSelectRatio;
+  final ValueChanged<CompositionGuideType> onSelectGuide;
   final VoidCallback onSwapRatioOrientation;
   final ValueChanged<double> onStraightenChanged;
   final VoidCallback onRotateLeft;
@@ -1628,6 +1624,33 @@ class _CropWorkspaceControls extends StatelessWidget {
                         ? null
                         : onSwapRatioOrientation,
                     icon: const Icon(Icons.screen_rotation_alt),
+                  ),
+                  PopupMenuButton<CompositionGuideType>(
+                    key: const ValueKey('composition-guide-menu'),
+                    tooltip: 'Composition guide: ${selectedGuide.label}',
+                    initialValue: selectedGuide,
+                    onSelected: onSelectGuide,
+                    icon: const Icon(Icons.grid_on),
+                    itemBuilder: (context) => [
+                      PopupMenuItem<CompositionGuideType>(
+                        key: const ValueKey('composition-guide-none'),
+                        value: CompositionGuideType.none,
+                        child: _CompositionGuideMenuItem(
+                          label: CompositionGuideType.none.label,
+                          selected: selectedGuide == CompositionGuideType.none,
+                        ),
+                      ),
+                      PopupMenuItem<CompositionGuideType>(
+                        key: const ValueKey('composition-guide-rule-of-thirds'),
+                        value: CompositionGuideType.ruleOfThirds,
+                        child: _CompositionGuideMenuItem(
+                          label: CompositionGuideType.ruleOfThirds.label,
+                          selected:
+                              selectedGuide ==
+                              CompositionGuideType.ruleOfThirds,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1737,6 +1760,30 @@ class _CropWorkspaceControls extends StatelessWidget {
         : rounded.toStringAsFixed(1);
 
     return rounded > 0 ? '+$text°' : '$text°';
+  }
+}
+
+class _CompositionGuideMenuItem extends StatelessWidget {
+  const _CompositionGuideMenuItem({
+    required this.label,
+    required this.selected,
+  });
+
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 24,
+          child: selected ? const Icon(Icons.check, size: 18) : null,
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Text(label),
+      ],
+    );
   }
 }
 

@@ -87,6 +87,21 @@
 - [x] Group crop gestures into single History transactions
 - [ ] Improve crop UI toward Adobe-style workflow
 
+## Composition guides
+
+- [x] Separate composition-guide UI state from CropState and History
+- [x] Add None guide
+- [x] Add Rule of Thirds
+- [ ] Add Center / Symmetry
+- [ ] Add Square Grid
+- [ ] Add Fine Grid
+- [ ] Add Phi Grid / Golden Ratio
+- [ ] Add Golden Spiral
+- [ ] Add Golden Triangle
+- [ ] Add Diagonal Method
+- [ ] Add guide orientation controls where relevant
+- [ ] Add guide opacity control
+
 ## Color controls
 
 - [ ] Temperature

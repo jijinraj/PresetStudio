@@ -53,6 +53,14 @@ void main() {
     expect(find.byKey(const ValueKey('crop-ratio-free')), findsNothing);
     expect(find.byKey(const ValueKey('crop-ratio-original')), findsOneWidget);
     expect(find.byKey(const ValueKey('crop-ratio-4x5')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('composition-guide-menu')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('composition-guide-rule-of-thirds-overlay')),
+      findsOneWidget,
+    );
 
     final originalChip = tester.widget<ChoiceChip>(
       find.byKey(const ValueKey('crop-ratio-original')),
@@ -77,6 +85,45 @@ void main() {
     expect(find.byKey(const ValueKey('crop-done')), findsOneWidget);
     expect(controller.isEditTransactionActive, isTrue);
   });
+
+  testWidgets(
+    'composition guide selection is workspace-only and creates no History entry',
+    (tester) async {
+      final controller = EditorController();
+      addTearDown(controller.dispose);
+
+      controller.setSourceImage('missing-test-image.jpg');
+
+      final initialSession = controller.session;
+      final initialHistoryLength = controller.history.length;
+
+      await tester.pumpWidget(buildWorkspace(controller));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const ValueKey('composition-guide-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('composition-guide-none')));
+      await tester.pumpAndSettle();
+
+      expect(controller.session, initialSession);
+      expect(controller.history, hasLength(initialHistoryLength));
+      expect(
+        find.byKey(const ValueKey('composition-guide-none-overlay')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('composition-guide-rule-of-thirds-overlay')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('crop-done')));
+      await tester.pump();
+
+      expect(controller.isEditTransactionActive, isFalse);
+      expect(controller.session, initialSession);
+      expect(controller.history, hasLength(initialHistoryLength));
+    },
+  );
 
   testWidgets(
     'corner handle resizes a constrained crop without changing ratio',
