@@ -1632,23 +1632,28 @@ class _CropWorkspaceControls extends StatelessWidget {
                     onSelected: onSelectGuide,
                     icon: const Icon(Icons.grid_on),
                     itemBuilder: (context) => [
-                      PopupMenuItem<CompositionGuideType>(
+                      CheckedPopupMenuItem<CompositionGuideType>(
                         key: const ValueKey('composition-guide-none'),
                         value: CompositionGuideType.none,
-                        child: _CompositionGuideMenuItem(
-                          label: CompositionGuideType.none.label,
-                          selected: selectedGuide == CompositionGuideType.none,
-                        ),
+                        checked: selectedGuide == CompositionGuideType.none,
+                        child: Text(CompositionGuideType.none.label),
                       ),
-                      PopupMenuItem<CompositionGuideType>(
+                      CheckedPopupMenuItem<CompositionGuideType>(
                         key: const ValueKey('composition-guide-rule-of-thirds'),
                         value: CompositionGuideType.ruleOfThirds,
-                        child: _CompositionGuideMenuItem(
-                          label: CompositionGuideType.ruleOfThirds.label,
-                          selected:
-                              selectedGuide ==
-                              CompositionGuideType.ruleOfThirds,
+                        checked:
+                            selectedGuide == CompositionGuideType.ruleOfThirds,
+                        child: Text(CompositionGuideType.ruleOfThirds.label),
+                      ),
+                      CheckedPopupMenuItem<CompositionGuideType>(
+                        key: const ValueKey(
+                          'composition-guide-center-symmetry',
                         ),
+                        value: CompositionGuideType.centerSymmetry,
+                        checked:
+                            selectedGuide ==
+                            CompositionGuideType.centerSymmetry,
+                        child: Text(CompositionGuideType.centerSymmetry.label),
                       ),
                     ],
                   ),
@@ -1760,30 +1765,6 @@ class _CropWorkspaceControls extends StatelessWidget {
         : rounded.toStringAsFixed(1);
 
     return rounded > 0 ? '+$text°' : '$text°';
-  }
-}
-
-class _CompositionGuideMenuItem extends StatelessWidget {
-  const _CompositionGuideMenuItem({
-    required this.label,
-    required this.selected,
-  });
-
-  final String label;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 24,
-          child: selected ? const Icon(Icons.check, size: 18) : null,
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Text(label),
-      ],
-    );
   }
 }
 

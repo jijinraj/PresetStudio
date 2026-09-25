@@ -116,6 +116,24 @@ void main() {
         findsNothing,
       );
 
+      await tester.tap(find.byKey(const ValueKey('composition-guide-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-center-symmetry')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(controller.session, initialSession);
+      expect(controller.history, hasLength(initialHistoryLength));
+      expect(
+        find.byKey(const ValueKey('composition-guide-center-symmetry-overlay')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('composition-guide-rule-of-thirds-overlay')),
+        findsNothing,
+      );
+
       await tester.tap(find.byKey(const ValueKey('crop-done')));
       await tester.pump();
 

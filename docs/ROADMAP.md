@@ -92,7 +92,7 @@
 - [x] Separate composition-guide UI state from CropState and History
 - [x] Add None guide
 - [x] Add Rule of Thirds
-- [ ] Add Center / Symmetry
+- [x] Add Center / Symmetry
 - [ ] Add Square Grid
 - [ ] Add Fine Grid
 - [ ] Add Phi Grid / Golden Ratio
