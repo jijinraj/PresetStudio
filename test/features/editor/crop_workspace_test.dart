@@ -40,6 +40,16 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey('crop-frame')), findsOneWidget);
+    expect(find.byKey(const ValueKey('crop-resize-top-left')), findsOneWidget);
+    expect(find.byKey(const ValueKey('crop-resize-top-right')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('crop-resize-bottom-left')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('crop-resize-bottom-right')),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('crop-ratio-free')), findsNothing);
     expect(find.byKey(const ValueKey('crop-ratio-original')), findsOneWidget);
     expect(find.byKey(const ValueKey('crop-ratio-4x5')), findsOneWidget);
@@ -67,6 +77,55 @@ void main() {
     expect(find.byKey(const ValueKey('crop-done')), findsOneWidget);
     expect(controller.isEditTransactionActive, isTrue);
   });
+
+  testWidgets(
+    'corner handle resizes a constrained crop without changing ratio',
+    (tester) async {
+      final controller = EditorController();
+      addTearDown(controller.dispose);
+
+      controller.setSourceImage('missing-test-image.jpg');
+
+      await tester.pumpWidget(buildWorkspace(controller));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const ValueKey('crop-ratio-4x5')));
+      await tester.pump();
+
+      final beforeRect = controller.session.crop.normalizedRect;
+      final beforeFrameSize = tester.getSize(
+        find.byKey(const ValueKey('crop-frame')),
+      );
+
+      final handle = find.byKey(const ValueKey('crop-resize-top-left'));
+      final gesture = await tester.startGesture(tester.getCenter(handle));
+      await gesture.moveBy(const Offset(36, 36));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+
+      final after = controller.session.crop;
+      final afterFrameSize = tester.getSize(
+        find.byKey(const ValueKey('crop-frame')),
+      );
+
+      expect(after.normalizedRect.right, closeTo(beforeRect.right, 0.000001));
+      expect(after.normalizedRect.bottom, closeTo(beforeRect.bottom, 0.000001));
+      expect(after.normalizedRect.width, lessThan(beforeRect.width));
+      expect(after.normalizedRect.height, lessThan(beforeRect.height));
+      expect(after.aspectRatio, closeTo(4 / 5, 0.000001));
+      expect(afterFrameSize.width, lessThan(beforeFrameSize.width));
+      expect(afterFrameSize.height, lessThan(beforeFrameSize.height));
+      expect(after.scale, greaterThan(1));
+      expect(controller.history, hasLength(1));
+
+      await tester.tap(find.byKey(const ValueKey('crop-done')));
+      await tester.pump();
+
+      expect(controller.history, hasLength(2));
+      expect(controller.history.last.label, 'Crop · 4:5');
+    },
+  );
 
   testWidgets('selecting 4:5 and Done creates one semantic crop entry', (
     tester,

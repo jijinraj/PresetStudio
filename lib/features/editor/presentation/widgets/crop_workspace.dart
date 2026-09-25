@@ -11,6 +11,7 @@ import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../application/editor_controller.dart';
 import '../../application/editor_history_entry.dart';
+import '../../domain/crop_resize_geometry.dart';
 import '../../domain/crop_state.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
@@ -377,23 +378,6 @@ class _CropWorkspaceState extends State<CropWorkspace> {
     return '${parts[1]}:${parts[0]}';
   }
 
-  double _previewAspectRatio(CropState crop) {
-    final explicit = crop.aspectRatio;
-
-    if (explicit != null && explicit > 0) {
-      return explicit;
-    }
-
-    final original = _originalAspectRatio ?? 4 / 3;
-    final rect = crop.normalizedRect;
-
-    if (rect.height <= 0) {
-      return original;
-    }
-
-    return (original * rect.width / rect.height).clamp(0.1, 10).toDouble();
-  }
-
   void _updateStraighten(double degrees) {
     _ensureTransactionStarted();
 
@@ -474,7 +458,6 @@ class _CropWorkspaceState extends State<CropWorkspace> {
                     adjustments: controller.previewAdjustments,
                     transform: session.transform,
                     crop: crop,
-                    aspectRatio: _previewAspectRatio(crop),
                     sourceAspectRatio: _originalAspectRatio ?? 4 / 3,
                     onCropChanged: (nextCrop) {
                       _ensureTransactionStarted();
@@ -581,7 +564,6 @@ class _CropCanvas extends StatefulWidget {
     required this.adjustments,
     required this.transform,
     required this.crop,
-    required this.aspectRatio,
     required this.sourceAspectRatio,
     required this.onCropChanged,
   });
@@ -590,7 +572,6 @@ class _CropCanvas extends StatefulWidget {
   final ImageAdjustments adjustments;
   final ImageTransform transform;
   final CropState crop;
-  final double aspectRatio;
   final double sourceAspectRatio;
   final ValueChanged<CropState> onCropChanged;
 
@@ -606,7 +587,13 @@ class _CropCanvasState extends State<_CropCanvas> {
   Offset? _gestureStartFocalPoint;
   Size _frameSize = Size.zero;
 
+  CropState? _resizeStartCrop;
+  Offset? _resizeStartGlobalPosition;
+  Size _resizeStageSize = Size.zero;
+  CropResizeHandle? _activeResizeHandle;
+
   bool _isManipulatingImage = false;
+  bool _isResizingCrop = false;
   PointerDeviceKind? _activePointerKind;
   Timer? _wheelIdleTimer;
 
@@ -925,6 +912,129 @@ class _CropCanvasState extends State<_CropCanvas> {
     });
   }
 
+  void _handleResizeStart(
+    CropResizeHandle handle,
+    DragStartDetails details,
+    Size stageSize,
+  ) {
+    if (stageSize.isEmpty) {
+      return;
+    }
+
+    _resizeStartCrop = widget.crop;
+    _resizeStartGlobalPosition = details.globalPosition;
+    _resizeStageSize = stageSize;
+    _activeResizeHandle = handle;
+
+    setState(() {
+      _isResizingCrop = true;
+    });
+  }
+
+  void _handleResizeUpdate(DragUpdateDetails details) {
+    final startCrop = _resizeStartCrop;
+    final startPosition = _resizeStartGlobalPosition;
+    final handle = _activeResizeHandle;
+    final stageSize = _resizeStageSize;
+
+    if (startCrop == null ||
+        startPosition == null ||
+        handle == null ||
+        stageSize.isEmpty) {
+      return;
+    }
+
+    final pointerDelta = details.globalPosition - startPosition;
+
+    const minimumFrameExtent = 56.0;
+
+    final nextRect = CropResizeGeometry.resize(
+      startRect: startCrop.normalizedRect,
+      handle: handle,
+      deltaX: pointerDelta.dx / stageSize.width,
+      deltaY: pointerDelta.dy / stageSize.height,
+      minimumWidth: (minimumFrameExtent / stageSize.width)
+          .clamp(NormalizedCropRect.minimumExtent, 1.0)
+          .toDouble(),
+      minimumHeight: (minimumFrameExtent / stageSize.height)
+          .clamp(NormalizedCropRect.minimumExtent, 1.0)
+          .toDouble(),
+    );
+
+    if (nextRect == startCrop.normalizedRect) {
+      return;
+    }
+
+    final startFrameSize = Size(
+      startCrop.normalizedRect.width * stageSize.width,
+      startCrop.normalizedRect.height * stageSize.height,
+    );
+
+    final nextFrameSize = Size(
+      nextRect.width * stageSize.width,
+      nextRect.height * stageSize.height,
+    );
+
+    if (startFrameSize.isEmpty || nextFrameSize.isEmpty) {
+      return;
+    }
+
+    // Keep the rendered image at the same visual size while the crop frame is
+    // resized around it. Shrinking the frame therefore tightens the crop
+    // instead of merely drawing the same composition in a smaller widget.
+    final frameScale = startFrameSize.width / nextFrameSize.width;
+    final nextScale = (startCrop.scale * frameScale)
+        .clamp(CropState.minimumScale, CropState.maximumScale)
+        .toDouble();
+
+    final startFrameCenter = _stageCenterFor(
+      startCrop.normalizedRect,
+      stageSize,
+    );
+    final nextFrameCenter = _stageCenterFor(nextRect, stageSize);
+
+    final startTranslation = _translationFor(startCrop, startFrameSize);
+    final absoluteImageCenter = startFrameCenter + startTranslation;
+    final proposedTranslation = absoluteImageCenter - nextFrameCenter;
+
+    final nextCrop = startCrop.copyWith(
+      normalizedRect: nextRect,
+      scale: nextScale,
+    );
+
+    final geometry = _geometryFor(crop: nextCrop, frameSize: nextFrameSize);
+    final clampedTranslation = geometry.clampTranslation(
+      proposedTranslation,
+      cropScale: nextScale,
+    );
+
+    widget.onCropChanged(
+      nextCrop.copyWith(
+        offset: _normalizedOffsetFor(clampedTranslation, nextFrameSize),
+      ),
+    );
+  }
+
+  void _handleResizeEnd() {
+    _resizeStartCrop = null;
+    _resizeStartGlobalPosition = null;
+    _resizeStageSize = Size.zero;
+    _activeResizeHandle = null;
+
+    if (mounted) {
+      setState(() {
+        _isResizingCrop = false;
+      });
+    }
+  }
+
+  Offset _stageCenterFor(NormalizedCropRect rect, Size stageSize) {
+    return Offset(
+      ((rect.left + rect.right) / 2) * stageSize.width,
+      ((rect.top + rect.bottom) / 2) * stageSize.height,
+    );
+  }
+
   void _resetImagePosition() {
     widget.onCropChanged(
       widget.crop.copyWith(
@@ -940,16 +1050,28 @@ class _CropCanvasState extends State<_CropCanvas> {
       builder: (context, constraints) {
         final availableWidth = math.max(1.0, constraints.maxWidth - 48);
         final availableHeight = math.max(1.0, constraints.maxHeight - 48);
+        final sourceAspectRatio =
+            widget.sourceAspectRatio.isFinite && widget.sourceAspectRatio > 0
+            ? widget.sourceAspectRatio
+            : 4 / 3;
 
-        var frameWidth = availableWidth;
-        var frameHeight = frameWidth / widget.aspectRatio;
+        var stageWidth = availableWidth;
+        var stageHeight = stageWidth / sourceAspectRatio;
 
-        if (frameHeight > availableHeight) {
-          frameHeight = availableHeight;
-          frameWidth = frameHeight * widget.aspectRatio;
+        if (stageHeight > availableHeight) {
+          stageHeight = availableHeight;
+          stageWidth = stageHeight * sourceAspectRatio;
         }
 
-        final frameSize = Size(frameWidth, frameHeight);
+        final stageSize = Size(stageWidth, stageHeight);
+        final cropRect = widget.crop.normalizedRect.sanitized();
+        final frameRect = Rect.fromLTRB(
+          cropRect.left * stageWidth,
+          cropRect.top * stageHeight,
+          cropRect.right * stageWidth,
+          cropRect.bottom * stageHeight,
+        );
+        final frameSize = frameRect.size;
         _frameSize = frameSize;
 
         return Stack(
@@ -962,59 +1084,78 @@ class _CropCanvasState extends State<_CropCanvas> {
               ),
             ),
             Center(
-              child: MouseRegion(
-                cursor: _isManipulatingImage
-                    ? SystemMouseCursors.grabbing
-                    : SystemMouseCursors.grab,
-                child: Listener(
-                  key: const ValueKey('crop-interaction-surface'),
-                  behavior: HitTestBehavior.opaque,
-                  onPointerDown: _handlePointerDown,
-                  onPointerMove: _handlePointerMove,
-                  onPointerUp: _handlePointerUp,
-                  onPointerCancel: _handlePointerCancel,
-                  onPointerSignal: _handlePointerSignal,
-                  child: GestureDetector(
-                    key: const ValueKey('crop-gesture-detector'),
-                    behavior: HitTestBehavior.opaque,
-                    onScaleStart: _handleScaleStart,
-                    onScaleUpdate: _handleScaleUpdate,
-                    onScaleEnd: _handleScaleEnd,
-                    child: SizedBox(
-                      key: const ValueKey('crop-frame'),
-                      width: frameSize.width,
-                      height: frameSize.height,
-                      child: ClipRect(
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            _CropImagePreview(
-                              sourceImagePath: widget.sourceImagePath,
-                              adjustments: widget.adjustments,
-                              transform: widget.transform,
-                              crop: widget.crop,
-                              frameSize: frameSize,
-                              sourceAspectRatio: widget.sourceAspectRatio,
-                            ),
-                            IgnorePointer(
-                              child: CustomPaint(
-                                painter: _CropFramePainter(
-                                  emphasizeGrid: _isManipulatingImage,
+              child: SizedBox(
+                key: const ValueKey('crop-source-stage'),
+                width: stageSize.width,
+                height: stageSize.height,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fromRect(
+                      rect: frameRect,
+                      child: MouseRegion(
+                        cursor: _isManipulatingImage
+                            ? SystemMouseCursors.grabbing
+                            : SystemMouseCursors.grab,
+                        child: Listener(
+                          key: const ValueKey('crop-interaction-surface'),
+                          behavior: HitTestBehavior.opaque,
+                          onPointerDown: _handlePointerDown,
+                          onPointerMove: _handlePointerMove,
+                          onPointerUp: _handlePointerUp,
+                          onPointerCancel: _handlePointerCancel,
+                          onPointerSignal: _handlePointerSignal,
+                          child: GestureDetector(
+                            key: const ValueKey('crop-gesture-detector'),
+                            behavior: HitTestBehavior.opaque,
+                            onScaleStart: _handleScaleStart,
+                            onScaleUpdate: _handleScaleUpdate,
+                            onScaleEnd: _handleScaleEnd,
+                            child: SizedBox(
+                              key: const ValueKey('crop-frame'),
+                              width: frameSize.width,
+                              height: frameSize.height,
+                              child: ClipRect(
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    _CropImagePreview(
+                                      sourceImagePath: widget.sourceImagePath,
+                                      adjustments: widget.adjustments,
+                                      transform: widget.transform,
+                                      crop: widget.crop,
+                                      frameSize: frameSize,
+                                      sourceAspectRatio:
+                                          widget.sourceAspectRatio,
+                                    ),
+                                    IgnorePointer(
+                                      child: CustomPaint(
+                                        painter: _CropFramePainter(
+                                          emphasizeGrid:
+                                              _isManipulatingImage ||
+                                              _isResizingCrop,
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: AppSpacing.sm,
+                                      bottom: AppSpacing.sm,
+                                      child: IgnorePointer(
+                                        child: _CropZoomBadge(
+                                          scale: widget.crop.scale,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                            Positioned(
-                              right: AppSpacing.sm,
-                              bottom: AppSpacing.sm,
-                              child: IgnorePointer(
-                                child: _CropZoomBadge(scale: widget.crop.scale),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    ..._buildResizeHandles(frameRect, stageSize),
+                  ],
                 ),
               ),
             ),
@@ -1022,6 +1163,73 @@ class _CropCanvasState extends State<_CropCanvas> {
         );
       },
     );
+  }
+
+  List<Widget> _buildResizeHandles(Rect frameRect, Size stageSize) {
+    const hitExtent = 36.0;
+    const halfHitExtent = hitExtent / 2;
+
+    Widget handle(
+      CropResizeHandle resizeHandle,
+      Offset center,
+      MouseCursor cursor,
+      String keyName,
+    ) {
+      final left = (center.dx - halfHitExtent)
+          .clamp(0.0, math.max(0.0, stageSize.width - hitExtent))
+          .toDouble();
+      final top = (center.dy - halfHitExtent)
+          .clamp(0.0, math.max(0.0, stageSize.height - hitExtent))
+          .toDouble();
+
+      return Positioned(
+        left: left,
+        top: top,
+        width: hitExtent,
+        height: hitExtent,
+        child: MouseRegion(
+          cursor: cursor,
+          child: GestureDetector(
+            key: ValueKey(keyName),
+            behavior: HitTestBehavior.opaque,
+            dragStartBehavior: DragStartBehavior.down,
+            onPanStart: (details) {
+              _handleResizeStart(resizeHandle, details, stageSize);
+            },
+            onPanUpdate: _handleResizeUpdate,
+            onPanEnd: (_) => _handleResizeEnd(),
+            onPanCancel: _handleResizeEnd,
+          ),
+        ),
+      );
+    }
+
+    return [
+      handle(
+        CropResizeHandle.topLeft,
+        frameRect.topLeft,
+        SystemMouseCursors.resizeUpLeftDownRight,
+        'crop-resize-top-left',
+      ),
+      handle(
+        CropResizeHandle.topRight,
+        frameRect.topRight,
+        SystemMouseCursors.resizeUpRightDownLeft,
+        'crop-resize-top-right',
+      ),
+      handle(
+        CropResizeHandle.bottomLeft,
+        frameRect.bottomLeft,
+        SystemMouseCursors.resizeUpRightDownLeft,
+        'crop-resize-bottom-left',
+      ),
+      handle(
+        CropResizeHandle.bottomRight,
+        frameRect.bottomRight,
+        SystemMouseCursors.resizeUpLeftDownRight,
+        'crop-resize-bottom-right',
+      ),
+    ];
   }
 }
 
