@@ -147,12 +147,20 @@
 
 ## Export
 
+- [x] Define export formats and full-resolution output planning
+  - [x] JPEG
+  - [x] PNG
+  - [x] WebP
+  - [x] Original resolution
+  - [x] Optional longest-edge limit
+  - [x] Quality preference for JPEG / WebP
 - [ ] Full-resolution export renderer
 - [ ] Ensure exported output matches editor preview
-- [ ] JPEG export
-- [ ] PNG export
-- [ ] Export quality settings
-- [ ] Export destination preferences
+- [ ] JPEG encoding
+- [ ] PNG encoding
+- [ ] WebP encoding
+- [ ] Save As / export destination flow
+- [ ] Export preferences UI
 
 ## Community
 

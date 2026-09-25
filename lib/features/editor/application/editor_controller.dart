@@ -179,7 +179,7 @@ class EditorController extends ChangeNotifier {
   }
 
   void updateExportSettings(ExportSettings settings) {
-    _session = _session.copyWith(exportSettings: settings);
+    _session = _session.copyWith(exportSettings: settings.sanitized());
 
     notifyListeners();
   }
