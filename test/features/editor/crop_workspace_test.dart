@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/application/editor_controller.dart';
 import 'package:presetstudio/features/editor/domain/crop_state.dart';
+import 'package:presetstudio/features/editor/presentation/widgets/composition_guide_overlay.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/crop_workspace.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/editor_rendered_image.dart';
 
@@ -122,6 +123,8 @@ void main() {
         ('fine-grid', 'fine-grid'),
         ('phi-grid', 'phi-grid'),
         ('diagonal-method', 'diagonal-method'),
+        ('golden-spiral', 'golden-spiral'),
+        ('golden-triangle', 'golden-triangle'),
       ];
 
       for (final (menuId, overlayId) in additionalGuides) {
@@ -148,6 +151,108 @@ void main() {
       await tester.pump();
 
       expect(controller.isEditTransactionActive, isFalse);
+      expect(controller.session, initialSession);
+      expect(controller.history, hasLength(initialHistoryLength));
+    },
+  );
+
+  testWidgets(
+    'directional guide orientation stays workspace-only and out of History',
+    (tester) async {
+      final controller = EditorController();
+      addTearDown(controller.dispose);
+
+      controller.setSourceImage('missing-test-image.jpg');
+
+      final initialSession = controller.session;
+      final initialHistoryLength = controller.history.length;
+
+      await tester.pumpWidget(buildWorkspace(controller));
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey('composition-guide-orientation-menu')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('composition-guide-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-golden-spiral')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('composition-guide-golden-spiral-overlay')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('composition-guide-orientation-menu')),
+        findsOneWidget,
+      );
+
+      var overlay = tester.widget<CompositionGuideOverlay>(
+        find.byType(CompositionGuideOverlay),
+      );
+      expect(overlay.orientation, const CompositionGuideOrientation());
+
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-orientation-menu')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('composition-guide-rotate')));
+      await tester.pumpAndSettle();
+
+      overlay = tester.widget<CompositionGuideOverlay>(
+        find.byType(CompositionGuideOverlay),
+      );
+      expect(overlay.orientation.normalizedQuarterTurns, 1);
+      expect(controller.session, initialSession);
+      expect(controller.history, hasLength(initialHistoryLength));
+
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-orientation-menu')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-flip-horizontal')),
+      );
+      await tester.pumpAndSettle();
+
+      overlay = tester.widget<CompositionGuideOverlay>(
+        find.byType(CompositionGuideOverlay),
+      );
+      expect(overlay.orientation.mirrored, isTrue);
+      expect(controller.session, initialSession);
+      expect(controller.history, hasLength(initialHistoryLength));
+
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-orientation-menu')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-flip-vertical')),
+      );
+      await tester.pumpAndSettle();
+
+      overlay = tester.widget<CompositionGuideOverlay>(
+        find.byType(CompositionGuideOverlay),
+      );
+      expect(overlay.orientation.mirrored, isFalse);
+      expect(controller.session, initialSession);
+      expect(controller.history, hasLength(initialHistoryLength));
+
+      await tester.tap(find.byKey(const ValueKey('composition-guide-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('composition-guide-center-symmetry')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('composition-guide-orientation-menu')),
+        findsNothing,
+      );
       expect(controller.session, initialSession);
       expect(controller.history, hasLength(initialHistoryLength));
     },

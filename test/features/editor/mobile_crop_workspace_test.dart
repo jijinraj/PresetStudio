@@ -94,4 +94,62 @@ void main() {
     expect(committedFrame.aspectRatio, closeTo(1.0, 0.000001));
     expect(controller.session.crop.aspectRatio, closeTo(1.0, 0.000001));
   });
+
+  testWidgets('mobile directional guide controls fit without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final controller = EditorController();
+    addTearDown(controller.dispose);
+
+    controller.setSourceImage('missing-test-image.jpg');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MobileEditorShell(
+          controller: controller,
+          onImportImage: () async {},
+          isImporting: false,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Crop'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('composition-guide-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('composition-guide-golden-spiral')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('composition-guide-golden-spiral-overlay')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('composition-guide-orientation-menu')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('composition-guide-orientation-menu')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('composition-guide-rotate')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('crop-cancel')));
+    await tester.pumpAndSettle();
+
+    expect(controller.isEditTransactionActive, isFalse);
+  });
 }

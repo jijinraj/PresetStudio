@@ -57,6 +57,8 @@ class _CropWorkspaceState extends State<CropWorkspace> {
   double? _originalAspectRatio;
   String _selectedRatioId = 'original';
   CompositionGuideType _selectedGuide = CompositionGuideType.ruleOfThirds;
+  CompositionGuideOrientation _guideOrientation =
+      const CompositionGuideOrientation();
 
   bool _ownsTransaction = false;
   bool _finalized = false;
@@ -390,6 +392,24 @@ class _CropWorkspaceState extends State<CropWorkspace> {
     });
   }
 
+  void _rotateCompositionGuide() {
+    setState(() {
+      _guideOrientation = _guideOrientation.rotateClockwise();
+    });
+  }
+
+  void _flipCompositionGuideHorizontal() {
+    setState(() {
+      _guideOrientation = _guideOrientation.flipHorizontal();
+    });
+  }
+
+  void _flipCompositionGuideVertical() {
+    setState(() {
+      _guideOrientation = _guideOrientation.flipVertical();
+    });
+  }
+
   void _updateStraighten(double degrees) {
     _ensureTransactionStarted();
 
@@ -472,6 +492,7 @@ class _CropWorkspaceState extends State<CropWorkspace> {
                     crop: crop,
                     sourceAspectRatio: _originalAspectRatio ?? 4 / 3,
                     compositionGuide: _selectedGuide,
+                    compositionGuideOrientation: _guideOrientation,
                     onCropChanged: (nextCrop) {
                       _ensureTransactionStarted();
                       controller.updateCrop(nextCrop);
@@ -487,8 +508,12 @@ class _CropWorkspaceState extends State<CropWorkspace> {
                   selectedRatioId: _selectedRatioId,
                   ratioOptions: _ratioOptions,
                   selectedGuide: _selectedGuide,
+                  guideOrientation: _guideOrientation,
                   onSelectRatio: _selectRatio,
                   onSelectGuide: _selectCompositionGuide,
+                  onRotateGuide: _rotateCompositionGuide,
+                  onFlipGuideHorizontal: _flipCompositionGuideHorizontal,
+                  onFlipGuideVertical: _flipCompositionGuideVertical,
                   onSwapRatioOrientation: _swapRatioOrientation,
                   onStraightenChanged: _updateStraighten,
                   onRotateLeft: _rotateLeft,
@@ -581,6 +606,7 @@ class _CropCanvas extends StatefulWidget {
     required this.crop,
     required this.sourceAspectRatio,
     required this.compositionGuide,
+    required this.compositionGuideOrientation,
     required this.onCropChanged,
   });
 
@@ -590,6 +616,7 @@ class _CropCanvas extends StatefulWidget {
   final CropState crop;
   final double sourceAspectRatio;
   final CompositionGuideType compositionGuide;
+  final CompositionGuideOrientation compositionGuideOrientation;
   final ValueChanged<CropState> onCropChanged;
 
   @override
@@ -1148,6 +1175,8 @@ class _CropCanvasState extends State<_CropCanvas> {
                                     IgnorePointer(
                                       child: CompositionGuideOverlay(
                                         guide: widget.compositionGuide,
+                                        orientation:
+                                            widget.compositionGuideOrientation,
                                         emphasize:
                                             _isManipulatingImage ||
                                             _isResizingCrop,
@@ -1529,6 +1558,8 @@ class _CropFramePainter extends CustomPainter {
   bool shouldRepaint(covariant _CropFramePainter oldDelegate) => false;
 }
 
+enum _CompositionGuideOrientationAction { rotate, flipHorizontal, flipVertical }
+
 class _CropWorkspaceControls extends StatelessWidget {
   const _CropWorkspaceControls({
     required this.compact,
@@ -1538,8 +1569,12 @@ class _CropWorkspaceControls extends StatelessWidget {
     required this.selectedRatioId,
     required this.ratioOptions,
     required this.selectedGuide,
+    required this.guideOrientation,
     required this.onSelectRatio,
     required this.onSelectGuide,
+    required this.onRotateGuide,
+    required this.onFlipGuideHorizontal,
+    required this.onFlipGuideVertical,
     required this.onSwapRatioOrientation,
     required this.onStraightenChanged,
     required this.onRotateLeft,
@@ -1555,8 +1590,12 @@ class _CropWorkspaceControls extends StatelessWidget {
   final String selectedRatioId;
   final List<_CropRatioOption> ratioOptions;
   final CompositionGuideType selectedGuide;
+  final CompositionGuideOrientation guideOrientation;
   final ValueChanged<_CropRatioOption> onSelectRatio;
   final ValueChanged<CompositionGuideType> onSelectGuide;
+  final VoidCallback onRotateGuide;
+  final VoidCallback onFlipGuideHorizontal;
+  final VoidCallback onFlipGuideVertical;
   final VoidCallback onSwapRatioOrientation;
   final ValueChanged<double> onStraightenChanged;
   final VoidCallback onRotateLeft;
@@ -1642,6 +1681,51 @@ class _CropWorkspaceControls extends StatelessWidget {
                         )
                         .toList(growable: false),
                   ),
+                  if (selectedGuide.supportsOrientation)
+                    PopupMenuButton<_CompositionGuideOrientationAction>(
+                      key: const ValueKey('composition-guide-orientation-menu'),
+                      tooltip: 'Orient ${selectedGuide.label.toLowerCase()}',
+                      icon: Transform.rotate(
+                        angle:
+                            guideOrientation.normalizedQuarterTurns *
+                            math.pi /
+                            2,
+                        child: const Icon(Icons.transform),
+                      ),
+                      onSelected: (action) {
+                        switch (action) {
+                          case _CompositionGuideOrientationAction.rotate:
+                            onRotateGuide();
+                            break;
+                          case _CompositionGuideOrientationAction
+                              .flipHorizontal:
+                            onFlipGuideHorizontal();
+                            break;
+                          case _CompositionGuideOrientationAction.flipVertical:
+                            onFlipGuideVertical();
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem<_CompositionGuideOrientationAction>(
+                          key: ValueKey('composition-guide-rotate'),
+                          value: _CompositionGuideOrientationAction.rotate,
+                          child: Text('Rotate 90°'),
+                        ),
+                        PopupMenuItem<_CompositionGuideOrientationAction>(
+                          key: ValueKey('composition-guide-flip-horizontal'),
+                          value:
+                              _CompositionGuideOrientationAction.flipHorizontal,
+                          child: Text('Flip horizontal'),
+                        ),
+                        PopupMenuItem<_CompositionGuideOrientationAction>(
+                          key: ValueKey('composition-guide-flip-vertical'),
+                          value:
+                              _CompositionGuideOrientationAction.flipVertical,
+                          child: Text('Flip vertical'),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),

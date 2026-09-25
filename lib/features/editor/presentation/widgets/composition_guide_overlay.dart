@@ -10,6 +10,8 @@ enum CompositionGuideType {
   fineGrid,
   phiGrid,
   diagonalMethod,
+  goldenSpiral,
+  goldenTriangle,
 }
 
 extension CompositionGuideTypeLabel on CompositionGuideType {
@@ -22,6 +24,8 @@ extension CompositionGuideTypeLabel on CompositionGuideType {
       CompositionGuideType.fineGrid => 'fine-grid',
       CompositionGuideType.phiGrid => 'phi-grid',
       CompositionGuideType.diagonalMethod => 'diagonal-method',
+      CompositionGuideType.goldenSpiral => 'golden-spiral',
+      CompositionGuideType.goldenTriangle => 'golden-triangle',
     };
   }
 
@@ -34,19 +38,92 @@ extension CompositionGuideTypeLabel on CompositionGuideType {
       CompositionGuideType.fineGrid => 'Fine Grid',
       CompositionGuideType.phiGrid => 'Phi Grid / Golden Ratio',
       CompositionGuideType.diagonalMethod => 'Diagonal Method',
+      CompositionGuideType.goldenSpiral => 'Golden Spiral',
+      CompositionGuideType.goldenTriangle => 'Golden Triangle',
     };
   }
+
+  bool get supportsOrientation {
+    return switch (this) {
+      CompositionGuideType.goldenSpiral ||
+      CompositionGuideType.goldenTriangle => true,
+      _ => false,
+    };
+  }
+}
+
+@immutable
+class CompositionGuideOrientation {
+  const CompositionGuideOrientation({
+    this.quarterTurns = 0,
+    this.mirrored = false,
+  });
+
+  final int quarterTurns;
+  final bool mirrored;
+
+  int get normalizedQuarterTurns => ((quarterTurns % 4) + 4) % 4;
+
+  CompositionGuideOrientation rotateClockwise() {
+    return CompositionGuideOrientation(
+      quarterTurns: normalizedQuarterTurns + 1,
+      mirrored: mirrored,
+    );
+  }
+
+  CompositionGuideOrientation flipHorizontal() {
+    return CompositionGuideOrientation(
+      quarterTurns: -normalizedQuarterTurns,
+      mirrored: !mirrored,
+    );
+  }
+
+  CompositionGuideOrientation flipVertical() {
+    return CompositionGuideOrientation(
+      quarterTurns: 2 - normalizedQuarterTurns,
+      mirrored: !mirrored,
+    );
+  }
+
+  Offset transformNormalized(Offset point) {
+    var x = point.dx;
+    var y = point.dy;
+
+    if (mirrored) {
+      x = 1 - x;
+    }
+
+    return switch (normalizedQuarterTurns) {
+      0 => Offset(x, y),
+      1 => Offset(1 - y, x),
+      2 => Offset(1 - x, 1 - y),
+      3 => Offset(y, 1 - x),
+      _ => throw StateError('Unexpected normalized quarter turn'),
+    };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CompositionGuideOrientation &&
+        normalizedQuarterTurns == other.normalizedQuarterTurns &&
+        mirrored == other.mirrored;
+  }
+
+  @override
+  int get hashCode => Object.hash(normalizedQuarterTurns, mirrored);
 }
 
 class CompositionGuideOverlay extends StatelessWidget {
   const CompositionGuideOverlay({
     required this.guide,
     required this.emphasize,
+    this.orientation = const CompositionGuideOrientation(),
     super.key,
   });
 
   final CompositionGuideType guide;
   final bool emphasize;
+  final CompositionGuideOrientation orientation;
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +154,20 @@ class CompositionGuideOverlay extends StatelessWidget {
       CompositionGuideType.diagonalMethod => CustomPaint(
         key: key,
         painter: _DiagonalMethodGuidePainter(emphasize: emphasize),
+      ),
+      CompositionGuideType.goldenSpiral => CustomPaint(
+        key: key,
+        painter: _GoldenSpiralGuidePainter(
+          emphasize: emphasize,
+          orientation: orientation,
+        ),
+      ),
+      CompositionGuideType.goldenTriangle => CustomPaint(
+        key: key,
+        painter: _GoldenTriangleGuidePainter(
+          emphasize: emphasize,
+          orientation: orientation,
+        ),
       ),
     };
   }
@@ -276,6 +367,136 @@ class _DiagonalMethodGuidePainter extends CustomPainter {
   }
 }
 
+class _GoldenSpiralGuidePainter extends CustomPainter {
+  const _GoldenSpiralGuidePainter({
+    required this.emphasize,
+    required this.orientation,
+  });
+
+  final bool emphasize;
+  final CompositionGuideOrientation orientation;
+
+  static const double _phi = 1.618033988749895;
+  static const int _samples = 220;
+  static const double _sweepRadians = math.pi * 3.5;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) {
+      return;
+    }
+
+    final rawPoints = <Offset>[];
+    final growth = math.log(_phi) / (math.pi / 2);
+
+    for (var index = 0; index < _samples; index += 1) {
+      final theta = _sweepRadians * index / (_samples - 1);
+      final radius = math.exp(-growth * theta);
+
+      rawPoints.add(Offset(radius * math.cos(theta), radius * math.sin(theta)));
+    }
+
+    var minX = double.infinity;
+    var maxX = double.negativeInfinity;
+    var minY = double.infinity;
+    var maxY = double.negativeInfinity;
+
+    for (final point in rawPoints) {
+      minX = math.min(minX, point.dx);
+      maxX = math.max(maxX, point.dx);
+      minY = math.min(minY, point.dy);
+      maxY = math.max(maxY, point.dy);
+    }
+
+    final spanX = maxX - minX;
+    final spanY = maxY - minY;
+
+    if (spanX <= 0 || spanY <= 0) {
+      return;
+    }
+
+    final path = Path();
+
+    for (var index = 0; index < rawPoints.length; index += 1) {
+      final raw = rawPoints[index];
+      final normalized = Offset(
+        (raw.dx - minX) / spanX,
+        (raw.dy - minY) / spanY,
+      );
+      final point = _mapNormalizedPoint(normalized, size, orientation);
+
+      if (index == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+
+    canvas.drawPath(path, _guidePaint(emphasize));
+  }
+
+  @override
+  bool shouldRepaint(covariant _GoldenSpiralGuidePainter oldDelegate) {
+    return oldDelegate.emphasize != emphasize ||
+        oldDelegate.orientation != orientation;
+  }
+}
+
+class _GoldenTriangleGuidePainter extends CustomPainter {
+  const _GoldenTriangleGuidePainter({
+    required this.emphasize,
+    required this.orientation,
+  });
+
+  final bool emphasize;
+  final CompositionGuideOrientation orientation;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) {
+      return;
+    }
+
+    final paint = _guidePaint(emphasize);
+    final denominator = (size.width * size.width) + (size.height * size.height);
+    final topProjection = size.width * size.width / denominator;
+    final bottomProjection = size.height * size.height / denominator;
+
+    final lines = <_NormalizedGuideLine>[
+      (start: Offset.zero, end: const Offset(1, 1)),
+      (start: const Offset(1, 0), end: Offset(topProjection, topProjection)),
+      (
+        start: const Offset(0, 1),
+        end: Offset(bottomProjection, bottomProjection),
+      ),
+    ];
+
+    for (final line in lines) {
+      canvas.drawLine(
+        _mapNormalizedPoint(line.start, size, orientation),
+        _mapNormalizedPoint(line.end, size, orientation),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GoldenTriangleGuidePainter oldDelegate) {
+    return oldDelegate.emphasize != emphasize ||
+        oldDelegate.orientation != orientation;
+  }
+}
+
+Offset _mapNormalizedPoint(
+  Offset point,
+  Size size,
+  CompositionGuideOrientation orientation,
+) {
+  final transformed = orientation.transformNormalized(point);
+  return Offset(transformed.dx * size.width, transformed.dy * size.height);
+}
+
+typedef _NormalizedGuideLine = ({Offset start, Offset end});
 typedef _GridLine = (Offset start, Offset end);
 
 void _drawCenteredGridLines({

@@ -96,10 +96,10 @@
 - [x] Add Square Grid
 - [x] Add Fine Grid
 - [x] Add Phi Grid / Golden Ratio
-- [ ] Add Golden Spiral
-- [ ] Add Golden Triangle
+- [x] Add Golden Spiral
+- [x] Add Golden Triangle
 - [x] Add Diagonal Method
-- [ ] Add guide orientation controls where relevant
+- [x] Add guide orientation controls where relevant
 - [ ] Add guide opacity control
 
 ## Color controls
