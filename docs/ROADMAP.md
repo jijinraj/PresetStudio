@@ -116,10 +116,10 @@
 - [x] Define portable preset metadata and adjustment mapping
 - [x] Keep crop / transform geometry out of Presets v1; reserve geometry for templates
 - [x] Define a multi-source remote preset registry without coupling preset files to Git hosting
-- [ ] Save current adjustments as preset
-- [ ] Apply preset
-- [ ] Rename preset
-- [ ] Delete preset
+- [x] Save current adjustments as preset
+- [x] Apply preset
+- [x] Rename preset
+- [x] Delete preset
 - [x] Local / offline preset library
 - [ ] Import preset JSON
 - [ ] Export preset JSON

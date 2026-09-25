@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,9 @@ import '../infrastructure/local_image_exporter.dart';
 import '../infrastructure/local_image_importer.dart';
 import '../rendering/export_background_renderer.dart';
 import '../rendering/export_image_renderer.dart';
+import '../../presets/application/preset_library.dart';
+import '../../presets/application/preset_library_controller.dart';
+import '../../presets/infrastructure/local_preset_library_store.dart';
 import 'widgets/editor_shell.dart';
 import 'widgets/export_settings_dialog.dart';
 
@@ -22,12 +26,26 @@ class _EditorScreenState extends State<EditorScreen> {
   final EditorController _controller = EditorController();
   final LocalImageImporter _imageImporter = const LocalImageImporter();
   final LocalImageExporter _imageExporter = const LocalImageExporter();
+  late final PresetLibraryController _presetLibraryController;
 
   bool _isImporting = false;
   bool _isExporting = false;
 
   @override
+  void initState() {
+    super.initState();
+    _presetLibraryController = PresetLibraryController(
+      libraryLoader: () async {
+        final store = await LocalPresetLibraryStore.openDefault();
+        return PresetLibrary(store: store);
+      },
+    );
+    unawaited(_presetLibraryController.initialize());
+  }
+
+  @override
   void dispose() {
+    _presetLibraryController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -150,6 +168,7 @@ class _EditorScreenState extends State<EditorScreen> {
   Widget build(BuildContext context) {
     return EditorShell(
       controller: _controller,
+      presetLibraryController: _presetLibraryController,
       onImportImage: _importImage,
       isImporting: _isImporting,
       onExportImage: _exportImage,

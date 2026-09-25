@@ -166,14 +166,20 @@ class EditorController extends ChangeNotifier {
 
   void applyPreset({
     required String presetId,
+    String? presetName,
     required ImageAdjustments adjustments,
   }) {
+    final normalizedName = presetName?.trim();
+    final label = normalizedName == null || normalizedName.isEmpty
+        ? 'Preset $presetId'
+        : 'Preset: $normalizedName';
+
     _applyEdit(
       _session.copyWith(
         activePresetId: presetId,
         adjustments: adjustments.sanitized(),
       ),
-      label: 'Preset $presetId',
+      label: label,
       action: EditorHistoryAction.preset,
     );
   }

@@ -8,6 +8,8 @@ import '../../../../theme/tokens/app_dimensions.dart';
 import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
+import '../../../presets/application/preset_library_controller.dart';
+import '../../../presets/presentation/widgets/preset_library_view.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
@@ -22,6 +24,7 @@ enum _MobileMenuAction { history }
 class MobileEditorShell extends StatelessWidget {
   const MobileEditorShell({
     required this.controller,
+    this.presetLibraryController,
     required this.onImportImage,
     required this.isImporting,
     this.onExportImage,
@@ -30,6 +33,7 @@ class MobileEditorShell extends StatelessWidget {
   });
 
   final EditorController controller;
+  final PresetLibraryController? presetLibraryController;
   final Future<void> Function() onImportImage;
   final bool isImporting;
   final Future<void> Function()? onExportImage;
@@ -130,7 +134,10 @@ class MobileEditorShell extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: _MobileToolBar(controller: controller),
+      bottomNavigationBar: _MobileToolBar(
+        controller: controller,
+        presetLibraryController: presetLibraryController,
+      ),
     );
   }
 
@@ -171,9 +178,13 @@ class MobileEditorShell extends StatelessWidget {
 }
 
 class _MobileToolBar extends StatelessWidget {
-  const _MobileToolBar({required this.controller});
+  const _MobileToolBar({
+    required this.controller,
+    this.presetLibraryController,
+  });
 
   final EditorController controller;
+  final PresetLibraryController? presetLibraryController;
 
   @override
   Widget build(BuildContext context) {
@@ -193,10 +204,15 @@ class _MobileToolBar extends StatelessWidget {
               height: AppDimensions.mobileBottomBarHeight,
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: _MobileTool(
                       icon: Icons.auto_awesome_outlined,
                       label: 'Looks',
+                      onTap: presetLibraryController == null
+                          ? null
+                          : () {
+                              _showPresetsSheet(context);
+                            },
                     ),
                   ),
                   Expanded(
@@ -221,6 +237,50 @@ class _MobileToolBar extends StatelessWidget {
                               _showCropWorkspace(context);
                             }
                           : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPresetsSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final height = MediaQuery.sizeOf(sheetContext).height * 0.68;
+
+        return SafeArea(
+          top: false,
+          child: SizedBox(
+            height: height,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Presets', style: AppTypography.title),
+                  const SizedBox(height: AppSpacing.md),
+                  Expanded(
+                    child: PresetLibraryView(
+                      libraryController: presetLibraryController!,
+                      editorController: controller,
+                      showTitle: false,
+                      onPresetApplied: () {
+                        Navigator.of(sheetContext).pop();
+                      },
                     ),
                   ),
                 ],

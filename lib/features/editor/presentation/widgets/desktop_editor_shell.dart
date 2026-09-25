@@ -7,6 +7,8 @@ import '../../../../theme/tokens/app_colors.dart';
 import '../../../../theme/tokens/app_dimensions.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
+import '../../../presets/application/preset_library_controller.dart';
+import '../../../presets/presentation/widgets/preset_library_view.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
@@ -25,6 +27,7 @@ enum _DesktopHistoryMenuAction { enableAll, clearHistory }
 class DesktopEditorShell extends StatefulWidget {
   const DesktopEditorShell({
     required this.controller,
+    this.presetLibraryController,
     required this.onImportImage,
     required this.isImporting,
     this.onExportImage,
@@ -33,6 +36,7 @@ class DesktopEditorShell extends StatefulWidget {
   });
 
   final EditorController controller;
+  final PresetLibraryController? presetLibraryController;
   final Future<void> Function() onImportImage;
   final bool isImporting;
   final Future<void> Function()? onExportImage;
@@ -121,7 +125,10 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
                   width: AppDimensions.libraryPanelWidth,
                   child: IgnorePointer(
                     ignoring: _isCropping,
-                    child: _LibraryPanel(controller: controller),
+                    child: _LibraryPanel(
+                      controller: controller,
+                      presetLibraryController: widget.presetLibraryController,
+                    ),
                   ),
                 ),
                 const VerticalDivider(width: 1),
@@ -328,9 +335,10 @@ class _DesktopTopBar extends StatelessWidget {
 }
 
 class _LibraryPanel extends StatefulWidget {
-  const _LibraryPanel({required this.controller});
+  const _LibraryPanel({required this.controller, this.presetLibraryController});
 
   final EditorController controller;
+  final PresetLibraryController? presetLibraryController;
 
   @override
   State<_LibraryPanel> createState() => _LibraryPanelState();
@@ -358,13 +366,26 @@ class _LibraryPanelState extends State<_LibraryPanel> {
             children: [
               const Text('Library', style: AppTypography.title),
               const SizedBox(height: AppSpacing.lg),
-              const Text('Presets', style: AppTypography.label),
-              const SizedBox(height: AppSpacing.sm),
-              const Text(
-                'Your preset library will appear here.',
-                style: AppTypography.bodyMuted,
+              SizedBox(
+                height: 220,
+                child: widget.presetLibraryController == null
+                    ? const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Presets', style: AppTypography.label),
+                          SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'Your preset library will appear here.',
+                            style: AppTypography.bodyMuted,
+                          ),
+                        ],
+                      )
+                    : PresetLibraryView(
+                        libraryController: widget.presetLibraryController!,
+                        editorController: controller,
+                      ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
               const Divider(height: 1),
               const SizedBox(height: AppSpacing.md),
               _DesktopHistoryHeader(
