@@ -121,8 +121,8 @@
 - [x] Rename preset
 - [x] Delete preset
 - [x] Local / offline preset library
-- [ ] Import preset JSON
-- [ ] Export preset JSON
+- [x] Import preset JSON
+- [x] Export preset JSON
 - [ ] Persist preset source registry
 - [ ] Add / remove / enable multiple repository or catalog URLs
 - [ ] Add repository-backed catalog provider

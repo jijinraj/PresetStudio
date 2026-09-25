@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
 import 'package:presetstudio/features/presets/application/preset_library.dart';
 import 'package:presetstudio/features/presets/application/preset_library_controller.dart';
+import 'package:presetstudio/features/presets/domain/preset.dart';
+import 'package:presetstudio/features/presets/domain/preset_adjustment_values.dart';
 import 'package:presetstudio/features/presets/domain/preset_record.dart';
 import 'package:presetstudio/features/presets/infrastructure/local_preset_library_store.dart';
 
@@ -59,6 +61,85 @@ void main() {
     expect(reloaded.records, hasLength(1));
     expect(reloaded.records.single.preset.name, 'Dark Forest');
     expect(reloaded.records.single.preset.description, 'Muted greens');
+  });
+
+  test(
+    'imports portable presets, sanitizes values, and supports copies',
+    () async {
+      final controller = _controller(
+        tempDirectory,
+        idGenerator: () => 'imported-copy',
+      );
+      await controller.initialize();
+
+      final portable = Preset(
+        id: 'portable-id',
+        name: 'Portable Look',
+        description: 'Shared preset',
+        author: 'Preset Author',
+        createdAt: DateTime.utc(2026, 9, 20),
+        revision: 4,
+        adjustments: const PresetAdjustmentValues(
+          exposure: 12,
+          contrast: 240,
+          temperature: -180,
+          vibrance: 35,
+        ),
+      );
+
+      final imported = await controller.importPortablePreset(portable);
+
+      expect(imported.preset.id, 'portable-id');
+      expect(imported.preset.revision, 4);
+      expect(imported.preset.adjustments.exposure, 5);
+      expect(imported.preset.adjustments.contrast, 100);
+      expect(imported.preset.adjustments.temperature, -100);
+      expect(
+        controller.localRecordForPresetId('portable-id')?.libraryId,
+        imported.libraryId,
+      );
+
+      final copy = await controller.importPortablePreset(
+        portable,
+        asCopy: true,
+      );
+
+      expect(copy.preset.id, 'imported-copy');
+      expect(copy.preset.name, portable.name);
+      expect(copy.preset.description, portable.description);
+      expect(copy.preset.author, portable.author);
+      expect(copy.preset.createdAt, portable.createdAt);
+      expect(copy.preset.revision, portable.revision);
+      expect(controller.records, hasLength(2));
+    },
+  );
+
+  test('import without copy replaces the matching local portable ID', () async {
+    final controller = _controller(tempDirectory);
+    await controller.initialize();
+
+    final original = Preset(
+      id: 'same-id',
+      name: 'Original',
+      createdAt: DateTime.utc(2026, 9, 20),
+      adjustments: const PresetAdjustmentValues(contrast: 10),
+    );
+    final replacement = Preset(
+      id: 'same-id',
+      name: 'Replacement',
+      createdAt: DateTime.utc(2026, 9, 21),
+      revision: 2,
+      adjustments: const PresetAdjustmentValues(contrast: 30),
+    );
+
+    final first = await controller.importPortablePreset(original);
+    final second = await controller.importPortablePreset(replacement);
+
+    expect(first.libraryId, second.libraryId);
+    expect(controller.records, hasLength(1));
+    expect(controller.records.single.preset.name, 'Replacement');
+    expect(controller.records.single.preset.revision, 2);
+    expect(controller.records.single.preset.adjustments.contrast, 30);
   });
 
   test('rename and delete update the in-memory library state', () async {

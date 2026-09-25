@@ -102,6 +102,50 @@ class PresetLibraryController extends ChangeNotifier {
     }
   }
 
+  PresetRecord? localRecordForPresetId(String presetId) {
+    final normalizedPresetId = presetId.trim();
+
+    for (final record in _records) {
+      if (record.origin.type == PresetOriginType.local &&
+          record.preset.id == normalizedPresetId) {
+        return record;
+      }
+    }
+
+    return null;
+  }
+
+  Future<PresetRecord> importPortablePreset(
+    Preset preset, {
+    bool asCopy = false,
+  }) async {
+    final library = _requireLibrary();
+    final sanitizedAdjustments = PresetAdjustmentMapper.fromImageAdjustments(
+      PresetAdjustmentMapper.toImageAdjustments(preset.adjustments),
+    );
+    final importedPreset = Preset(
+      schemaVersion: preset.schemaVersion,
+      id: asCopy ? _idGenerator() : preset.id,
+      name: preset.name,
+      description: preset.description,
+      author: preset.author,
+      createdAt: preset.createdAt,
+      revision: preset.revision,
+      adjustments: sanitizedAdjustments,
+    );
+
+    try {
+      final record = await library.saveLocal(importedPreset);
+      _upsertRecord(record);
+      _errorMessage = null;
+      _notifyListeners();
+      return record;
+    } on Object catch (error) {
+      _rememberMutationError(error);
+      rethrow;
+    }
+  }
+
   Future<PresetRecord> renameLocal(String libraryId, String newName) async {
     final library = _requireLibrary();
 

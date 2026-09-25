@@ -5,8 +5,12 @@ import 'package:presetstudio/features/editor/application/editor_history_entry.da
 import 'package:presetstudio/features/editor/domain/crop_state.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
 import 'package:presetstudio/features/editor/domain/image_transform.dart';
+import 'package:presetstudio/features/presets/application/preset_file_gateway.dart';
 import 'package:presetstudio/features/presets/application/preset_library.dart';
 import 'package:presetstudio/features/presets/application/preset_library_store.dart';
+import 'package:presetstudio/features/presets/domain/preset.dart';
+import 'package:presetstudio/features/presets/domain/preset_adjustment_values.dart';
+import 'package:presetstudio/features/presets/domain/preset_json_codec.dart';
 import 'package:presetstudio/features/presets/domain/preset_record.dart';
 import 'package:presetstudio/features/presets/application/preset_library_controller.dart';
 import 'package:presetstudio/features/presets/presentation/widgets/preset_library_view.dart';
@@ -132,6 +136,80 @@ void main() {
     },
   );
 
+  testWidgets('imports and exports portable presets from My Presets', (
+    tester,
+  ) async {
+    final portable = Preset(
+      id: 'portable-ui',
+      name: 'Portable UI',
+      createdAt: DateTime.utc(2026, 9, 20),
+      adjustments: const PresetAdjustmentValues(contrast: 21, vibrance: 14),
+    );
+    final fileGateway = _MemoryPresetFileGateway(presetToImport: portable);
+
+    await tester.pumpWidget(
+      _testApp(
+        libraryController: libraryController,
+        editorController: editorController,
+        fileGateway: fileGateway,
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('preset-import')));
+    await tester.pumpAndSettle();
+
+    expect(libraryController.records, hasLength(1));
+    final record = libraryController.records.single;
+    expect(record.preset.id, 'portable-ui');
+    expect(record.preset.name, 'Portable UI');
+
+    await tester.tap(find.byKey(ValueKey('preset-menu-${record.libraryId}')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Export'));
+    await tester.pumpAndSettle();
+
+    expect(fileGateway.exportedPreset, record.preset);
+
+    await _drainPresetFeedback(tester);
+  });
+
+  testWidgets('duplicate import can be installed as a separate copy', (
+    tester,
+  ) async {
+    final portable = Preset(
+      id: 'duplicate-ui',
+      name: 'Duplicate UI',
+      createdAt: DateTime.utc(2026, 9, 20),
+      adjustments: const PresetAdjustmentValues(temperature: 18),
+    );
+    await libraryController.importPortablePreset(portable);
+    final fileGateway = _MemoryPresetFileGateway(presetToImport: portable);
+
+    await tester.pumpWidget(
+      _testApp(
+        libraryController: libraryController,
+        editorController: editorController,
+        fileGateway: fileGateway,
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('preset-import')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Preset already exists'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('preset-import-copy')));
+    await tester.pumpAndSettle();
+
+    expect(libraryController.records, hasLength(2));
+    expect(
+      libraryController.records.map((record) => record.preset.id),
+      containsAll(<String>['duplicate-ui', 'ui-local-preset']),
+    );
+
+    await _drainPresetFeedback(tester);
+  });
+
   testWidgets('save, rename, and delete are available from My Presets', (
     tester,
   ) async {
@@ -200,6 +278,22 @@ Future<void> _drainPresetFeedback(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+class _MemoryPresetFileGateway implements PresetFileGateway {
+  _MemoryPresetFileGateway({this.presetToImport});
+
+  Preset? presetToImport;
+  Preset? exportedPreset;
+
+  @override
+  Future<Preset?> importPreset() async => presetToImport;
+
+  @override
+  Future<Uri?> exportPreset(Preset preset) async {
+    exportedPreset = preset;
+    return Uri.parse('file:///exported${PresetJsonCodec.fileSuffix}');
+  }
+}
+
 class _MemoryPresetLibraryStore implements PresetLibraryStore {
   final Map<String, PresetRecord> _records = <String, PresetRecord>{};
 
@@ -222,6 +316,7 @@ class _MemoryPresetLibraryStore implements PresetLibraryStore {
 Widget _testApp({
   required PresetLibraryController libraryController,
   required EditorController editorController,
+  PresetFileGateway? fileGateway,
 }) {
   return MaterialApp(
     theme: PresetStudioTheme.dark,
@@ -234,6 +329,7 @@ Widget _testApp({
           child: PresetLibraryView(
             libraryController: libraryController,
             editorController: editorController,
+            fileGateway: fileGateway ?? _MemoryPresetFileGateway(),
           ),
         ),
       ),

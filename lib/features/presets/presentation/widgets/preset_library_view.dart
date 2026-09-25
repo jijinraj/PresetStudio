@@ -5,13 +5,17 @@ import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../../editor/application/editor_controller.dart';
 import '../../application/preset_adjustment_mapper.dart';
+import '../../application/preset_file_gateway.dart';
 import '../../application/preset_library_controller.dart';
+import '../../domain/preset_json_codec.dart';
 import '../../domain/preset_record.dart';
+import '../../infrastructure/local_preset_file_gateway.dart';
 
 class PresetLibraryView extends StatelessWidget {
   const PresetLibraryView({
     required this.libraryController,
     required this.editorController,
+    this.fileGateway = const LocalPresetFileGateway(),
     this.onPresetApplied,
     this.showTitle = true,
     super.key,
@@ -19,6 +23,7 @@ class PresetLibraryView extends StatelessWidget {
 
   final PresetLibraryController libraryController;
   final EditorController editorController;
+  final PresetFileGateway fileGateway;
   final VoidCallback? onPresetApplied;
   final bool showTitle;
 
@@ -55,16 +60,28 @@ class PresetLibraryView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            key: const ValueKey('preset-save-current'),
-            onPressed: hasImage && libraryController.isReady
-                ? () => _saveCurrent(context)
-                : null,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Save current'),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                key: const ValueKey('preset-save-current'),
+                onPressed: hasImage && libraryController.isReady
+                    ? () => _saveCurrent(context)
+                    : null,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Save current'),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            IconButton.outlined(
+              key: const ValueKey('preset-import'),
+              tooltip: 'Import preset',
+              onPressed: libraryController.isReady
+                  ? () => _importPreset(context)
+                  : null,
+              icon: const Icon(Icons.file_open_outlined, size: 18),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.sm),
         Expanded(child: _buildLibraryBody(context)),
@@ -119,7 +136,7 @@ class PresetLibraryView extends StatelessWidget {
     if (records.isEmpty) {
       return const Center(
         child: Text(
-          'No presets yet.\nSave your current adjustments to get started.',
+          'No presets yet.\nSave your current adjustments or import a preset.',
           textAlign: TextAlign.center,
           style: AppTypography.bodyMuted,
         ),
@@ -141,6 +158,7 @@ class PresetLibraryView extends StatelessWidget {
           isActive: isActive,
           enabled: editorController.session.hasImage,
           onApply: () => _applyPreset(context, record),
+          onExport: () => _exportPreset(context, record),
           onRename: record.origin.isMutable
               ? () => _renamePreset(context, record)
               : null,
@@ -174,6 +192,82 @@ class PresetLibraryView extends StatelessWidget {
     } on Object catch (error) {
       if (context.mounted) {
         _showMessage(context, 'Could not save preset: $error');
+      }
+    }
+  }
+
+  Future<void> _importPreset(BuildContext context) async {
+    try {
+      final preset = await fileGateway.importPreset();
+
+      if (preset == null || !context.mounted) {
+        return;
+      }
+
+      final existing = libraryController.localRecordForPresetId(preset.id);
+      var asCopy = false;
+
+      if (existing != null) {
+        final resolution = await showPresetImportConflictDialog(
+          context,
+          incomingName: preset.name,
+          existingName: existing.preset.name,
+        );
+
+        if (resolution == null || !context.mounted) {
+          return;
+        }
+
+        asCopy = resolution == PresetImportConflictResolution.importCopy;
+      }
+
+      final record = await libraryController.importPortablePreset(
+        preset,
+        asCopy: asCopy,
+      );
+
+      if (!context.mounted) {
+        return;
+      }
+
+      if (existing != null && !asCopy) {
+        _showMessage(context, 'Replaced ${record.preset.name}.');
+      } else if (asCopy) {
+        _showMessage(context, 'Imported ${record.preset.name} as a copy.');
+      } else {
+        _showMessage(context, 'Imported ${record.preset.name}.');
+      }
+    } on PresetFormatException catch (error) {
+      if (context.mounted) {
+        _showMessage(context, 'Could not import preset: ${error.message}');
+      }
+    } on PresetFileException catch (error) {
+      if (context.mounted) {
+        _showMessage(context, 'Could not import preset: ${error.message}');
+      }
+    } on Object catch (error) {
+      if (context.mounted) {
+        _showMessage(context, 'Could not import preset: $error');
+      }
+    }
+  }
+
+  Future<void> _exportPreset(BuildContext context, PresetRecord record) async {
+    try {
+      final destination = await fileGateway.exportPreset(record.preset);
+
+      if (destination == null || !context.mounted) {
+        return;
+      }
+
+      _showMessage(context, 'Exported ${record.preset.name}.');
+    } on PresetFileException catch (error) {
+      if (context.mounted) {
+        _showMessage(context, 'Could not export preset: ${error.message}');
+      }
+    } on Object catch (error) {
+      if (context.mounted) {
+        _showMessage(context, 'Could not export preset: $error');
       }
     }
   }
@@ -273,6 +367,7 @@ class _PresetTile extends StatelessWidget {
     required this.isActive,
     required this.enabled,
     required this.onApply,
+    required this.onExport,
     required this.onRename,
     required this.onDelete,
   });
@@ -281,6 +376,7 @@ class _PresetTile extends StatelessWidget {
   final bool isActive;
   final bool enabled;
   final VoidCallback onApply;
+  final VoidCallback onExport;
   final VoidCallback? onRename;
   final VoidCallback? onDelete;
 
@@ -327,35 +423,40 @@ class _PresetTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (onRename != null || onDelete != null)
-                PopupMenuButton<_PresetMenuAction>(
-                  key: ValueKey('preset-menu-${record.libraryId}'),
-                  tooltip: 'Preset options',
-                  iconSize: 18,
-                  padding: EdgeInsets.zero,
-                  onSelected: (action) {
-                    switch (action) {
-                      case _PresetMenuAction.rename:
-                        onRename?.call();
-                      case _PresetMenuAction.delete:
-                        onDelete?.call();
-                    }
-                  },
-                  itemBuilder: (context) {
-                    return [
-                      if (onRename != null)
-                        const PopupMenuItem(
-                          value: _PresetMenuAction.rename,
-                          child: Text('Rename'),
-                        ),
-                      if (onDelete != null)
-                        const PopupMenuItem(
-                          value: _PresetMenuAction.delete,
-                          child: Text('Delete'),
-                        ),
-                    ];
-                  },
-                ),
+              PopupMenuButton<_PresetMenuAction>(
+                key: ValueKey('preset-menu-${record.libraryId}'),
+                tooltip: 'Preset options',
+                iconSize: 18,
+                padding: EdgeInsets.zero,
+                onSelected: (action) {
+                  switch (action) {
+                    case _PresetMenuAction.export:
+                      onExport();
+                    case _PresetMenuAction.rename:
+                      onRename?.call();
+                    case _PresetMenuAction.delete:
+                      onDelete?.call();
+                  }
+                },
+                itemBuilder: (context) {
+                  return [
+                    const PopupMenuItem(
+                      value: _PresetMenuAction.export,
+                      child: Text('Export'),
+                    ),
+                    if (onRename != null)
+                      const PopupMenuItem(
+                        value: _PresetMenuAction.rename,
+                        child: Text('Rename'),
+                      ),
+                    if (onDelete != null)
+                      const PopupMenuItem(
+                        value: _PresetMenuAction.delete,
+                        child: Text('Delete'),
+                      ),
+                  ];
+                },
+              ),
             ],
           ),
         ),
@@ -377,7 +478,49 @@ class _PresetTile extends StatelessWidget {
   }
 }
 
-enum _PresetMenuAction { rename, delete }
+enum _PresetMenuAction { export, rename, delete }
+
+enum PresetImportConflictResolution { replace, importCopy }
+
+Future<PresetImportConflictResolution?> showPresetImportConflictDialog(
+  BuildContext context, {
+  required String incomingName,
+  required String existingName,
+}) {
+  return showDialog<PresetImportConflictResolution>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Preset already exists'),
+        content: Text(
+          'A local preset with the same preset ID already exists. '
+          'Replace “$existingName” with “$incomingName”, or import it as '
+          'a separate local copy?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            key: const ValueKey('preset-import-copy'),
+            onPressed: () =>
+                Navigator.of(context)
+                    .pop(PresetImportConflictResolution.importCopy),
+            child: const Text('Import copy'),
+          ),
+          FilledButton(
+            key: const ValueKey('preset-import-replace'),
+            onPressed: () =>
+                Navigator.of(context)
+                    .pop(PresetImportConflictResolution.replace),
+            child: const Text('Replace'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
 class PresetSaveDraft {
   const PresetSaveDraft({required this.name, this.description});
