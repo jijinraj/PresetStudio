@@ -120,7 +120,7 @@
 - [ ] Apply preset
 - [ ] Rename preset
 - [ ] Delete preset
-- [ ] Local / offline preset library
+- [x] Local / offline preset library
 - [ ] Import preset JSON
 - [ ] Export preset JSON
 - [ ] Persist preset source registry
