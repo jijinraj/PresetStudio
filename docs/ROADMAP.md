@@ -112,15 +112,22 @@
 
 ## Presets v1
 
-- [ ] Define versioned preset JSON schema
+- [x] Define versioned preset JSON schema
+- [x] Define portable preset metadata and adjustment mapping
+- [x] Keep crop / transform geometry out of Presets v1; reserve geometry for templates
+- [x] Define a multi-source remote preset registry without coupling preset files to Git hosting
 - [ ] Save current adjustments as preset
 - [ ] Apply preset
 - [ ] Rename preset
 - [ ] Delete preset
-- [ ] Local preset library
+- [ ] Local / offline preset library
 - [ ] Import preset JSON
 - [ ] Export preset JSON
-- [ ] Decide whether geometry can optionally be included in presets
+- [ ] Persist preset source registry
+- [ ] Add / remove / enable multiple repository or catalog URLs
+- [ ] Add repository-backed catalog provider
+- [ ] Add generic catalog URL provider
+- [ ] Cache remote catalogs and installed presets for offline use
 
 ## Settings backlog
 
