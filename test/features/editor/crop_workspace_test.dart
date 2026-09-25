@@ -116,23 +116,33 @@ void main() {
         findsNothing,
       );
 
-      await tester.tap(find.byKey(const ValueKey('composition-guide-menu')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const ValueKey('composition-guide-center-symmetry')),
-      );
-      await tester.pumpAndSettle();
+      const additionalGuides = [
+        ('center-symmetry', 'center-symmetry'),
+        ('square-grid', 'square-grid'),
+        ('fine-grid', 'fine-grid'),
+        ('phi-grid', 'phi-grid'),
+        ('diagonal-method', 'diagonal-method'),
+      ];
 
-      expect(controller.session, initialSession);
-      expect(controller.history, hasLength(initialHistoryLength));
-      expect(
-        find.byKey(const ValueKey('composition-guide-center-symmetry-overlay')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey('composition-guide-rule-of-thirds-overlay')),
-        findsNothing,
-      );
+      for (final (menuId, overlayId) in additionalGuides) {
+        await tester.tap(find.byKey(const ValueKey('composition-guide-menu')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(ValueKey('composition-guide-$menuId')));
+        await tester.pumpAndSettle();
+
+        expect(controller.session, initialSession);
+        expect(controller.history, hasLength(initialHistoryLength));
+        expect(
+          find.byKey(ValueKey('composition-guide-$overlayId-overlay')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(
+            const ValueKey('composition-guide-rule-of-thirds-overlay'),
+          ),
+          findsNothing,
+        );
+      }
 
       await tester.tap(find.byKey(const ValueKey('crop-done')));
       await tester.pump();

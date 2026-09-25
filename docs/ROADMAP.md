@@ -93,12 +93,12 @@
 - [x] Add None guide
 - [x] Add Rule of Thirds
 - [x] Add Center / Symmetry
-- [ ] Add Square Grid
-- [ ] Add Fine Grid
-- [ ] Add Phi Grid / Golden Ratio
+- [x] Add Square Grid
+- [x] Add Fine Grid
+- [x] Add Phi Grid / Golden Ratio
 - [ ] Add Golden Spiral
 - [ ] Add Golden Triangle
-- [ ] Add Diagonal Method
+- [x] Add Diagonal Method
 - [ ] Add guide orientation controls where relevant
 - [ ] Add guide opacity control
 

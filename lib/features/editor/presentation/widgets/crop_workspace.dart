@@ -1631,31 +1631,16 @@ class _CropWorkspaceControls extends StatelessWidget {
                     initialValue: selectedGuide,
                     onSelected: onSelectGuide,
                     icon: const Icon(Icons.grid_on),
-                    itemBuilder: (context) => [
-                      CheckedPopupMenuItem<CompositionGuideType>(
-                        key: const ValueKey('composition-guide-none'),
-                        value: CompositionGuideType.none,
-                        checked: selectedGuide == CompositionGuideType.none,
-                        child: Text(CompositionGuideType.none.label),
-                      ),
-                      CheckedPopupMenuItem<CompositionGuideType>(
-                        key: const ValueKey('composition-guide-rule-of-thirds'),
-                        value: CompositionGuideType.ruleOfThirds,
-                        checked:
-                            selectedGuide == CompositionGuideType.ruleOfThirds,
-                        child: Text(CompositionGuideType.ruleOfThirds.label),
-                      ),
-                      CheckedPopupMenuItem<CompositionGuideType>(
-                        key: const ValueKey(
-                          'composition-guide-center-symmetry',
-                        ),
-                        value: CompositionGuideType.centerSymmetry,
-                        checked:
-                            selectedGuide ==
-                            CompositionGuideType.centerSymmetry,
-                        child: Text(CompositionGuideType.centerSymmetry.label),
-                      ),
-                    ],
+                    itemBuilder: (context) => CompositionGuideType.values
+                        .map(
+                          (guide) => CheckedPopupMenuItem<CompositionGuideType>(
+                            key: ValueKey('composition-guide-${guide.id}'),
+                            value: guide,
+                            checked: selectedGuide == guide,
+                            child: Text(guide.label),
+                          ),
+                        )
+                        .toList(growable: false),
                   ),
                 ],
               ),
