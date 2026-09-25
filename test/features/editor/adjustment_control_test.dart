@@ -848,5 +848,121 @@ void main() {
       expect(changedValue, -0.1);
       expect(scrollController.offset, 0.0);
     });
+
+    testWidgets('wheel interaction guard lets parent panel keep ownership', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+
+      double? changedValue;
+      var allowSliderWheel = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 240,
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  children: [
+                    AdjustmentControl(
+                      definition: exposureDefinition,
+                      value: 0.0,
+                      wheelInteractionGuard: () => allowSliderWheel,
+                      onChanged: (value) {
+                        changedValue = value;
+                      },
+                    ),
+                    const SizedBox(height: 1200),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final interaction = find.byKey(
+        const ValueKey('adjustment-exposure-slider-interaction'),
+      );
+
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: tester.getCenter(interaction),
+          scrollDelta: const Offset(0, 40),
+        ),
+      );
+      await tester.pump();
+
+      expect(changedValue, isNull);
+      expect(scrollController.offset, greaterThan(0));
+
+      allowSliderWheel = true;
+      final panelOffset = scrollController.offset;
+
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: tester.getCenter(interaction),
+          scrollDelta: const Offset(0, -20),
+        ),
+      );
+      await tester.pump();
+
+      expect(changedValue, 0.1);
+      expect(scrollController.offset, panelOffset);
+    });
+
+    testWidgets('disabled slider wheel interaction lets parent panel scroll', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+
+      double? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 240,
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  children: [
+                    AdjustmentControl(
+                      definition: exposureDefinition,
+                      value: 0.0,
+                      wheelInteractionEnabled: false,
+                      onChanged: (value) {
+                        changedValue = value;
+                      },
+                    ),
+                    const SizedBox(height: 1200),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final interaction = find.byKey(
+        const ValueKey('adjustment-exposure-slider-interaction'),
+      );
+
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: tester.getCenter(interaction),
+          scrollDelta: const Offset(0, 40),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(changedValue, isNull);
+      expect(scrollController.offset, greaterThan(0));
+    });
   });
 }

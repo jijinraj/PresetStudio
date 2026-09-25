@@ -9,6 +9,9 @@ uniform float u_highlights;
 uniform float u_shadows;
 uniform float u_whites;
 uniform float u_blacks;
+uniform float u_temperature;
+uniform float u_tint;
+uniform float u_vibrance;
 uniform float u_saturation;
 
 uniform sampler2D u_texture;
@@ -46,6 +49,38 @@ vec3 applyContrast(vec3 rgb, float contrast) {
   return ((rgb - vec3(0.5)) * factor) + vec3(0.5);
 }
 
+
+vec3 applyColorBalance(vec3 rgb, float temperature, float tint) {
+  float normalizedTemperature = temperature / 100.0;
+  float normalizedTint = tint / 100.0;
+
+  vec3 channelScale = vec3(
+    1.0 + normalizedTemperature * 0.12 + normalizedTint * 0.05,
+    1.0 + normalizedTemperature * 0.02 - normalizedTint * 0.08,
+    1.0 - normalizedTemperature * 0.12 + normalizedTint * 0.05
+  );
+
+  return rgb * channelScale;
+}
+
+vec3 applyVibrance(vec3 rgb, float vibrance) {
+  if (vibrance == 0.0) {
+    return rgb;
+  }
+
+  float luminance = dot(rgb, kLuminance);
+  float maximum = max(max(rgb.r, rgb.g), rgb.b);
+  float minimum = min(min(rgb.r, rgb.g), rgb.b);
+  float chroma = clamp(maximum - minimum, 0.0, 1.0);
+  float normalizedVibrance = vibrance / 100.0;
+
+  float factor = normalizedVibrance >= 0.0
+      ? 1.0 + normalizedVibrance * (1.0 - chroma) * 0.85
+      : 1.0 + normalizedVibrance * 0.85;
+
+  return mix(vec3(luminance), rgb, factor);
+}
+
 vec3 applySaturation(vec3 rgb, float saturation) {
   float factor = 1.0 + (saturation / 100.0);
   float luminance = dot(rgb, kLuminance);
@@ -78,6 +113,8 @@ void main() {
   );
 
   rgb = applyContrast(rgb, u_contrast);
+  rgb = applyColorBalance(rgb, u_temperature, u_tint);
+  rgb = applyVibrance(rgb, u_vibrance);
   rgb = applySaturation(rgb, u_saturation);
 
   rgb = clamp(rgb, 0.0, 1.0);

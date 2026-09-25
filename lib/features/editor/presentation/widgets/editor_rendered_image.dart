@@ -145,6 +145,9 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
     shader.setFloat(5, adjustments.shadows);
     shader.setFloat(6, adjustments.whites);
     shader.setFloat(7, adjustments.blacks);
-    shader.setFloat(8, adjustments.saturation);
+    shader.setFloat(8, adjustments.temperature);
+    shader.setFloat(9, adjustments.tint);
+    shader.setFloat(10, adjustments.vibrance);
+    shader.setFloat(11, adjustments.saturation);
   }
 }

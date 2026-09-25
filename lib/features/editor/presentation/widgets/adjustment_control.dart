@@ -11,6 +11,8 @@ class AdjustmentControl extends StatelessWidget {
     this.onInteractionStart,
     this.onInteractionEnd,
     this.enabled = true,
+    this.wheelInteractionEnabled = true,
+    this.wheelInteractionGuard,
     super.key,
   });
 
@@ -22,6 +24,8 @@ class AdjustmentControl extends StatelessWidget {
   final VoidCallback? onInteractionEnd;
 
   final bool enabled;
+  final bool wheelInteractionEnabled;
+  final ValueGetter<bool>? wheelInteractionGuard;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +44,8 @@ class AdjustmentControl extends StatelessWidget {
       onInteractionStart: onInteractionStart,
       onInteractionEnd: onInteractionEnd,
       enabled: enabled,
+      wheelInteractionEnabled: wheelInteractionEnabled,
+      wheelInteractionGuard: wheelInteractionGuard,
     );
   }
 }

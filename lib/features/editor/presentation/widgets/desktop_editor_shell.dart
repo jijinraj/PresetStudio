@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_constants.dart';
@@ -502,7 +504,7 @@ class _DesktopHistoryHeader extends StatelessWidget {
   }
 }
 
-class _AdjustmentsPanel extends StatelessWidget {
+class _AdjustmentsPanel extends StatefulWidget {
   const _AdjustmentsPanel({
     required this.controller,
     required this.onOpenCrop,
@@ -514,7 +516,41 @@ class _AdjustmentsPanel extends StatelessWidget {
   final bool isCropping;
 
   @override
+  State<_AdjustmentsPanel> createState() => _AdjustmentsPanelState();
+}
+
+class _AdjustmentsPanelState extends State<_AdjustmentsPanel> {
+  static const Duration _panelWheelBurstDelay = Duration(milliseconds: 300);
+
+  Timer? _panelWheelBurstTimer;
+  bool _panelOwnsWheelBurst = false;
+
+  @override
+  void dispose() {
+    _panelWheelBurstTimer?.cancel();
+    super.dispose();
+  }
+
+  bool _handlePanelScrollNotification(ScrollNotification notification) {
+    if (notification.depth != 0 || notification is! ScrollUpdateNotification) {
+      return false;
+    }
+
+    _panelWheelBurstTimer?.cancel();
+
+    _panelOwnsWheelBurst = true;
+
+    _panelWheelBurstTimer = Timer(_panelWheelBurstDelay, () {
+      _panelOwnsWheelBurst = false;
+    });
+
+    return false;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
+
     final exposureDefinition = AdjustmentDefinitions.of(
       AdjustmentType.exposure,
     );
@@ -533,6 +569,16 @@ class _AdjustmentsPanel extends StatelessWidget {
 
     final blacksDefinition = AdjustmentDefinitions.of(AdjustmentType.blacks);
 
+    final temperatureDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.temperature,
+    );
+
+    final tintDefinition = AdjustmentDefinitions.of(AdjustmentType.tint);
+
+    final vibranceDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.vibrance,
+    );
+
     final saturationDefinition = AdjustmentDefinitions.of(
       AdjustmentType.saturation,
     );
@@ -546,149 +592,205 @@ class _AdjustmentsPanel extends StatelessWidget {
           final session = controller.session;
           final hasImage = session.hasImage;
 
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text('Adjustments', style: AppTypography.title),
+          return NotificationListener<ScrollNotification>(
+            onNotification: _handlePanelScrollNotification,
+            child: SingleChildScrollView(
+              key: const ValueKey('desktop-adjustments-scroll'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Adjustments', style: AppTypography.title),
+                      ),
+                      TextButton(
+                        key: const ValueKey('desktop-reset-adjustments'),
+                        onPressed: controller.canResetAdjustments
+                            ? controller.resetAdjustments
+                            : null,
+                        child: const Text('Reset'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  if (!hasImage)
+                    const Text(
+                      'Select an image to start editing.',
+                      style: AppTypography.bodyMuted,
+                    )
+                  else ...[
+                    const Text('Transform', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        key: const ValueKey('desktop-open-crop'),
+                        onPressed: widget.isCropping ? null : widget.onOpenCrop,
+                        icon: const Icon(Icons.crop),
+                        label: const Text('Crop & Straighten'),
+                      ),
                     ),
-                    TextButton(
-                      key: const ValueKey('desktop-reset-adjustments'),
-                      onPressed: controller.canResetAdjustments
-                          ? controller.resetAdjustments
-                          : null,
-                      child: const Text('Reset'),
+                    const SizedBox(height: AppSpacing.md),
+                    RotationControl(
+                      transform: session.transform,
+                      onChanged: controller.updateTransform,
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    FlipControl(
+                      transform: session.transform,
+                      onChanged: controller.updateTransform,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Divider(height: 1),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text('Light', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.md),
+                    AdjustmentControl(
+                      definition: exposureDefinition,
+                      value: session.adjustments.exposure,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.exposure,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AdjustmentControl(
+                      definition: contrastDefinition,
+                      value: session.adjustments.contrast,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.contrast,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AdjustmentControl(
+                      definition: highlightsDefinition,
+                      value: session.adjustments.highlights,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.highlights,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AdjustmentControl(
+                      definition: shadowsDefinition,
+                      value: session.adjustments.shadows,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.shadows,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AdjustmentControl(
+                      definition: whitesDefinition,
+                      value: session.adjustments.whites,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.whites,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AdjustmentControl(
+                      definition: blacksDefinition,
+                      value: session.adjustments.blacks,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.blacks,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Divider(height: 1),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text('Color', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.md),
+                    AdjustmentControl(
+                      definition: temperatureDefinition,
+                      value: session.adjustments.temperature,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.temperature,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AdjustmentControl(
+                      definition: tintDefinition,
+                      value: session.adjustments.tint,
+                      onChanged: (value) {
+                        controller.updateAdjustment(AdjustmentType.tint, value);
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AdjustmentControl(
+                      definition: vibranceDefinition,
+                      value: session.adjustments.vibrance,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.vibrance,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AdjustmentControl(
+                      definition: saturationDefinition,
+                      value: session.adjustments.saturation,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.saturation,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
                     ),
                   ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                if (!hasImage)
-                  const Text(
-                    'Select an image to start editing.',
-                    style: AppTypography.bodyMuted,
-                  )
-                else ...[
-                  const Text('Transform', style: AppTypography.label),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      key: const ValueKey('desktop-open-crop'),
-                      onPressed: isCropping ? null : onOpenCrop,
-                      icon: const Icon(Icons.crop),
-                      label: const Text('Crop & Straighten'),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  RotationControl(
-                    transform: session.transform,
-                    onChanged: controller.updateTransform,
-                    onInteractionStart: controller.beginEditTransaction,
-                    onInteractionEnd: controller.endEditTransaction,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  FlipControl(
-                    transform: session.transform,
-                    onChanged: controller.updateTransform,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  const Divider(height: 1),
-                  const SizedBox(height: AppSpacing.lg),
-                  const Text('Light', style: AppTypography.label),
-                  const SizedBox(height: AppSpacing.md),
-                  AdjustmentControl(
-                    definition: exposureDefinition,
-                    value: session.adjustments.exposure,
-                    onChanged: (value) {
-                      controller.updateAdjustment(
-                        AdjustmentType.exposure,
-                        value,
-                      );
-                    },
-                    onInteractionStart: controller.beginEditTransaction,
-                    onInteractionEnd: controller.endEditTransaction,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AdjustmentControl(
-                    definition: contrastDefinition,
-                    value: session.adjustments.contrast,
-                    onChanged: (value) {
-                      controller.updateAdjustment(
-                        AdjustmentType.contrast,
-                        value,
-                      );
-                    },
-                    onInteractionStart: controller.beginEditTransaction,
-                    onInteractionEnd: controller.endEditTransaction,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AdjustmentControl(
-                    definition: highlightsDefinition,
-                    value: session.adjustments.highlights,
-                    onChanged: (value) {
-                      controller.updateAdjustment(
-                        AdjustmentType.highlights,
-                        value,
-                      );
-                    },
-                    onInteractionStart: controller.beginEditTransaction,
-                    onInteractionEnd: controller.endEditTransaction,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AdjustmentControl(
-                    definition: shadowsDefinition,
-                    value: session.adjustments.shadows,
-                    onChanged: (value) {
-                      controller.updateAdjustment(
-                        AdjustmentType.shadows,
-                        value,
-                      );
-                    },
-                    onInteractionStart: controller.beginEditTransaction,
-                    onInteractionEnd: controller.endEditTransaction,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AdjustmentControl(
-                    definition: whitesDefinition,
-                    value: session.adjustments.whites,
-                    onChanged: (value) {
-                      controller.updateAdjustment(AdjustmentType.whites, value);
-                    },
-                    onInteractionStart: controller.beginEditTransaction,
-                    onInteractionEnd: controller.endEditTransaction,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AdjustmentControl(
-                    definition: blacksDefinition,
-                    value: session.adjustments.blacks,
-                    onChanged: (value) {
-                      controller.updateAdjustment(AdjustmentType.blacks, value);
-                    },
-                    onInteractionStart: controller.beginEditTransaction,
-                    onInteractionEnd: controller.endEditTransaction,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  const Divider(height: 1),
-                  const SizedBox(height: AppSpacing.lg),
-                  const Text('Color', style: AppTypography.label),
-                  const SizedBox(height: AppSpacing.md),
-                  AdjustmentControl(
-                    definition: saturationDefinition,
-                    value: session.adjustments.saturation,
-                    onChanged: (value) {
-                      controller.updateAdjustment(
-                        AdjustmentType.saturation,
-                        value,
-                      );
-                    },
-                    onInteractionStart: controller.beginEditTransaction,
-                    onInteractionEnd: controller.endEditTransaction,
-                  ),
                 ],
-              ],
+              ),
             ),
           );
         },

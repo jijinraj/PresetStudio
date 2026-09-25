@@ -173,6 +173,31 @@ void main() {
 
       expect(find.byKey(const ValueKey('editor-color-filter')), findsOneWidget);
     });
+    testWidgets('accepts temperature tint and vibrance in the color stage', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EditorRenderedImage(
+              sourceImagePath: 'missing-test-image.jpg',
+              adjustments: const ImageAdjustments(
+                temperature: 35,
+                tint: -20,
+                vibrance: 45,
+              ),
+              transform: ImageTransform.initial,
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const ValueKey('editor-color-filter')), findsOneWidget);
+    });
+
     testWidgets('accepts tonal range adjustments in the color stage', (
       tester,
     ) async {

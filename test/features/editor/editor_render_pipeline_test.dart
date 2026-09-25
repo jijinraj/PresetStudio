@@ -208,6 +208,53 @@ void main() {
       expect(plan.adjustments.blacks, -22.0);
     });
 
+    test('warms color balance with positive temperature', () {
+      const adjustments = ImageAdjustments(temperature: 100.0);
+
+      final plan = pipeline.buildPlan(adjustments);
+
+      expect(plan.colorMatrix[0], closeTo(1.12, 0.000001));
+      expect(plan.colorMatrix[6], closeTo(1.02, 0.000001));
+      expect(plan.colorMatrix[12], closeTo(0.88, 0.000001));
+    });
+
+    test('moves positive tint toward magenta in the fallback matrix', () {
+      const adjustments = ImageAdjustments(tint: 100.0);
+
+      final plan = pipeline.buildPlan(adjustments);
+
+      expect(plan.colorMatrix[0], closeTo(1.05, 0.000001));
+      expect(plan.colorMatrix[6], closeTo(0.92, 0.000001));
+      expect(plan.colorMatrix[12], closeTo(1.05, 0.000001));
+    });
+
+    test('uses restrained saturation as the linear vibrance fallback', () {
+      const adjustments = ImageAdjustments(vibrance: 100.0);
+
+      final plan = pipeline.buildPlan(adjustments);
+
+      // Positive Vibrance uses the selective chroma-aware curve in the GPU
+      // shader. The color-matrix fallback intentionally approximates it at
+      // 60% of the equivalent Saturation strength.
+      expect(plan.colorMatrix[0], closeTo(1.47244, 0.000001));
+      expect(plan.colorMatrix[1], closeTo(-0.42912, 0.000001));
+      expect(plan.colorMatrix[2], closeTo(-0.04332, 0.000001));
+    });
+
+    test('sanitizes color adjustment values before rendering', () {
+      const adjustments = ImageAdjustments(
+        temperature: 150.0,
+        tint: -180.0,
+        vibrance: 240.0,
+      );
+
+      final plan = pipeline.buildPlan(adjustments);
+
+      expect(plan.adjustments.temperature, 100.0);
+      expect(plan.adjustments.tint, -100.0);
+      expect(plan.adjustments.vibrance, 100.0);
+    });
+
     test('does not mutate supplied adjustment state', () {
       const adjustments = ImageAdjustments(exposure: 500.0);
 

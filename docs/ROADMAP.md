@@ -105,9 +105,9 @@
 
 ## Color controls
 
-- [ ] Temperature
-- [ ] Tint
-- [ ] Vibrance
+- [x] Temperature
+- [x] Tint
+- [x] Vibrance
 - [ ] Finish Color panel UX
 
 ## Presets v1

@@ -13,8 +13,10 @@ class EditorRenderPlan {
 
   /// Flutter-compatible fallback matrix for the linear adjustment stage.
   ///
-  /// Exposure, contrast, and saturation can be represented here. Luminance-
-  /// dependent tonal controls such as highlights, shadows, whites, and blacks
-  /// are evaluated by the GPU tonal shader when shader filters are available.
+  /// Exposure, contrast, temperature, tint, saturation, and a restrained
+  /// vibrance approximation can be represented here. Luminance-dependent tonal
+  /// controls such as highlights, shadows, whites, and blacks, plus the fully
+  /// selective vibrance curve, are evaluated by the GPU tonal shader when
+  /// shader filters are available.
   final List<double> colorMatrix;
 }

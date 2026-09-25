@@ -23,6 +23,8 @@ class ScalarControl extends StatefulWidget {
     this.onInteractionEnd,
     this.valueSuffix = '',
     this.enabled = true,
+    this.wheelInteractionEnabled = true,
+    this.wheelInteractionGuard,
     super.key,
   }) : assert(precisionStep > 0),
        assert(interactionStep > 0),
@@ -50,6 +52,8 @@ class ScalarControl extends StatefulWidget {
 
   final String valueSuffix;
   final bool enabled;
+  final bool wheelInteractionEnabled;
+  final ValueGetter<bool>? wheelInteractionGuard;
 
   @override
   State<ScalarControl> createState() => _ScalarControlState();
@@ -151,7 +155,9 @@ class _ScalarControlState extends State<ScalarControl> {
                   _sliderFocusNode.requestFocus();
                 }
               : null,
-          onPointerSignal: widget.enabled ? _handlePointerSignal : null,
+          onPointerSignal: widget.enabled && widget.wheelInteractionEnabled
+              ? _handlePointerSignal
+              : null,
           child: Slider(
             key: ValueKey('${widget.controlId}-slider'),
             value: sanitizedValue,
@@ -248,6 +254,10 @@ class _ScalarControlState extends State<ScalarControl> {
 
   void _handlePointerSignal(PointerSignalEvent event) {
     if (!widget.enabled || event is! PointerScrollEvent) {
+      return;
+    }
+
+    if (widget.wheelInteractionGuard?.call() == false) {
       return;
     }
 

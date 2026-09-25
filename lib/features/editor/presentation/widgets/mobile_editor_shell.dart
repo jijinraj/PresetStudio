@@ -230,6 +230,16 @@ class _MobileToolBar extends StatelessWidget {
 
     final blacksDefinition = AdjustmentDefinitions.of(AdjustmentType.blacks);
 
+    final temperatureDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.temperature,
+    );
+
+    final tintDefinition = AdjustmentDefinitions.of(AdjustmentType.tint);
+
+    final vibranceDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.vibrance,
+    );
+
     final saturationDefinition = AdjustmentDefinitions.of(
       AdjustmentType.saturation,
     );
@@ -305,6 +315,7 @@ class _MobileToolBar extends StatelessWidget {
                           child: SafeArea(
                             top: false,
                             child: SingleChildScrollView(
+                              key: const ValueKey('mobile-edit-scroll'),
                               padding: EdgeInsets.fromLTRB(
                                 AppSpacing.md,
                                 AppSpacing.sm,
@@ -463,6 +474,52 @@ class _MobileToolBar extends StatelessWidget {
                                         style: AppTypography.label,
                                       ),
                                       const SizedBox(height: AppSpacing.md),
+                                      AdjustmentControl(
+                                        definition: temperatureDefinition,
+                                        value: session.adjustments.temperature,
+                                        onChanged: (value) {
+                                          controller.updateAdjustment(
+                                            AdjustmentType.temperature,
+                                            value,
+                                          );
+                                        },
+                                        onInteractionStart: () {
+                                          focusAdjustment(
+                                            AdjustmentType.temperature,
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
+                                      AdjustmentControl(
+                                        definition: tintDefinition,
+                                        value: session.adjustments.tint,
+                                        onChanged: (value) {
+                                          controller.updateAdjustment(
+                                            AdjustmentType.tint,
+                                            value,
+                                          );
+                                        },
+                                        onInteractionStart: () {
+                                          focusAdjustment(AdjustmentType.tint);
+                                        },
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
+                                      AdjustmentControl(
+                                        definition: vibranceDefinition,
+                                        value: session.adjustments.vibrance,
+                                        onChanged: (value) {
+                                          controller.updateAdjustment(
+                                            AdjustmentType.vibrance,
+                                            value,
+                                          );
+                                        },
+                                        onInteractionStart: () {
+                                          focusAdjustment(
+                                            AdjustmentType.vibrance,
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
                                       AdjustmentControl(
                                         definition: saturationDefinition,
                                         value: session.adjustments.saturation,

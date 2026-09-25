@@ -46,6 +46,15 @@ class EditorRenderPipeline {
 
     final contrastMatrix = _buildContrastMatrix(sanitizedAdjustments.contrast);
 
+    final colorBalanceMatrix = _buildColorBalanceMatrix(
+      sanitizedAdjustments.temperature,
+      sanitizedAdjustments.tint,
+    );
+
+    final vibranceMatrix = _buildVibranceFallbackMatrix(
+      sanitizedAdjustments.vibrance,
+    );
+
     final saturationMatrix = _buildSaturationMatrix(
       sanitizedAdjustments.saturation,
     );
@@ -55,10 +64,17 @@ class EditorRenderPipeline {
       exposureMatrix,
     );
 
-    final colorMatrix = _multiplyColorMatrices(
-      saturationMatrix,
+    final withColorBalance = _multiplyColorMatrices(
+      colorBalanceMatrix,
       exposureAndContrast,
     );
+
+    final withVibrance = _multiplyColorMatrices(
+      vibranceMatrix,
+      withColorBalance,
+    );
+
+    final colorMatrix = _multiplyColorMatrices(saturationMatrix, withVibrance);
 
     return EditorRenderPlan(
       adjustments: sanitizedAdjustments,
@@ -130,6 +146,60 @@ class EditorRenderPipeline {
       1.0,
       0.0,
     ];
+  }
+
+  List<double> _buildColorBalanceMatrix(double temperature, double tint) {
+    if (temperature == 0.0 && tint == 0.0) {
+      return identityColorMatrix;
+    }
+
+    final normalizedTemperature = temperature / 100.0;
+    final normalizedTint = tint / 100.0;
+
+    final redFactor =
+        1.0 + (normalizedTemperature * 0.12) + (normalizedTint * 0.05);
+    final greenFactor =
+        1.0 + (normalizedTemperature * 0.02) - (normalizedTint * 0.08);
+    final blueFactor =
+        1.0 - (normalizedTemperature * 0.12) + (normalizedTint * 0.05);
+
+    return <double>[
+      redFactor,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      greenFactor,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      blueFactor,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+    ];
+  }
+
+  List<double> _buildVibranceFallbackMatrix(double vibrance) {
+    if (vibrance == 0.0) {
+      return identityColorMatrix;
+    }
+
+    // A color matrix cannot reproduce PresetStudio's selective GPU vibrance
+    // curve because that curve depends on each pixel's existing chroma. Keep
+    // the fallback deliberately restrained so unsupported shader platforms
+    // still receive a useful approximation without turning Vibrance into a
+    // second full-strength Saturation control.
+    final fallbackSaturation = vibrance * 0.6;
+
+    return _buildSaturationMatrix(fallbackSaturation);
   }
 
   List<double> _buildSaturationMatrix(double saturation) {
