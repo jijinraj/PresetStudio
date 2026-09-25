@@ -7,6 +7,7 @@ import '../../../editor/application/editor_controller.dart';
 import '../../application/preset_adjustment_mapper.dart';
 import '../../application/preset_file_gateway.dart';
 import '../../application/preset_library_controller.dart';
+import '../../application/preset_remote_controller.dart';
 import '../../domain/preset_json_codec.dart';
 import '../../domain/preset_record.dart';
 import '../../infrastructure/local_preset_file_gateway.dart';
@@ -15,6 +16,7 @@ class PresetLibraryView extends StatelessWidget {
   const PresetLibraryView({
     required this.libraryController,
     required this.editorController,
+    this.remoteController,
     this.fileGateway = const LocalPresetFileGateway(),
     this.onPresetApplied,
     this.showTitle = true,
@@ -23,22 +25,36 @@ class PresetLibraryView extends StatelessWidget {
 
   final PresetLibraryController libraryController;
   final EditorController editorController;
+  final PresetRemoteController? remoteController;
   final PresetFileGateway fileGateway;
   final VoidCallback? onPresetApplied;
   final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
+    final remote = remoteController;
+
+    Widget buildLocal() {
+      return AnimatedBuilder(
+        animation: libraryController,
+        builder: (context, _) {
+          return AnimatedBuilder(
+            animation: editorController,
+            builder: (context, _) {
+              return _buildContent(context);
+            },
+          );
+        },
+      );
+    }
+
+    if (remote == null) {
+      return buildLocal();
+    }
+
     return AnimatedBuilder(
-      animation: libraryController,
-      builder: (context, _) {
-        return AnimatedBuilder(
-          animation: editorController,
-          builder: (context, _) {
-            return _buildContent(context);
-          },
-        );
-      },
+      animation: remote,
+      builder: (context, _) => buildLocal(),
     );
   }
 
@@ -114,7 +130,7 @@ class PresetLibraryView extends StatelessWidget {
                 size: 20,
               ),
               const SizedBox(height: AppSpacing.xs),
-              Text(
+              const Text(
                 'Preset library unavailable.',
                 textAlign: TextAlign.center,
                 style: AppTypography.bodyMuted,
@@ -132,8 +148,10 @@ class PresetLibraryView extends StatelessWidget {
     }
 
     final records = libraryController.records;
+    final remote = remoteController;
+    final remoteItems = remote?.items ?? const <RemotePresetCatalogItem>[];
 
-    if (records.isEmpty) {
+    if (records.isEmpty && remote == null) {
       return const Center(
         child: Text(
           'No presets yet.\nSave your current adjustments or import a preset.',
@@ -143,31 +161,143 @@ class PresetLibraryView extends StatelessWidget {
       );
     }
 
-    return ListView.separated(
+    return ListView(
       key: const ValueKey('preset-library-list'),
       padding: EdgeInsets.zero,
-      itemCount: records.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.xxs),
-      itemBuilder: (context, index) {
-        final record = records[index];
-        final isActive =
-            editorController.session.activePresetId == record.libraryId;
-
-        return _PresetTile(
-          record: record,
-          isActive: isActive,
-          enabled: editorController.session.hasImage,
-          onApply: () => _applyPreset(context, record),
-          onExport: () => _exportPreset(context, record),
-          onRename: record.origin.isMutable
-              ? () => _renamePreset(context, record)
-              : null,
-          onDelete: record.origin.type != PresetOriginType.builtIn
-              ? () => _deletePreset(context, record)
-              : null,
-        );
-      },
+      children: [
+        if (records.isNotEmpty) ...[
+          const _PresetSectionLabel(label: 'My presets'),
+          const SizedBox(height: AppSpacing.xxs),
+          for (final record in records) ...[
+            _buildLocalPresetTile(context, record),
+            const SizedBox(height: AppSpacing.xxs),
+          ],
+        ] else ...[
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: Text(
+              'No local presets yet.',
+              style: AppTypography.bodyMuted,
+            ),
+          ),
+        ],
+        if (remote != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _RemoteSectionHeader(
+            isRefreshing: remote.isRefreshing,
+            onRefresh: remote.isInitialized && !remote.isRefreshing
+                ? () => remote.refresh()
+                : null,
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          if (remote.isInitializing)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Center(
+                child: SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else if (remoteItems.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Text(
+                remote.errorMessage != null || remote.sourceErrors.isNotEmpty
+                    ? 'Remote presets are unavailable. Installed presets '
+                          'still work offline.'
+                    : 'No remote presets available.',
+                style: AppTypography.bodyMuted,
+              ),
+            )
+          else
+            for (final item in remoteItems) ...[
+              _buildRemotePresetTile(context, item),
+              const SizedBox(height: AppSpacing.xxs),
+            ],
+        ],
+      ],
     );
+  }
+
+  Widget _buildLocalPresetTile(BuildContext context, PresetRecord record) {
+    final isActive =
+        editorController.session.activePresetId == record.libraryId;
+
+    return _PresetTile(
+      record: record,
+      isActive: isActive,
+      enabled: editorController.session.hasImage,
+      onApply: () => _applyPreset(context, record),
+      onExport: () => _exportPreset(context, record),
+      onRename: record.origin.isMutable
+          ? () => _renamePreset(context, record)
+          : null,
+      onDelete: record.origin.type != PresetOriginType.builtIn
+          ? () => _deletePreset(context, record)
+          : null,
+    );
+  }
+
+  Widget _buildRemotePresetTile(
+    BuildContext context,
+    RemotePresetCatalogItem item,
+  ) {
+    final remote = remoteController!;
+    final installed = libraryController.remoteRecordFor(
+      sourceId: item.source.id,
+      remotePresetId: item.entry.id,
+    );
+    final installedRevision = installed?.origin.remoteRevision;
+    final isCurrent =
+        installed != null &&
+        installedRevision != null &&
+        installedRevision >= item.entry.revision;
+    final isUpdate =
+        installed != null &&
+        installedRevision != null &&
+        installedRevision < item.entry.revision;
+    final isInstalling = remote.isInstalling(item);
+
+    return _RemotePresetTile(
+      item: item,
+      state: isCurrent
+          ? _RemotePresetState.installed
+          : isUpdate
+          ? _RemotePresetState.updateAvailable
+          : _RemotePresetState.available,
+      isBusy: isInstalling,
+      onInstall: isCurrent || isInstalling
+          ? null
+          : () => _installRemotePreset(context, item),
+    );
+  }
+
+  Future<void> _installRemotePreset(
+    BuildContext context,
+    RemotePresetCatalogItem item,
+  ) async {
+    final remote = remoteController;
+
+    if (remote == null) {
+      return;
+    }
+
+    try {
+      final record = await remote.install(
+        item,
+        libraryController: libraryController,
+      );
+
+      if (context.mounted) {
+        _showMessage(context, 'Installed ${record.preset.name}.');
+      }
+    } on Object catch (error) {
+      if (context.mounted) {
+        _showMessage(context, 'Could not install preset: $error');
+      }
+    }
   }
 
   Future<void> _saveCurrent(BuildContext context) async {
@@ -358,6 +488,129 @@ class PresetLibraryView extends StatelessWidget {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _PresetSectionLabel extends StatelessWidget {
+  const _PresetSectionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(label, style: AppTypography.label);
+  }
+}
+
+class _RemoteSectionHeader extends StatelessWidget {
+  const _RemoteSectionHeader({
+    required this.isRefreshing,
+    required this.onRefresh,
+  });
+
+  final bool isRefreshing;
+  final VoidCallback? onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(child: Text('Discover', style: AppTypography.label)),
+        IconButton(
+          key: const ValueKey('preset-remote-refresh'),
+          tooltip: 'Refresh remote presets',
+          visualDensity: VisualDensity.compact,
+          onPressed: onRefresh,
+          icon: isRefreshing
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.refresh, size: 18),
+        ),
+      ],
+    );
+  }
+}
+
+enum _RemotePresetState { available, updateAvailable, installed }
+
+class _RemotePresetTile extends StatelessWidget {
+  const _RemotePresetTile({
+    required this.item,
+    required this.state,
+    required this.isBusy,
+    required this.onInstall,
+  });
+
+  final RemotePresetCatalogItem item;
+  final _RemotePresetState state;
+  final bool isBusy;
+  final VoidCallback? onInstall;
+
+  @override
+  Widget build(BuildContext context) {
+    final buttonLabel = switch (state) {
+      _RemotePresetState.available => 'Install',
+      _RemotePresetState.updateAvailable => 'Update',
+      _RemotePresetState.installed => 'Installed',
+    };
+
+    return Container(
+      key: ValueKey('preset-remote-${item.source.id}-${item.entry.id}'),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.cloud_download_outlined,
+            size: 18,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.entry.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.body,
+                ),
+                Text(
+                  item.entry.author == null
+                      ? item.source.name
+                      : '${item.entry.author} · ${item.source.name}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodyMuted,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          TextButton(
+            key: ValueKey(
+              'preset-remote-install-${item.source.id}-${item.entry.id}',
+            ),
+            onPressed: onInstall,
+            child: isBusy
+                ? const SizedBox.square(
+                    dimension: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(buttonLabel),
+          ),
+        ],
+      ),
+    );
   }
 }
 

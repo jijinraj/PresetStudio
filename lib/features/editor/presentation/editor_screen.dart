@@ -11,7 +11,11 @@ import '../rendering/export_background_renderer.dart';
 import '../rendering/export_image_renderer.dart';
 import '../../presets/application/preset_library.dart';
 import '../../presets/application/preset_library_controller.dart';
+import '../../presets/application/preset_remote_controller.dart';
+import '../../presets/infrastructure/http_preset_remote_gateway.dart';
+import '../../presets/infrastructure/local_preset_catalog_cache.dart';
 import '../../presets/infrastructure/local_preset_library_store.dart';
+import '../../presets/infrastructure/local_preset_source_store.dart';
 import 'widgets/editor_shell.dart';
 import 'widgets/export_settings_dialog.dart';
 
@@ -27,6 +31,7 @@ class _EditorScreenState extends State<EditorScreen> {
   final LocalImageImporter _imageImporter = const LocalImageImporter();
   final LocalImageExporter _imageExporter = const LocalImageExporter();
   late final PresetLibraryController _presetLibraryController;
+  late final PresetRemoteController _presetRemoteController;
 
   bool _isImporting = false;
   bool _isExporting = false;
@@ -40,14 +45,32 @@ class _EditorScreenState extends State<EditorScreen> {
         return PresetLibrary(store: store);
       },
     );
-    unawaited(_presetLibraryController.initialize());
+    _presetRemoteController = PresetRemoteController(
+      sourceStoreLoader: LocalPresetSourceStore.openDefault,
+      catalogCacheLoader: LocalPresetCatalogCache.openDefault,
+      gateway: HttpPresetRemoteGateway(),
+    );
+
+    unawaited(_initializePresetServices());
   }
 
   @override
   void dispose() {
+    _presetRemoteController.dispose();
     _presetLibraryController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _initializePresetServices() async {
+    await Future.wait([
+      _presetLibraryController.initialize(),
+      _presetRemoteController.initialize(),
+    ]);
+
+    if (_presetRemoteController.isInitialized) {
+      unawaited(_presetRemoteController.refresh());
+    }
   }
 
   Future<void> _importImage() async {
@@ -169,6 +192,7 @@ class _EditorScreenState extends State<EditorScreen> {
     return EditorShell(
       controller: _controller,
       presetLibraryController: _presetLibraryController,
+      presetRemoteController: _presetRemoteController,
       onImportImage: _importImage,
       isImporting: _isImporting,
       onExportImage: _exportImage,

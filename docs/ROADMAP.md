@@ -123,11 +123,11 @@
 - [x] Local / offline preset library
 - [x] Import preset JSON
 - [x] Export preset JSON
-- [ ] Persist preset source registry
-- [ ] Add / remove / enable multiple repository or catalog URLs
-- [ ] Add repository-backed catalog provider
-- [ ] Add generic catalog URL provider
-- [ ] Cache remote catalogs and installed presets for offline use
+- [x] Persist preset source registry
+- [x] Add / remove / enable multiple repository or catalog URLs
+- [x] Add repository-backed catalog provider
+- [x] Add generic catalog URL provider
+- [x] Cache remote catalogs and installed presets for offline use
 
 ## Settings backlog
 

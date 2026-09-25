@@ -177,6 +177,49 @@ class PresetLibraryController extends ChangeNotifier {
     }
   }
 
+  PresetRecord? remoteRecordFor({
+    required String sourceId,
+    required String remotePresetId,
+  }) {
+    final libraryId = PresetRecord.remoteLibraryId(
+      sourceId: sourceId,
+      remotePresetId: remotePresetId,
+    );
+
+    for (final record in _records) {
+      if (record.libraryId == libraryId) {
+        return record;
+      }
+    }
+
+    return null;
+  }
+
+  Future<PresetRecord> installRemote({
+    required Preset preset,
+    required String sourceId,
+    required String remotePresetId,
+    required int remoteRevision,
+  }) async {
+    final library = _requireLibrary();
+
+    try {
+      final record = await library.installRemote(
+        preset: preset,
+        sourceId: sourceId,
+        remotePresetId: remotePresetId,
+        remoteRevision: remoteRevision,
+      );
+      _upsertRecord(record);
+      _errorMessage = null;
+      _notifyListeners();
+      return record;
+    } on Object catch (error) {
+      _rememberMutationError(error);
+      rethrow;
+    }
+  }
+
   PresetLibrary _requireLibrary() {
     final library = _library;
 

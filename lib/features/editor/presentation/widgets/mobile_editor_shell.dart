@@ -9,6 +9,7 @@ import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../../presets/application/preset_library_controller.dart';
+import '../../../presets/application/preset_remote_controller.dart';
 import '../../../presets/presentation/widgets/preset_library_view.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
@@ -25,6 +26,7 @@ class MobileEditorShell extends StatelessWidget {
   const MobileEditorShell({
     required this.controller,
     this.presetLibraryController,
+    this.presetRemoteController,
     required this.onImportImage,
     required this.isImporting,
     this.onExportImage,
@@ -34,6 +36,7 @@ class MobileEditorShell extends StatelessWidget {
 
   final EditorController controller;
   final PresetLibraryController? presetLibraryController;
+  final PresetRemoteController? presetRemoteController;
   final Future<void> Function() onImportImage;
   final bool isImporting;
   final Future<void> Function()? onExportImage;
@@ -137,6 +140,7 @@ class MobileEditorShell extends StatelessWidget {
       bottomNavigationBar: _MobileToolBar(
         controller: controller,
         presetLibraryController: presetLibraryController,
+        presetRemoteController: presetRemoteController,
       ),
     );
   }
@@ -181,10 +185,12 @@ class _MobileToolBar extends StatelessWidget {
   const _MobileToolBar({
     required this.controller,
     this.presetLibraryController,
+    this.presetRemoteController,
   });
 
   final EditorController controller;
   final PresetLibraryController? presetLibraryController;
+  final PresetRemoteController? presetRemoteController;
 
   @override
   Widget build(BuildContext context) {
@@ -276,6 +282,7 @@ class _MobileToolBar extends StatelessWidget {
                   Expanded(
                     child: PresetLibraryView(
                       libraryController: presetLibraryController!,
+                      remoteController: presetRemoteController,
                       editorController: controller,
                       showTitle: false,
                       onPresetApplied: () {

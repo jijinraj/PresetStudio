@@ -8,6 +8,7 @@ import '../../../../theme/tokens/app_dimensions.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../../presets/application/preset_library_controller.dart';
+import '../../../presets/application/preset_remote_controller.dart';
 import '../../../presets/presentation/widgets/preset_library_view.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
@@ -28,6 +29,7 @@ class DesktopEditorShell extends StatefulWidget {
   const DesktopEditorShell({
     required this.controller,
     this.presetLibraryController,
+    this.presetRemoteController,
     required this.onImportImage,
     required this.isImporting,
     this.onExportImage,
@@ -37,6 +39,7 @@ class DesktopEditorShell extends StatefulWidget {
 
   final EditorController controller;
   final PresetLibraryController? presetLibraryController;
+  final PresetRemoteController? presetRemoteController;
   final Future<void> Function() onImportImage;
   final bool isImporting;
   final Future<void> Function()? onExportImage;
@@ -128,6 +131,7 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
                     child: _LibraryPanel(
                       controller: controller,
                       presetLibraryController: widget.presetLibraryController,
+                      presetRemoteController: widget.presetRemoteController,
                     ),
                   ),
                 ),
@@ -335,10 +339,15 @@ class _DesktopTopBar extends StatelessWidget {
 }
 
 class _LibraryPanel extends StatefulWidget {
-  const _LibraryPanel({required this.controller, this.presetLibraryController});
+  const _LibraryPanel({
+    required this.controller,
+    this.presetLibraryController,
+    this.presetRemoteController,
+  });
 
   final EditorController controller;
   final PresetLibraryController? presetLibraryController;
+  final PresetRemoteController? presetRemoteController;
 
   @override
   State<_LibraryPanel> createState() => _LibraryPanelState();
@@ -382,6 +391,7 @@ class _LibraryPanelState extends State<_LibraryPanel> {
                       )
                     : PresetLibraryView(
                         libraryController: widget.presetLibraryController!,
+                        remoteController: widget.presetRemoteController,
                         editorController: controller,
                       ),
               ),
