@@ -30,8 +30,11 @@ void main() {
       id: 'warm-film',
       name: 'Warm Film',
       author: 'Jijin',
+      description: 'Warm film-inspired tones with softened highlights.',
+      tags: const ['film', 'warm', 'portrait'],
       revision: 1,
       presetPath: 'presets/warm-film.presetstudio',
+      previewPath: 'previews/warm-film.webp',
     );
     final catalog = PresetCatalog(
       name: 'PresetStudio Presets',
@@ -65,7 +68,7 @@ void main() {
         theme: PresetStudioTheme.dark,
         home: Scaffold(
           body: SizedBox(
-            width: 420,
+            width: 200,
             height: 620,
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -82,6 +85,11 @@ void main() {
 
     expect(find.text('Discover'), findsOneWidget);
     expect(find.text('Warm Film'), findsOneWidget);
+    expect(
+      find.text('Warm film-inspired tones with softened highlights.'),
+      findsOneWidget,
+    );
+    expect(find.text('film · warm · portrait'), findsOneWidget);
     expect(find.text('Install'), findsOneWidget);
 
     await tester.tap(

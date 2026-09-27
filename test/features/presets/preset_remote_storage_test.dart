@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/presets/domain/preset_catalog.dart';
 import 'package:presetstudio/features/presets/domain/preset_source.dart';
 import 'package:presetstudio/features/presets/infrastructure/local_preset_catalog_cache.dart';
+import 'package:presetstudio/features/presets/infrastructure/local_preset_preview_cache.dart';
 import 'package:presetstudio/features/presets/infrastructure/local_preset_source_store.dart';
 
 void main() {
@@ -84,5 +86,64 @@ void main() {
     await cache.remove('source-a');
 
     expect(await cache.load('source-a'), isNull);
+  });
+
+  test('preview cache survives reload and replaces older revisions', () async {
+    final cache = LocalPresetPreviewCache(
+      directory: Directory(
+        '${tempDirectory.path}${Platform.pathSeparator}preview-cache',
+      ),
+    );
+
+    await cache.save(
+      sourceId: 'source-a',
+      presetId: 'warm-film',
+      revision: 1,
+      bytes: Uint8List.fromList(const [1, 2, 3]),
+    );
+
+    expect(
+      await cache.load(
+        sourceId: 'source-a',
+        presetId: 'warm-film',
+        revision: 1,
+      ),
+      [1, 2, 3],
+    );
+
+    await cache.save(
+      sourceId: 'source-a',
+      presetId: 'warm-film',
+      revision: 2,
+      bytes: Uint8List.fromList(const [4, 5, 6]),
+    );
+
+    expect(
+      await cache.load(
+        sourceId: 'source-a',
+        presetId: 'warm-film',
+        revision: 1,
+      ),
+      isNull,
+    );
+    expect(
+      await cache.load(
+        sourceId: 'source-a',
+        presetId: 'warm-film',
+        revision: 2,
+      ),
+      [4, 5, 6],
+    );
+
+    await cache.removeSource('source-a');
+
+    expect(
+      await cache.load(
+        sourceId: 'source-a',
+        presetId: 'warm-film',
+        revision: 2,
+      ),
+      isNull,
+    );
   });
 }

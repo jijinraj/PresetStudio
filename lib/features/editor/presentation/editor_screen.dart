@@ -15,6 +15,7 @@ import '../../presets/application/preset_remote_controller.dart';
 import '../../presets/infrastructure/http_preset_remote_gateway.dart';
 import '../../presets/infrastructure/local_preset_catalog_cache.dart';
 import '../../presets/infrastructure/local_preset_library_store.dart';
+import '../../presets/infrastructure/local_preset_preview_cache.dart';
 import '../../presets/infrastructure/local_preset_source_store.dart';
 import 'widgets/editor_shell.dart';
 import 'widgets/export_settings_dialog.dart';
@@ -48,6 +49,7 @@ class _EditorScreenState extends State<EditorScreen> {
     _presetRemoteController = PresetRemoteController(
       sourceStoreLoader: LocalPresetSourceStore.openDefault,
       catalogCacheLoader: LocalPresetCatalogCache.openDefault,
+      previewCacheLoader: LocalPresetPreviewCache.openDefault,
       gateway: HttpPresetRemoteGateway(),
     );
 

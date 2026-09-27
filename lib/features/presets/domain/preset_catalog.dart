@@ -74,6 +74,8 @@ class PresetCatalogEntry {
     required String id,
     required String name,
     String? author,
+    String? description,
+    Iterable<String> tags = const <String>[],
     required int revision,
     required String presetPath,
     String? previewPath,
@@ -81,6 +83,8 @@ class PresetCatalogEntry {
     final normalizedId = id.trim();
     final normalizedName = name.trim();
     final normalizedAuthor = _normalizeOptional(author);
+    final normalizedDescription = _normalizeOptional(description);
+    final normalizedTags = _normalizeTags(tags);
     final normalizedPresetPath = _normalizeRelativePath(
       presetPath,
       fieldName: 'preset',
@@ -107,6 +111,12 @@ class PresetCatalogEntry {
       );
     }
 
+    if (normalizedDescription != null && normalizedDescription.length > 1000) {
+      throw const PresetCatalogException(
+        'Preset description cannot exceed 1000 characters.',
+      );
+    }
+
     if (revision <= 0) {
       throw const PresetCatalogException(
         'Preset revision must be a positive integer.',
@@ -117,6 +127,8 @@ class PresetCatalogEntry {
       id: normalizedId,
       name: normalizedName,
       author: normalizedAuthor,
+      description: normalizedDescription,
+      tags: normalizedTags,
       revision: revision,
       presetPath: normalizedPresetPath,
       previewPath: normalizedPreviewPath,
@@ -127,6 +139,8 @@ class PresetCatalogEntry {
     required this.id,
     required this.name,
     required this.author,
+    required this.description,
+    required this.tags,
     required this.revision,
     required this.presetPath,
     required this.previewPath,
@@ -135,9 +149,39 @@ class PresetCatalogEntry {
   final String id;
   final String name;
   final String? author;
+  final String? description;
+  final List<String> tags;
   final int revision;
   final String presetPath;
   final String? previewPath;
+}
+
+List<String> _normalizeTags(Iterable<String> values) {
+  final normalized = <String>[];
+  final identities = <String>{};
+
+  for (final value in values) {
+    final tag = value.trim();
+
+    if (tag.isEmpty || tag.length > 40) {
+      throw const PresetCatalogException(
+        'Preset tags must contain between 1 and 40 characters.',
+      );
+    }
+
+    final identity = tag.toLowerCase();
+    if (identities.add(identity)) {
+      normalized.add(tag);
+    }
+  }
+
+  if (normalized.length > 12) {
+    throw const PresetCatalogException(
+      'A catalog preset cannot contain more than 12 tags.',
+    );
+  }
+
+  return List<String>.unmodifiable(normalized);
 }
 
 String? _normalizeOptional(String? value) {

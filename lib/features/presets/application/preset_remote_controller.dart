@@ -7,11 +7,13 @@ import '../domain/preset_source.dart';
 import 'preset_catalog_cache.dart';
 import 'preset_default_sources.dart';
 import 'preset_library_controller.dart';
+import 'preset_preview_cache.dart';
 import 'preset_remote_gateway.dart';
 import 'preset_source_store.dart';
 
 typedef PresetSourceStoreLoader = Future<PresetSourceStore> Function();
 typedef PresetCatalogCacheLoader = Future<PresetCatalogCache> Function();
+typedef PresetPreviewCacheLoader = Future<PresetPreviewCache> Function();
 
 class RemotePresetCatalogItem {
   const RemotePresetCatalogItem({
@@ -31,11 +33,13 @@ class PresetRemoteController extends ChangeNotifier {
   PresetRemoteController({
     required PresetSourceStoreLoader sourceStoreLoader,
     required PresetCatalogCacheLoader catalogCacheLoader,
+    PresetPreviewCacheLoader? previewCacheLoader,
     required PresetRemoteGateway gateway,
     Iterable<PresetRemoteSource>? defaultSources,
   }) : this._(
          sourceStoreLoader,
          catalogCacheLoader,
+         previewCacheLoader,
          gateway,
          List<PresetRemoteSource>.unmodifiable(
            defaultSources ?? PresetDefaultSources.all,
@@ -45,21 +49,28 @@ class PresetRemoteController extends ChangeNotifier {
   PresetRemoteController._(
     this._sourceStoreLoader,
     this._catalogCacheLoader,
+    this._previewCacheLoader,
     this._gateway,
     this._defaultSources,
   );
 
   final PresetSourceStoreLoader _sourceStoreLoader;
   final PresetCatalogCacheLoader _catalogCacheLoader;
+  final PresetPreviewCacheLoader? _previewCacheLoader;
   final PresetRemoteGateway _gateway;
   final List<PresetRemoteSource> _defaultSources;
 
   PresetSourceStore? _sourceStore;
   PresetCatalogCache? _catalogCache;
+  PresetPreviewCache? _previewCache;
   PresetSourceRegistry _registry = PresetSourceRegistry();
   final Map<String, PresetCatalog> _catalogs = <String, PresetCatalog>{};
   final Map<String, String> _sourceErrors = <String, String>{};
   final Set<String> _installingKeys = <String>{};
+  final Map<String, Future<Uint8List?>> _previewFutures =
+      <String, Future<Uint8List?>>{};
+  final Map<String, Future<Preset?>> _presetPreviewFutures =
+      <String, Future<Preset?>>{};
 
   bool _isInitializing = false;
   bool _isInitialized = false;
@@ -117,6 +128,23 @@ class PresetRemoteController extends ChangeNotifier {
     return _installingKeys.contains(item.key);
   }
 
+  Future<Uint8List?> previewFor(RemotePresetCatalogItem item) {
+    if (item.entry.previewPath == null) {
+      return Future<Uint8List?>.value(null);
+    }
+
+    final key = _previewKey(item);
+    return _previewFutures.putIfAbsent(key, () => _loadPreview(item));
+  }
+
+  Future<Preset?> presetForPreview(RemotePresetCatalogItem item) {
+    final key = _presetPayloadKey(item);
+    return _presetPreviewFutures.putIfAbsent(
+      key,
+      () => _loadPresetForPreview(item),
+    );
+  }
+
   Future<void> initialize() async {
     if (_isInitializing || _isInitialized) {
       return;
@@ -128,6 +156,16 @@ class PresetRemoteController extends ChangeNotifier {
     try {
       final sourceStore = await _sourceStoreLoader();
       final catalogCache = await _catalogCacheLoader();
+      PresetPreviewCache? previewCache;
+
+      if (_previewCacheLoader != null) {
+        try {
+          previewCache = await _previewCacheLoader();
+        } on Object {
+          previewCache = null;
+        }
+      }
+
       var registry = await sourceStore.loadRegistry();
 
       if (registry == null) {
@@ -137,6 +175,7 @@ class PresetRemoteController extends ChangeNotifier {
 
       _sourceStore = sourceStore;
       _catalogCache = catalogCache;
+      _previewCache = previewCache;
       _registry = registry;
       _errorMessage = null;
 
@@ -167,6 +206,8 @@ class PresetRemoteController extends ChangeNotifier {
     }
 
     _isRefreshing = true;
+    _previewFutures.clear();
+    _presetPreviewFutures.clear();
     _notifyListeners();
 
     try {
@@ -204,8 +245,14 @@ class PresetRemoteController extends ChangeNotifier {
     _notifyListeners();
 
     try {
-      final preset = await _gateway.fetchPreset(item.source, item.entry);
-      _validateDownloadedPreset(item.entry, preset);
+      final previewFuture = _presetPreviewFutures[_presetPayloadKey(item)];
+      final previewPreset = previewFuture == null ? null : await previewFuture;
+      final preset =
+          previewPreset ?? await _gateway.fetchPreset(item.source, item.entry);
+
+      if (previewPreset == null) {
+        _validateDownloadedPreset(item.entry, preset);
+      }
 
       return await libraryController.installRemote(
         preset: preset,
@@ -231,6 +278,18 @@ class PresetRemoteController extends ChangeNotifier {
     _sourceErrors.remove(sourceId);
     await _requireSourceStore().saveRegistry(_registry);
     await _requireCache().remove(sourceId);
+
+    final previewCache = _previewCache;
+    if (previewCache != null) {
+      try {
+        await previewCache.removeSource(sourceId);
+      } on Object {
+        // Preview cleanup is best-effort and must not block source removal.
+      }
+    }
+
+    _previewFutures.removeWhere((key, _) => key.startsWith('$sourceId:'));
+    _presetPreviewFutures.removeWhere((key, _) => key.startsWith('$sourceId:'));
     _notifyListeners();
   }
 
@@ -246,9 +305,89 @@ class PresetRemoteController extends ChangeNotifier {
     } else {
       _catalogs.remove(sourceId);
       _sourceErrors.remove(sourceId);
+      _previewFutures.removeWhere((key, _) => key.startsWith('$sourceId:'));
+      _presetPreviewFutures.removeWhere(
+        (key, _) => key.startsWith('$sourceId:'),
+      );
     }
 
     _notifyListeners();
+  }
+
+  Future<Uint8List?> _loadPreview(RemotePresetCatalogItem item) async {
+    final cache = _previewCache;
+
+    if (cache != null) {
+      try {
+        final cached = await cache.load(
+          sourceId: item.source.id,
+          presetId: item.entry.id,
+          revision: item.entry.revision,
+        );
+
+        if (cached != null && cached.isNotEmpty) {
+          return cached;
+        }
+      } on Object {
+        // A corrupt/unreadable preview cache should fall back to the network.
+      }
+    }
+
+    final previewGateway = _gateway is PresetRemotePreviewGateway
+        ? _gateway as PresetRemotePreviewGateway
+        : null;
+
+    if (previewGateway == null) {
+      return null;
+    }
+
+    try {
+      final bytes = await previewGateway.fetchPreview(item.source, item.entry);
+
+      if (bytes.isEmpty) {
+        return null;
+      }
+
+      if (cache != null) {
+        try {
+          await cache.save(
+            sourceId: item.source.id,
+            presetId: item.entry.id,
+            revision: item.entry.revision,
+            bytes: bytes,
+          );
+        } on Object {
+          // Preview caching is best-effort; display the downloaded bytes.
+        }
+      }
+
+      return bytes;
+    } on Object {
+      // A missing/broken preview must never block catalog discovery/install.
+      return null;
+    }
+  }
+
+  Future<Preset?> _loadPresetForPreview(RemotePresetCatalogItem item) async {
+    try {
+      final preset = await _gateway.fetchPreset(item.source, item.entry);
+      _validateDownloadedPreset(item.entry, preset);
+      return preset;
+    } on Object {
+      // Live previews are best-effort. Installation retries independently,
+      // and a preview failure must not make the remote preset unavailable.
+      return null;
+    }
+  }
+
+  String _previewKey(RemotePresetCatalogItem item) {
+    return '${item.source.id}:${item.entry.id}:${item.entry.revision}:'
+        '${item.entry.previewPath}';
+  }
+
+  String _presetPayloadKey(RemotePresetCatalogItem item) {
+    return '${item.source.id}:${item.entry.id}:${item.entry.revision}:'
+        '${item.entry.presetPath}';
   }
 
   void _validateDownloadedPreset(PresetCatalogEntry entry, Preset preset) {

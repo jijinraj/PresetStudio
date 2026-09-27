@@ -354,6 +354,7 @@ class _LibraryPanel extends StatefulWidget {
 }
 
 class _LibraryPanelState extends State<_LibraryPanel> {
+  bool _presetsExpanded = true;
   bool _historyExpanded = true;
 
   EditorController get controller => widget.controller;
@@ -375,26 +376,37 @@ class _LibraryPanelState extends State<_LibraryPanel> {
             children: [
               const Text('Library', style: AppTypography.title),
               const SizedBox(height: AppSpacing.lg),
-              SizedBox(
-                height: 220,
-                child: widget.presetLibraryController == null
-                    ? const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Presets', style: AppTypography.label),
-                          SizedBox(height: AppSpacing.sm),
-                          Text(
-                            'Your preset library will appear here.',
-                            style: AppTypography.bodyMuted,
-                          ),
-                        ],
-                      )
-                    : PresetLibraryView(
-                        libraryController: widget.presetLibraryController!,
-                        remoteController: widget.presetRemoteController,
-                        editorController: controller,
-                      ),
+              _DesktopPresetsHeader(
+                isExpanded: _presetsExpanded,
+                onToggleExpanded: () {
+                  setState(() {
+                    _presetsExpanded = !_presetsExpanded;
+                  });
+                },
               ),
+              if (_presetsExpanded) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Expanded(
+                  flex: _historyExpanded ? 3 : 1,
+                  child: KeyedSubtree(
+                    key: const ValueKey('desktop-presets-body'),
+                    child: widget.presetLibraryController == null
+                        ? const Align(
+                            alignment: Alignment.topLeft,
+                            child: Text(
+                              'Your preset library will appear here.',
+                              style: AppTypography.bodyMuted,
+                            ),
+                          )
+                        : PresetLibraryView(
+                            libraryController: widget.presetLibraryController!,
+                            remoteController: widget.presetRemoteController,
+                            editorController: controller,
+                            showTitle: false,
+                          ),
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.md),
               const Divider(height: 1),
               const SizedBox(height: AppSpacing.md),
@@ -413,6 +425,7 @@ class _LibraryPanelState extends State<_LibraryPanel> {
               if (_historyExpanded) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Expanded(
+                  flex: _presetsExpanded ? 2 : 1,
                   child: EditorHistoryList(
                     controller: controller,
                     allowEditToggles: true,
@@ -466,6 +479,48 @@ class _LibraryPanelState extends State<_LibraryPanel> {
           controller.clearHistoryKeepingCurrent();
         }
     }
+  }
+}
+
+class _DesktopPresetsHeader extends StatelessWidget {
+  const _DesktopPresetsHeader({
+    required this.isExpanded,
+    required this.onToggleExpanded,
+  });
+
+  final bool isExpanded;
+  final VoidCallback onToggleExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: const ValueKey('desktop-presets-toggle'),
+      borderRadius: BorderRadius.circular(4),
+      onTap: onToggleExpanded,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Row(
+          children: [
+            Icon(
+              isExpanded
+                  ? Icons.keyboard_arrow_down
+                  : Icons.keyboard_arrow_right,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: AppSpacing.xxs),
+            const Expanded(
+              child: Text(
+                'Presets',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.label,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

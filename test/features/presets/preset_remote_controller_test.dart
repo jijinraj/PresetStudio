@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/presets/application/preset_catalog_cache.dart';
 import 'package:presetstudio/features/presets/application/preset_library.dart';
 import 'package:presetstudio/features/presets/application/preset_library_controller.dart';
 import 'package:presetstudio/features/presets/application/preset_library_store.dart';
+import 'package:presetstudio/features/presets/application/preset_preview_cache.dart';
 import 'package:presetstudio/features/presets/application/preset_remote_controller.dart';
 import 'package:presetstudio/features/presets/application/preset_remote_gateway.dart';
 import 'package:presetstudio/features/presets/application/preset_source_store.dart';
@@ -229,6 +232,117 @@ void main() {
       );
     },
   );
+
+  test(
+    'remote previews load lazily, cache locally, and work offline',
+    () async {
+      final source = PresetRemoteSource(
+        id: 'preview-source',
+        name: 'Preview source',
+        kind: PresetSourceKind.repository,
+        location: 'https://github.com/example/previews',
+      );
+      final entry = PresetCatalogEntry(
+        id: 'warm-film',
+        name: 'Warm Film',
+        revision: 2,
+        presetPath: 'presets/warm-film.presetstudio',
+        previewPath: 'previews/warm-film.webp',
+      );
+      final catalog = PresetCatalog(name: 'Preview source', presets: [entry]);
+      final sourceStore = _MemorySourceStore(
+        registry: PresetSourceRegistry(sources: [source]),
+      );
+      final cache = _MemoryPreviewCache();
+      final gateway = _FakeRemoteGateway()
+        ..catalogs[source.id] = catalog
+        ..previews['${source.id}:${entry.id}'] = Uint8List.fromList(const [
+          1,
+          2,
+          3,
+          4,
+        ]);
+      final controller = PresetRemoteController(
+        sourceStoreLoader: () async => sourceStore,
+        catalogCacheLoader: () async => _MemoryCatalogCache(),
+        previewCacheLoader: () async => cache,
+        gateway: gateway,
+      );
+
+      await controller.initialize();
+      await controller.refresh();
+
+      final item = controller.items.single;
+      final first = await controller.previewFor(item);
+
+      expect(first, [1, 2, 3, 4]);
+      expect(gateway.previewFetchCount, 1);
+
+      final cached = await cache.load(
+        sourceId: source.id,
+        presetId: entry.id,
+        revision: entry.revision,
+      );
+      expect(cached, [1, 2, 3, 4]);
+
+      gateway.failPreviews = true;
+      await controller.refresh();
+      final offline = await controller.previewFor(controller.items.single);
+
+      expect(offline, [1, 2, 3, 4]);
+      expect(gateway.previewFetchCount, 1);
+    },
+  );
+
+  test('live preview fetches preset data and install reuses it', () async {
+    final source = PresetRemoteSource(
+      id: 'live-source',
+      name: 'Live source',
+      kind: PresetSourceKind.repository,
+      location: 'https://github.com/example/live-presets',
+    );
+    final entry = PresetCatalogEntry(
+      id: 'warm-film',
+      name: 'Warm Film',
+      revision: 1,
+      presetPath: 'presets/warm-film.presetstudio',
+    );
+    final preset = Preset(
+      id: entry.id,
+      name: entry.name,
+      createdAt: DateTime.utc(2026, 9, 25),
+      revision: entry.revision,
+      adjustments: const PresetAdjustmentValues(temperature: 12),
+    );
+    final gateway = _FakeRemoteGateway()
+      ..catalogs[source.id] = PresetCatalog(name: source.name, presets: [entry])
+      ..presets['${source.id}:${entry.id}'] = preset;
+    final remote = PresetRemoteController(
+      sourceStoreLoader: () async =>
+          _MemorySourceStore(registry: PresetSourceRegistry(sources: [source])),
+      catalogCacheLoader: () async => _MemoryCatalogCache(),
+      gateway: gateway,
+    );
+    final library = PresetLibraryController(
+      libraryLoader: () async =>
+          PresetLibrary(store: _MemoryPresetLibraryStore()),
+    );
+
+    await remote.initialize();
+    await remote.refresh();
+    await library.initialize();
+
+    final item = remote.items.single;
+    final previewPreset = await remote.presetForPreview(item);
+
+    expect(previewPreset, same(preset));
+    expect(gateway.presetFetchCount, 1);
+
+    await remote.install(item, libraryController: library);
+
+    expect(gateway.presetFetchCount, 1);
+    expect(library.records, hasLength(1));
+  });
 }
 
 class _MemorySourceStore implements PresetSourceStore {
@@ -264,10 +378,15 @@ class _MemoryCatalogCache implements PresetCatalogCache {
   }
 }
 
-class _FakeRemoteGateway implements PresetRemoteGateway {
+class _FakeRemoteGateway
+    implements PresetRemoteGateway, PresetRemotePreviewGateway {
   final Map<String, PresetCatalog> catalogs = <String, PresetCatalog>{};
   final Map<String, Preset> presets = <String, Preset>{};
+  final Map<String, Uint8List> previews = <String, Uint8List>{};
   bool failCatalogs = false;
+  bool failPreviews = false;
+  int previewFetchCount = 0;
+  int presetFetchCount = 0;
 
   @override
   Future<PresetCatalog> fetchCatalog(PresetRemoteSource source) async {
@@ -289,6 +408,7 @@ class _FakeRemoteGateway implements PresetRemoteGateway {
     PresetRemoteSource source,
     PresetCatalogEntry entry,
   ) async {
+    presetFetchCount++;
     final preset = presets['${source.id}:${entry.id}'];
 
     if (preset == null) {
@@ -296,6 +416,57 @@ class _FakeRemoteGateway implements PresetRemoteGateway {
     }
 
     return preset;
+  }
+
+  @override
+  Future<Uint8List> fetchPreview(
+    PresetRemoteSource source,
+    PresetCatalogEntry entry,
+  ) async {
+    if (failPreviews) {
+      throw const PresetRemoteException('offline');
+    }
+
+    final preview = previews['${source.id}:${entry.id}'];
+
+    if (preview == null) {
+      throw PresetRemoteException('No preview for ${entry.id}.');
+    }
+
+    previewFetchCount++;
+    return preview;
+  }
+}
+
+class _MemoryPreviewCache implements PresetPreviewCache {
+  final Map<String, Uint8List> previews = <String, Uint8List>{};
+
+  String _key(String sourceId, String presetId, int revision) {
+    return '$sourceId:$presetId:$revision';
+  }
+
+  @override
+  Future<Uint8List?> load({
+    required String sourceId,
+    required String presetId,
+    required int revision,
+  }) async {
+    return previews[_key(sourceId, presetId, revision)];
+  }
+
+  @override
+  Future<void> save({
+    required String sourceId,
+    required String presetId,
+    required int revision,
+    required Uint8List bytes,
+  }) async {
+    previews[_key(sourceId, presetId, revision)] = bytes;
+  }
+
+  @override
+  Future<void> removeSource(String sourceId) async {
+    previews.removeWhere((key, _) => key.startsWith('$sourceId:'));
   }
 }
 

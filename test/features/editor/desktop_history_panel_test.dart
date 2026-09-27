@@ -39,16 +39,39 @@ void main() {
     await pumpHistoryShell(tester);
 
     expect(find.byKey(const ValueKey('editor-history-list')), findsOneWidget);
+    final presetBody = find.byKey(const ValueKey('desktop-presets-body'));
+    final initialPresetHeight = tester.getSize(presetBody).height;
 
     await tester.tap(find.byKey(const ValueKey('desktop-history-toggle')));
     await tester.pump();
 
     expect(find.byKey(const ValueKey('editor-history-list')), findsNothing);
+    expect(tester.getSize(presetBody).height, greaterThan(initialPresetHeight));
 
     await tester.tap(find.byKey(const ValueKey('desktop-history-toggle')));
     await tester.pump();
 
     expect(find.byKey(const ValueKey('editor-history-list')), findsOneWidget);
+  });
+
+  testWidgets('desktop Presets panel can collapse independently', (
+    tester,
+  ) async {
+    await pumpHistoryShell(tester);
+
+    expect(find.byKey(const ValueKey('desktop-presets-body')), findsOneWidget);
+    expect(find.byKey(const ValueKey('editor-history-list')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('desktop-presets-toggle')));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('desktop-presets-body')), findsNothing);
+    expect(find.byKey(const ValueKey('editor-history-list')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('desktop-presets-toggle')));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('desktop-presets-body')), findsOneWidget);
   });
 
   testWidgets('desktop eye toggle disables and re-enables an edit', (

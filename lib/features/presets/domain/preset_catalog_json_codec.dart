@@ -28,6 +28,8 @@ class PresetCatalogJsonCodec {
               'id': entry.id,
               'name': entry.name,
               if (entry.author != null) 'author': entry.author,
+              if (entry.description != null) 'description': entry.description,
+              if (entry.tags.isNotEmpty) 'tags': entry.tags,
               'revision': entry.revision,
               'preset': entry.presetPath,
               if (entry.previewPath != null) 'preview': entry.previewPath,
@@ -95,6 +97,8 @@ class PresetCatalogJsonCodec {
             id: _requiredString(rawEntry, 'id'),
             name: _requiredString(rawEntry, 'name'),
             author: _optionalString(rawEntry, 'author'),
+            description: _optionalString(rawEntry, 'description'),
+            tags: _optionalStringList(rawEntry, 'tags'),
             revision: _requiredInt(rawEntry, 'revision'),
             presetPath: _requiredString(rawEntry, 'preset'),
             previewPath: _optionalString(rawEntry, 'preview'),
@@ -139,6 +143,32 @@ class PresetCatalogJsonCodec {
     }
 
     return value;
+  }
+
+  List<String> _optionalStringList(Map<String, dynamic> json, String key) {
+    final value = json[key];
+
+    if (value == null) {
+      return const <String>[];
+    }
+
+    if (value is! List) {
+      throw PresetCatalogFormatException('$key must be an array.');
+    }
+
+    final result = <String>[];
+
+    for (var index = 0; index < value.length; index++) {
+      final item = value[index];
+
+      if (item is! String) {
+        throw PresetCatalogFormatException('$key[$index] must be a string.');
+      }
+
+      result.add(item);
+    }
+
+    return result;
   }
 
   int _requiredInt(Map<String, dynamic> json, String key) {

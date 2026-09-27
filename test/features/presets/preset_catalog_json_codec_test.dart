@@ -17,6 +17,8 @@ void main() {
       "id": "warm-film",
       "name": "Warm Film",
       "author": "Jijin",
+      "description": "Warm film-inspired tones.",
+      "tags": ["film", "warm", "portrait"],
       "revision": 2,
       "preset": "presets/warm-film.presetstudio",
       "preview": "previews/warm-film.webp"
@@ -33,12 +35,16 @@ void main() {
 
     final entry = catalog.presets.single;
     expect(entry.id, 'warm-film');
+    expect(entry.description, 'Warm film-inspired tones.');
+    expect(entry.tags, ['film', 'warm', 'portrait']);
     expect(entry.revision, 2);
     expect(entry.presetPath, 'presets/warm-film.presetstudio');
     expect(entry.previewPath, 'previews/warm-film.webp');
 
     final roundTripped = codec.decode(codec.encode(catalog));
     expect(roundTripped.presets.single.id, entry.id);
+    expect(roundTripped.presets.single.description, entry.description);
+    expect(roundTripped.presets.single.tags, entry.tags);
     expect(roundTripped.presets.single.revision, entry.revision);
   });
 
@@ -96,6 +102,30 @@ void main() {
             presetPath: 'presets/two.presetstudio',
           ),
         ],
+      ),
+      throwsA(isA<PresetCatalogException>()),
+    );
+  });
+
+  test('normalizes duplicate tags and rejects invalid tag metadata', () {
+    final entry = PresetCatalogEntry(
+      id: 'tagged',
+      name: 'Tagged',
+      description: 'Description',
+      tags: const [' Film ', 'film', 'Warm'],
+      revision: 1,
+      presetPath: 'presets/tagged.presetstudio',
+    );
+
+    expect(entry.tags, ['Film', 'Warm']);
+
+    expect(
+      () => PresetCatalogEntry(
+        id: 'too-many',
+        name: 'Too many',
+        tags: List<String>.generate(13, (index) => 'tag-$index'),
+        revision: 1,
+        presetPath: 'presets/too-many.presetstudio',
       ),
       throwsA(isA<PresetCatalogException>()),
     );

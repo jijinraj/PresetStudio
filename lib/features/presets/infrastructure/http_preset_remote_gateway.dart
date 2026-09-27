@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import '../application/preset_remote_gateway.dart';
 import '../domain/preset.dart';
@@ -10,15 +11,20 @@ import '../domain/preset_json_codec.dart';
 import '../domain/preset_source.dart';
 
 typedef PresetRemoteTextLoader = Future<String> Function(Uri uri);
+typedef PresetRemoteBytesLoader = Future<Uint8List> Function(Uri uri);
 
-class HttpPresetRemoteGateway implements PresetRemoteGateway {
+class HttpPresetRemoteGateway
+    implements PresetRemoteGateway, PresetRemotePreviewGateway {
   HttpPresetRemoteGateway({
     PresetRemoteTextLoader? textLoader,
+    PresetRemoteBytesLoader? bytesLoader,
     this.catalogCodec = const PresetCatalogJsonCodec(),
     this.presetCodec = const PresetJsonCodec(),
-  }) : _textLoader = textLoader ?? _loadText;
+  }) : _textLoader = textLoader ?? _loadText,
+       _bytesLoader = bytesLoader ?? _loadBytes;
 
   final PresetRemoteTextLoader _textLoader;
+  final PresetRemoteBytesLoader _bytesLoader;
   final PresetCatalogJsonCodec catalogCodec;
   final PresetJsonCodec presetCodec;
 
@@ -53,6 +59,15 @@ class HttpPresetRemoteGateway implements PresetRemoteGateway {
     }
   }
 
+  @override
+  Future<Uint8List> fetchPreview(
+    PresetRemoteSource source,
+    PresetCatalogEntry entry,
+  ) async {
+    final uri = previewUriFor(source, entry);
+    return _bytesLoader(uri);
+  }
+
   Uri catalogUriFor(PresetRemoteSource source) {
     switch (source.kind) {
       case PresetSourceKind.repository:
@@ -69,6 +84,23 @@ class HttpPresetRemoteGateway implements PresetRemoteGateway {
         return _repositoryRawBase(source.location).resolve(entry.presetPath);
       case PresetSourceKind.catalog:
         return source.location.resolve(entry.presetPath);
+    }
+  }
+
+  Uri previewUriFor(PresetRemoteSource source, PresetCatalogEntry entry) {
+    final previewPath = entry.previewPath;
+
+    if (previewPath == null) {
+      throw PresetRemoteException(
+        'Preset ${entry.name} does not declare a preview.',
+      );
+    }
+
+    switch (source.kind) {
+      case PresetSourceKind.repository:
+        return _repositoryRawBase(source.location).resolve(previewPath);
+      case PresetSourceKind.catalog:
+        return source.location.resolve(previewPath);
     }
   }
 
@@ -110,6 +142,21 @@ class HttpPresetRemoteGateway implements PresetRemoteGateway {
   }
 
   static Future<String> _loadText(Uri uri) async {
+    final bytes = await _loadBytes(uri, maxBytes: 1024 * 1024);
+
+    try {
+      return utf8.decode(bytes);
+    } on FormatException {
+      throw const PresetRemoteException(
+        'Remote preset response is not valid UTF-8 text.',
+      );
+    }
+  }
+
+  static Future<Uint8List> _loadBytes(
+    Uri uri, {
+    int maxBytes = 5 * 1024 * 1024,
+  }) async {
     final client = HttpClient()
       ..userAgent = 'PresetStudio/1'
       ..connectionTimeout = const Duration(seconds: 12);
@@ -133,22 +180,17 @@ class HttpPresetRemoteGateway implements PresetRemoteGateway {
       final bytes = await response.fold<List<int>>(<int>[], (buffer, chunk) {
         buffer.addAll(chunk);
 
-        if (buffer.length > 1024 * 1024) {
-          throw const PresetRemoteException(
-            'Remote preset response exceeded the 1 MB limit.',
+        if (buffer.length > maxBytes) {
+          throw PresetRemoteException(
+            'Remote response exceeded the ${maxBytes ~/ (1024 * 1024)} MB '
+            'limit.',
           );
         }
 
         return buffer;
       });
 
-      try {
-        return utf8.decode(bytes);
-      } on FormatException {
-        throw const PresetRemoteException(
-          'Remote preset response is not valid UTF-8 text.',
-        );
-      }
+      return Uint8List.fromList(bytes);
     } on PresetRemoteException {
       rethrow;
     } on SocketException catch (error) {

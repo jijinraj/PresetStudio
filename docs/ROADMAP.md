@@ -128,6 +128,10 @@
 - [x] Add repository-backed catalog provider
 - [x] Add generic catalog URL provider
 - [x] Cache remote catalogs and installed presets for offline use
+- [x] Add optional remote preset preview metadata and local preview cache
+- [x] Add remote preset descriptions and tags in Discover
+- [x] Render Discover presets against the currently edited image when available
+- [x] Make desktop Presets and History library sections independently collapsible
 
 ## Settings backlog
 

@@ -1,13 +1,17 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../../theme/tokens/app_colors.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../../editor/application/editor_controller.dart';
+import '../../../editor/presentation/widgets/editor_crop_preview.dart';
 import '../../application/preset_adjustment_mapper.dart';
 import '../../application/preset_file_gateway.dart';
 import '../../application/preset_library_controller.dart';
 import '../../application/preset_remote_controller.dart';
+import '../../domain/preset.dart';
 import '../../domain/preset_json_codec.dart';
 import '../../domain/preset_record.dart';
 import '../../infrastructure/local_preset_file_gateway.dart';
@@ -259,9 +263,14 @@ class PresetLibraryView extends StatelessWidget {
         installedRevision != null &&
         installedRevision < item.entry.revision;
     final isInstalling = remote.isInstalling(item);
+    final sourceImagePath = editorController.session.sourceImagePath;
 
     return _RemotePresetTile(
       item: item,
+      remoteController: remote,
+      installedPreset: installed?.preset,
+      sourceImagePath: sourceImagePath,
+      editorController: editorController,
       state: isCurrent
           ? _RemotePresetState.installed
           : isUpdate
@@ -538,12 +547,20 @@ enum _RemotePresetState { available, updateAvailable, installed }
 class _RemotePresetTile extends StatelessWidget {
   const _RemotePresetTile({
     required this.item,
+    required this.remoteController,
+    required this.installedPreset,
+    required this.sourceImagePath,
+    required this.editorController,
     required this.state,
     required this.isBusy,
     required this.onInstall,
   });
 
   final RemotePresetCatalogItem item;
+  final PresetRemoteController remoteController;
+  final Preset? installedPreset;
+  final String? sourceImagePath;
+  final EditorController editorController;
   final _RemotePresetState state;
   final bool isBusy;
   final VoidCallback? onInstall;
@@ -555,60 +572,210 @@ class _RemotePresetTile extends StatelessWidget {
       _RemotePresetState.updateAvailable => 'Update',
       _RemotePresetState.installed => 'Installed',
     };
+    final description = item.entry.description;
+    final tags = item.entry.tags;
+    final remotePreviewFuture = remoteController.previewFor(item);
+    final livePreviewFuture = sourceImagePath == null
+        ? Future<Preset?>.value(null)
+        : installedPreset != null
+        ? Future<Preset?>.value(installedPreset)
+        : remoteController.presetForPreview(item);
 
     return Container(
       key: ValueKey('preset-remote-${item.source.id}-${item.entry.id}'),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.cloud_download_outlined,
-            size: 18,
-            color: AppColors.textSecondary,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.entry.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.body,
-                ),
-                Text(
-                  item.entry.author == null
-                      ? item.source.name
-                      : '${item.entry.author} · ${item.source.name}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodyMuted,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          TextButton(
+          _RemotePresetPreview(
             key: ValueKey(
-              'preset-remote-install-${item.source.id}-${item.entry.id}',
+              'preset-remote-preview-${item.source.id}-${item.entry.id}',
             ),
-            onPressed: onInstall,
-            child: isBusy
-                ? const SizedBox.square(
-                    dimension: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(buttonLabel),
+            remoteFuture: remotePreviewFuture,
+            livePreviewFuture: livePreviewFuture,
+            sourceImagePath: sourceImagePath,
+            editorController: editorController,
+            hasDeclaredPreview: item.entry.previewPath != null,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            item.entry.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.body,
+          ),
+          Text(
+            item.entry.author == null
+                ? item.source.name
+                : '${item.entry.author} · ${item.source.name}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.bodyMuted,
+          ),
+          if (description != null) ...[
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.bodyMuted,
+            ),
+          ],
+          if (tags.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              _tagSummary(tags),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.bodyMuted,
+            ),
+          ],
+          const SizedBox(height: AppSpacing.xs),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              key: ValueKey(
+                'preset-remote-install-${item.source.id}-${item.entry.id}',
+              ),
+              onPressed: onInstall,
+              child: isBusy
+                  ? const SizedBox.square(
+                      dimension: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(buttonLabel),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  String _tagSummary(List<String> tags) {
+    const visibleCount = 3;
+    final visible = tags.take(visibleCount).join(' · ');
+    final remaining = tags.length - visibleCount;
+
+    return remaining > 0 ? '$visible · +$remaining' : visible;
+  }
+}
+
+class _RemotePresetPreview extends StatelessWidget {
+  const _RemotePresetPreview({
+    required this.remoteFuture,
+    required this.livePreviewFuture,
+    required this.sourceImagePath,
+    required this.editorController,
+    required this.hasDeclaredPreview,
+    super.key,
+  });
+
+  final Future<Uint8List?> remoteFuture;
+  final Future<Preset?> livePreviewFuture;
+  final String? sourceImagePath;
+  final EditorController editorController;
+  final bool hasDeclaredPreview;
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 4 / 3,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: FutureBuilder<Preset?>(
+          future: livePreviewFuture,
+          builder: (context, snapshot) {
+            final preset = snapshot.data;
+            final path = sourceImagePath;
+
+            if (path != null && preset != null) {
+              return ColoredBox(
+                key: const ValueKey('preset-remote-live-preview'),
+                color: AppColors.surfaceElevated,
+                child: EditorCropPreview(
+                  sourceImagePath: path,
+                  adjustments: PresetAdjustmentMapper.toImageAdjustments(
+                    preset.adjustments,
+                  ),
+                  transform: editorController.session.transform,
+                  crop: editorController.session.crop,
+                  filterQuality: FilterQuality.low,
+                  errorBuilder: (_, _, _) => _fallback(),
+                ),
+              );
+            }
+
+            return _buildRemoteFallback(
+              showLoading:
+                  path != null &&
+                  snapshot.connectionState == ConnectionState.waiting,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRemoteFallback({required bool showLoading}) {
+    return FutureBuilder<Uint8List?>(
+      future: remoteFuture,
+      builder: (context, snapshot) {
+        final bytes = snapshot.data;
+
+        if (bytes != null && bytes.isNotEmpty) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.memory(
+                bytes,
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+                errorBuilder: (_, _, _) => _fallback(),
+              ),
+              if (showLoading) _loadingOverlay(),
+            ],
+          );
+        }
+
+        if (showLoading ||
+            (snapshot.connectionState == ConnectionState.waiting &&
+                hasDeclaredPreview)) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [_fallback(), _loadingOverlay()],
+          );
+        }
+
+        return _fallback();
+      },
+    );
+  }
+
+  Widget _loadingOverlay() {
+    return const ColoredBox(
+      color: Color(0x33000000),
+      child: Center(
+        child: SizedBox.square(
+          dimension: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+    );
+  }
+
+  Widget _fallback() {
+    return const ColoredBox(
+      color: AppColors.surfaceElevated,
+      child: Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 22,
+          color: AppColors.textSecondary,
+        ),
       ),
     );
   }
