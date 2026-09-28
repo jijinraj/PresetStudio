@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/application/editor_controller.dart';
+import 'package:presetstudio/features/editor/presentation/widgets/editor_ruler_control.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/mobile_editor_shell.dart';
 
 void main() {
@@ -34,7 +35,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('crop-frame')), findsOneWidget);
-    expect(find.text('Crop & Straighten'), findsOneWidget);
+    expect(find.text('Crop'), findsOneWidget);
+    expect(find.byType(EditorRulerControl), findsOneWidget);
+    expect(find.byKey(const ValueKey('crop-reset')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('crop-cancel')));
     await tester.pumpAndSettle();
@@ -184,5 +187,67 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.isEditTransactionActive, isFalse);
+  });
+  testWidgets('mobile straighten ruler enters immersive crop interaction', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final controller = EditorController();
+    addTearDown(controller.dispose);
+    controller.setSourceImage('missing-test-image.jpg');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MobileEditorShell(
+          controller: controller,
+          onImportImage: () async {},
+          isImporting: false,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Crop'));
+    await tester.pumpAndSettle();
+
+    var ruler = tester.widget<EditorRulerControl>(
+      find.byType(EditorRulerControl),
+    );
+    ruler.onInteractionStart?.call();
+    ruler.onChanged(2.4);
+    await tester.pump(const Duration(milliseconds: 180));
+
+    final hiddenTopBar = tester.widget<AnimatedOpacity>(
+      find.byKey(const ValueKey('mobile-crop-top-bar-visibility')),
+    );
+    final hiddenSecondaryControls = tester.widget<AnimatedOpacity>(
+      find.byKey(const ValueKey('mobile-crop-secondary-controls')),
+    );
+
+    expect(hiddenTopBar.opacity, 0);
+    expect(hiddenSecondaryControls.opacity, 0);
+    expect(controller.session.crop.straightenDegrees, closeTo(2.4, 0.000001));
+
+    ruler = tester.widget<EditorRulerControl>(find.byType(EditorRulerControl));
+    ruler.onInteractionEnd?.call();
+    await tester.pump(const Duration(milliseconds: 180));
+
+    final visibleTopBar = tester.widget<AnimatedOpacity>(
+      find.byKey(const ValueKey('mobile-crop-top-bar-visibility')),
+    );
+    expect(visibleTopBar.opacity, 1);
+
+    await tester.tap(find.byKey(const ValueKey('crop-reset')));
+    await tester.pump();
+    expect(controller.session.crop.straightenDegrees, 0);
+
+    await tester.tap(find.byKey(const ValueKey('crop-cancel')));
+    await tester.pumpAndSettle();
   });
 }

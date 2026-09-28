@@ -151,7 +151,7 @@
 - [x] Redesign mobile preset browser
 - [x] Add reusable precision ruler control
 - [x] Redesign mobile adjustment workflow
-- [ ] Redesign crop presentation around the existing crop engine
+- [x] Redesign crop presentation around the existing crop engine
 - [ ] Add dedicated composition guides mode
 - [ ] Finish responsive, accessibility, motion, and interaction polish
 

@@ -17,6 +17,7 @@ import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
 import 'composition_guide_overlay.dart';
 import 'editor_rendered_image.dart';
+import 'editor_ruler_control.dart';
 
 class CropWorkspace extends StatefulWidget {
   const CropWorkspace({
@@ -64,6 +65,7 @@ class _CropWorkspaceState extends State<CropWorkspace> {
 
   bool _ownsTransaction = false;
   bool _finalized = false;
+  bool _isStraightenInteractionActive = false;
 
   EditorController get controller => widget.controller;
 
@@ -436,6 +438,37 @@ class _CropWorkspaceState extends State<CropWorkspace> {
     );
   }
 
+  void _startStraightenInteraction() {
+    if (!widget.compact || _isStraightenInteractionActive) {
+      return;
+    }
+
+    setState(() {
+      _isStraightenInteractionActive = true;
+    });
+  }
+
+  void _endStraightenInteraction() {
+    if (!widget.compact || !_isStraightenInteractionActive) {
+      return;
+    }
+
+    setState(() {
+      _isStraightenInteractionActive = false;
+    });
+  }
+
+  void _resetCropWorkspace() {
+    _ensureTransactionStarted();
+
+    setState(() {
+      _selectedRatioId = _ratioIdForCrop(_initialCrop);
+    });
+
+    controller.updateCrop(_initialCrop);
+    controller.updateTransform(_initialTransform);
+  }
+
   void _rotateLeft() {
     _ensureTransactionStarted();
 
@@ -493,58 +526,90 @@ class _CropWorkspaceState extends State<CropWorkspace> {
             }
 
             final crop = session.crop;
+            final canvas = _CropCanvas(
+              sourceImagePath: sourceImagePath,
+              adjustments: controller.previewAdjustments,
+              transform: session.transform,
+              crop: crop,
+              sourceAspectRatio: _originalAspectRatio ?? 4 / 3,
+              compositionGuide: _selectedGuide,
+              compositionGuideOrientation: _guideOrientation,
+              compositionGuideColor: _guideColor,
+              compositionGuideOpacity: _guideOpacity,
+              onCropChanged: (nextCrop) {
+                _ensureTransactionStarted();
+                controller.updateCrop(nextCrop);
+              },
+            );
+
+            final controls = _CropWorkspaceControls(
+              compact: widget.compact,
+              crop: crop,
+              transform: session.transform,
+              originalAspectRatio: _originalAspectRatio,
+              selectedRatioId: _selectedRatioId,
+              ratioOptions: _ratioOptions,
+              selectedGuide: _selectedGuide,
+              guideOrientation: _guideOrientation,
+              guideColor: _guideColor,
+              guideOpacity: _guideOpacity,
+              isStraightening: _isStraightenInteractionActive,
+              onSelectRatio: _selectRatio,
+              onSelectGuide: _selectCompositionGuide,
+              onGuideColorChanged: _updateCompositionGuideColor,
+              onGuideOpacityChanged: _updateCompositionGuideOpacity,
+              onRotateGuide: _rotateCompositionGuide,
+              onFlipGuideHorizontal: _flipCompositionGuideHorizontal,
+              onFlipGuideVertical: _flipCompositionGuideVertical,
+              onSwapRatioOrientation: _swapRatioOrientation,
+              onStraightenChanged: _updateStraighten,
+              onStraightenInteractionStart: _startStraightenInteraction,
+              onStraightenInteractionEnd: _endStraightenInteraction,
+              onRotateLeft: _rotateLeft,
+              onRotateRight: _rotateRight,
+              onFlipHorizontal: _flipHorizontal,
+              onFlipVertical: _flipVertical,
+              onReset: _resetCropWorkspace,
+            );
+
+            if (widget.compact) {
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Column(
+                    children: [
+                      IgnorePointer(
+                        ignoring: _isStraightenInteractionActive,
+                        child: AnimatedOpacity(
+                          key: const ValueKey('mobile-crop-top-bar-visibility'),
+                          opacity: _isStraightenInteractionActive ? 0 : 1,
+                          duration: const Duration(milliseconds: 160),
+                          child: _CropWorkspaceTopBar(
+                            compact: true,
+                            onCancel: _cancel,
+                            onDone: _done,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: canvas),
+                    ],
+                  ),
+                  Positioned(left: 0, right: 0, bottom: 0, child: controls),
+                ],
+              );
+            }
 
             return Column(
               children: [
                 _CropWorkspaceTopBar(
-                  compact: widget.compact,
+                  compact: false,
                   onCancel: _cancel,
                   onDone: _done,
                 ),
                 const Divider(height: 1),
-                Expanded(
-                  child: _CropCanvas(
-                    sourceImagePath: sourceImagePath,
-                    adjustments: controller.previewAdjustments,
-                    transform: session.transform,
-                    crop: crop,
-                    sourceAspectRatio: _originalAspectRatio ?? 4 / 3,
-                    compositionGuide: _selectedGuide,
-                    compositionGuideOrientation: _guideOrientation,
-                    compositionGuideColor: _guideColor,
-                    compositionGuideOpacity: _guideOpacity,
-                    onCropChanged: (nextCrop) {
-                      _ensureTransactionStarted();
-                      controller.updateCrop(nextCrop);
-                    },
-                  ),
-                ),
+                Expanded(child: canvas),
                 const Divider(height: 1),
-                _CropWorkspaceControls(
-                  compact: widget.compact,
-                  crop: crop,
-                  transform: session.transform,
-                  originalAspectRatio: _originalAspectRatio,
-                  selectedRatioId: _selectedRatioId,
-                  ratioOptions: _ratioOptions,
-                  selectedGuide: _selectedGuide,
-                  guideOrientation: _guideOrientation,
-                  guideColor: _guideColor,
-                  guideOpacity: _guideOpacity,
-                  onSelectRatio: _selectRatio,
-                  onSelectGuide: _selectCompositionGuide,
-                  onGuideColorChanged: _updateCompositionGuideColor,
-                  onGuideOpacityChanged: _updateCompositionGuideOpacity,
-                  onRotateGuide: _rotateCompositionGuide,
-                  onFlipGuideHorizontal: _flipCompositionGuideHorizontal,
-                  onFlipGuideVertical: _flipCompositionGuideVertical,
-                  onSwapRatioOrientation: _swapRatioOrientation,
-                  onStraightenChanged: _updateStraighten,
-                  onRotateLeft: _rotateLeft,
-                  onRotateRight: _rotateRight,
-                  onFlipHorizontal: _flipHorizontal,
-                  onFlipVertical: _flipVertical,
-                ),
+                controls,
               ],
             );
           },
@@ -602,9 +667,9 @@ class _CropWorkspaceTopBar extends StatelessWidget {
                 onPressed: onCancel,
                 child: const Text('Cancel'),
               ),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Crop & Straighten',
+                  compact ? 'Crop' : 'Crop & Straighten',
                   textAlign: TextAlign.center,
                   style: AppTypography.title,
                 ),
@@ -612,7 +677,7 @@ class _CropWorkspaceTopBar extends StatelessWidget {
               FilledButton(
                 key: const ValueKey('crop-done'),
                 onPressed: onDone,
-                child: const Text('Done'),
+                child: Text(compact ? 'Apply' : 'Done'),
               ),
             ],
           ),
@@ -1602,6 +1667,7 @@ class _CropWorkspaceControls extends StatelessWidget {
     required this.guideOrientation,
     required this.guideColor,
     required this.guideOpacity,
+    required this.isStraightening,
     required this.onSelectRatio,
     required this.onSelectGuide,
     required this.onGuideColorChanged,
@@ -1611,10 +1677,13 @@ class _CropWorkspaceControls extends StatelessWidget {
     required this.onFlipGuideVertical,
     required this.onSwapRatioOrientation,
     required this.onStraightenChanged,
+    required this.onStraightenInteractionStart,
+    required this.onStraightenInteractionEnd,
     required this.onRotateLeft,
     required this.onRotateRight,
     required this.onFlipHorizontal,
     required this.onFlipVertical,
+    required this.onReset,
   });
 
   final bool compact;
@@ -1627,6 +1696,7 @@ class _CropWorkspaceControls extends StatelessWidget {
   final CompositionGuideOrientation guideOrientation;
   final CompositionGuideColor guideColor;
   final double guideOpacity;
+  final bool isStraightening;
   final ValueChanged<_CropRatioOption> onSelectRatio;
   final ValueChanged<CompositionGuideType> onSelectGuide;
   final ValueChanged<CompositionGuideColor> onGuideColorChanged;
@@ -1636,13 +1706,47 @@ class _CropWorkspaceControls extends StatelessWidget {
   final VoidCallback onFlipGuideVertical;
   final VoidCallback onSwapRatioOrientation;
   final ValueChanged<double> onStraightenChanged;
+  final VoidCallback onStraightenInteractionStart;
+  final VoidCallback onStraightenInteractionEnd;
   final VoidCallback onRotateLeft;
   final VoidCallback onRotateRight;
   final VoidCallback onFlipHorizontal;
   final VoidCallback onFlipVertical;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return _MobileCropWorkspaceControls(
+        crop: crop,
+        transform: transform,
+        originalAspectRatio: originalAspectRatio,
+        selectedRatioId: selectedRatioId,
+        ratioOptions: ratioOptions,
+        selectedGuide: selectedGuide,
+        guideOrientation: guideOrientation,
+        guideColor: guideColor,
+        guideOpacity: guideOpacity,
+        isStraightening: isStraightening,
+        onSelectRatio: onSelectRatio,
+        onSelectGuide: onSelectGuide,
+        onGuideColorChanged: onGuideColorChanged,
+        onGuideOpacityChanged: onGuideOpacityChanged,
+        onRotateGuide: onRotateGuide,
+        onFlipGuideHorizontal: onFlipGuideHorizontal,
+        onFlipGuideVertical: onFlipGuideVertical,
+        onSwapRatioOrientation: onSwapRatioOrientation,
+        onStraightenChanged: onStraightenChanged,
+        onStraightenInteractionStart: onStraightenInteractionStart,
+        onStraightenInteractionEnd: onStraightenInteractionEnd,
+        onRotateLeft: onRotateLeft,
+        onRotateRight: onRotateRight,
+        onFlipHorizontal: onFlipHorizontal,
+        onFlipVertical: onFlipVertical,
+        onReset: onReset,
+      );
+    }
+
     return SafeArea(
       top: false,
       child: Container(
@@ -1971,6 +2075,469 @@ class _CropWorkspaceControls extends StatelessWidget {
         : rounded.toStringAsFixed(1);
 
     return rounded > 0 ? '+$text°' : '$text°';
+  }
+}
+
+class _MobileCropWorkspaceControls extends StatelessWidget {
+  const _MobileCropWorkspaceControls({
+    required this.crop,
+    required this.transform,
+    required this.originalAspectRatio,
+    required this.selectedRatioId,
+    required this.ratioOptions,
+    required this.selectedGuide,
+    required this.guideOrientation,
+    required this.guideColor,
+    required this.guideOpacity,
+    required this.isStraightening,
+    required this.onSelectRatio,
+    required this.onSelectGuide,
+    required this.onGuideColorChanged,
+    required this.onGuideOpacityChanged,
+    required this.onRotateGuide,
+    required this.onFlipGuideHorizontal,
+    required this.onFlipGuideVertical,
+    required this.onSwapRatioOrientation,
+    required this.onStraightenChanged,
+    required this.onStraightenInteractionStart,
+    required this.onStraightenInteractionEnd,
+    required this.onRotateLeft,
+    required this.onRotateRight,
+    required this.onFlipHorizontal,
+    required this.onFlipVertical,
+    required this.onReset,
+  });
+
+  final CropState crop;
+  final ImageTransform transform;
+  final double? originalAspectRatio;
+  final String selectedRatioId;
+  final List<_CropRatioOption> ratioOptions;
+  final CompositionGuideType selectedGuide;
+  final CompositionGuideOrientation guideOrientation;
+  final CompositionGuideColor guideColor;
+  final double guideOpacity;
+  final bool isStraightening;
+  final ValueChanged<_CropRatioOption> onSelectRatio;
+  final ValueChanged<CompositionGuideType> onSelectGuide;
+  final ValueChanged<CompositionGuideColor> onGuideColorChanged;
+  final ValueChanged<double> onGuideOpacityChanged;
+  final VoidCallback onRotateGuide;
+  final VoidCallback onFlipGuideHorizontal;
+  final VoidCallback onFlipGuideVertical;
+  final VoidCallback onSwapRatioOrientation;
+  final ValueChanged<double> onStraightenChanged;
+  final VoidCallback onStraightenInteractionStart;
+  final VoidCallback onStraightenInteractionEnd;
+  final VoidCallback onRotateLeft;
+  final VoidCallback onRotateRight;
+  final VoidCallback onFlipHorizontal;
+  final VoidCallback onFlipVertical;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: AnimatedContainer(
+        key: const ValueKey('mobile-crop-controls'),
+        duration: const Duration(milliseconds: 160),
+        color: isStraightening
+            ? Colors.transparent
+            : AppColors.surface.withValues(alpha: 0.94),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.sm,
+          AppSpacing.xs,
+          AppSpacing.sm,
+          AppSpacing.sm,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              key: const ValueKey('crop-straighten-ruler'),
+              child: EditorRulerControl(
+                value: crop.straightenDegrees,
+                minValue: CropState.minimumStraightenDegrees,
+                maxValue: CropState.maximumStraightenDegrees,
+                defaultValue: 0,
+                precisionStep: 0.1,
+                interactionStep: 1,
+                minorTickStep: 0.5,
+                majorTickStep: 5,
+                unit: '°',
+                pixelsPerMinorTick: 14,
+                rulerHeight: 68,
+                enableHaptics: true,
+                onInteractionStart: onStraightenInteractionStart,
+                onInteractionEnd: onStraightenInteractionEnd,
+                onChanged: onStraightenChanged,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            IgnorePointer(
+              ignoring: isStraightening,
+              child: AnimatedOpacity(
+                key: const ValueKey('mobile-crop-secondary-controls'),
+                opacity: isStraightening ? 0 : 1,
+                duration: const Duration(milliseconds: 140),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 38,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ListView.separated(
+                              key: const ValueKey('crop-ratio-list'),
+                              scrollDirection: Axis.horizontal,
+                              itemCount: ratioOptions.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(width: AppSpacing.xs),
+                              itemBuilder: (context, index) {
+                                final option = ratioOptions[index];
+                                final isOriginal = option.id == 'original';
+                                final isSelected = selectedRatioId == option.id;
+
+                                return ChoiceChip(
+                                  key: ValueKey('crop-ratio-${option.id}'),
+                                  label: Text(
+                                    _CropWorkspaceControls._displayRatioLabel(
+                                      option,
+                                      isSelected: isSelected,
+                                      currentRatio: crop.aspectRatio,
+                                    ),
+                                  ),
+                                  selected: isSelected,
+                                  showCheckmark: false,
+                                  visualDensity: VisualDensity.compact,
+                                  selectedColor: AppColors.accentMuted,
+                                  side: BorderSide(
+                                    color: isSelected
+                                        ? AppColors.accent
+                                        : AppColors.border,
+                                  ),
+                                  onSelected:
+                                      isOriginal && originalAspectRatio == null
+                                      ? null
+                                      : (_) {
+                                          onSelectRatio(option);
+                                        },
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          IconButton(
+                            key: const ValueKey('crop-swap-ratio-orientation'),
+                            tooltip: 'Swap crop orientation',
+                            visualDensity: VisualDensity.compact,
+                            onPressed:
+                                crop.aspectRatio == null ||
+                                    _CropWorkspaceControls._isClose(
+                                      crop.aspectRatio!,
+                                      1,
+                                    )
+                                ? null
+                                : onSwapRatioOrientation,
+                            icon: const Icon(Icons.screen_rotation_alt),
+                          ),
+                          _MobileGuideMenu(
+                            selectedGuide: selectedGuide,
+                            guideOrientation: guideOrientation,
+                            guideColor: guideColor,
+                            guideOpacity: guideOpacity,
+                            onSelectGuide: onSelectGuide,
+                            onGuideColorChanged: onGuideColorChanged,
+                            onGuideOpacityChanged: onGuideOpacityChanged,
+                            onRotateGuide: onRotateGuide,
+                            onFlipGuideHorizontal: onFlipGuideHorizontal,
+                            onFlipGuideVertical: onFlipGuideVertical,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _MobileCropActionButton(
+                            key: const ValueKey('crop-rotate-left'),
+                            icon: Icons.rotate_left,
+                            label: 'Left',
+                            onPressed: onRotateLeft,
+                          ),
+                        ),
+                        Expanded(
+                          child: _MobileCropActionButton(
+                            key: const ValueKey('crop-rotate-right'),
+                            icon: Icons.rotate_right,
+                            label: 'Right',
+                            onPressed: onRotateRight,
+                          ),
+                        ),
+                        Expanded(
+                          child: _MobileCropActionButton(
+                            key: const ValueKey('crop-flip-horizontal'),
+                            icon: Icons.flip,
+                            label: 'Flip H',
+                            isActive: transform.flipHorizontal,
+                            onPressed: onFlipHorizontal,
+                          ),
+                        ),
+                        Expanded(
+                          child: _MobileCropActionButton(
+                            key: const ValueKey('crop-flip-vertical'),
+                            icon: Icons.flip,
+                            label: 'Flip V',
+                            quarterTurns: 1,
+                            isActive: transform.flipVertical,
+                            onPressed: onFlipVertical,
+                          ),
+                        ),
+                        Expanded(
+                          child: _MobileCropActionButton(
+                            key: const ValueKey('crop-reset'),
+                            icon: Icons.restart_alt,
+                            label: 'Reset',
+                            onPressed: onReset,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileGuideMenu extends StatelessWidget {
+  const _MobileGuideMenu({
+    required this.selectedGuide,
+    required this.guideOrientation,
+    required this.guideColor,
+    required this.guideOpacity,
+    required this.onSelectGuide,
+    required this.onGuideColorChanged,
+    required this.onGuideOpacityChanged,
+    required this.onRotateGuide,
+    required this.onFlipGuideHorizontal,
+    required this.onFlipGuideVertical,
+  });
+
+  final CompositionGuideType selectedGuide;
+  final CompositionGuideOrientation guideOrientation;
+  final CompositionGuideColor guideColor;
+  final double guideOpacity;
+  final ValueChanged<CompositionGuideType> onSelectGuide;
+  final ValueChanged<CompositionGuideColor> onGuideColorChanged;
+  final ValueChanged<double> onGuideOpacityChanged;
+  final VoidCallback onRotateGuide;
+  final VoidCallback onFlipGuideHorizontal;
+  final VoidCallback onFlipGuideVertical;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PopupMenuButton<CompositionGuideType>(
+          key: const ValueKey('composition-guide-menu'),
+          tooltip: 'Composition guide: ${selectedGuide.label}',
+          initialValue: selectedGuide,
+          onSelected: onSelectGuide,
+          icon: const Icon(Icons.grid_on),
+          itemBuilder: (context) => CompositionGuideType.values
+              .map(
+                (guide) => CheckedPopupMenuItem<CompositionGuideType>(
+                  key: ValueKey('composition-guide-${guide.id}'),
+                  value: guide,
+                  checked: selectedGuide == guide,
+                  child: Text(guide.label),
+                ),
+              )
+              .toList(growable: false),
+        ),
+        if (selectedGuide != CompositionGuideType.none)
+          PopupMenuButton<CompositionGuideColor>(
+            key: const ValueKey('composition-guide-style-menu'),
+            tooltip:
+                'Guide style: ${guideColor.label}, ${(guideOpacity * 100).round()}%',
+            initialValue: guideColor,
+            onSelected: onGuideColorChanged,
+            icon: Icon(Icons.palette_outlined, color: guideColor.color),
+            itemBuilder: (context) {
+              var popupOpacity = guideOpacity;
+
+              return [
+                ...CompositionGuideColor.values.map(
+                  (colorOption) => CheckedPopupMenuItem<CompositionGuideColor>(
+                    key: ValueKey('composition-guide-color-${colorOption.id}'),
+                    value: colorOption,
+                    checked: guideColor == colorOption,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: colorOption.color,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0x40FFFFFF)),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(colorOption.label),
+                      ],
+                    ),
+                  ),
+                ),
+                PopupMenuItem<CompositionGuideColor>(
+                  enabled: false,
+                  child: StatefulBuilder(
+                    builder: (context, setMenuState) {
+                      return SizedBox(
+                        width: 220,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Opacity', style: AppTypography.label),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Slider(
+                                    key: const ValueKey(
+                                      'composition-guide-opacity-slider',
+                                    ),
+                                    min: 0.1,
+                                    max: 1,
+                                    divisions: 18,
+                                    value: popupOpacity,
+                                    onChanged: (value) {
+                                      setMenuState(() {
+                                        popupOpacity = value;
+                                      });
+                                      onGuideOpacityChanged(value);
+                                    },
+                                  ),
+                                ),
+                                SizedBox(
+                                  key: const ValueKey(
+                                    'composition-guide-opacity-value',
+                                  ),
+                                  width: 46,
+                                  child: Text(
+                                    '${(popupOpacity * 100).round()}%',
+                                    textAlign: TextAlign.right,
+                                    style: AppTypography.label,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ];
+            },
+          ),
+        if (selectedGuide.supportsOrientation)
+          PopupMenuButton<_CompositionGuideOrientationAction>(
+            key: const ValueKey('composition-guide-orientation-menu'),
+            tooltip: 'Orient ${selectedGuide.label.toLowerCase()}',
+            icon: Transform.rotate(
+              angle: guideOrientation.normalizedQuarterTurns * math.pi / 2,
+              child: const Icon(Icons.transform),
+            ),
+            onSelected: (action) {
+              switch (action) {
+                case _CompositionGuideOrientationAction.rotate:
+                  onRotateGuide();
+                  break;
+                case _CompositionGuideOrientationAction.flipHorizontal:
+                  onFlipGuideHorizontal();
+                  break;
+                case _CompositionGuideOrientationAction.flipVertical:
+                  onFlipGuideVertical();
+                  break;
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<_CompositionGuideOrientationAction>(
+                key: ValueKey('composition-guide-rotate'),
+                value: _CompositionGuideOrientationAction.rotate,
+                child: Text('Rotate 90°'),
+              ),
+              PopupMenuItem<_CompositionGuideOrientationAction>(
+                key: ValueKey('composition-guide-flip-horizontal'),
+                value: _CompositionGuideOrientationAction.flipHorizontal,
+                child: Text('Flip horizontal'),
+              ),
+              PopupMenuItem<_CompositionGuideOrientationAction>(
+                key: ValueKey('composition-guide-flip-vertical'),
+                value: _CompositionGuideOrientationAction.flipVertical,
+                child: Text('Flip vertical'),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _MobileCropActionButton extends StatelessWidget {
+  const _MobileCropActionButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.isActive = false,
+    this.quarterTurns = 0,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final bool isActive;
+  final int quarterTurns;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isActive ? AppColors.accent : AppColors.textSecondary;
+
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RotatedBox(
+              quarterTurns: quarterTurns,
+              child: Icon(icon, size: 20, color: color),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.label.copyWith(color: color),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
