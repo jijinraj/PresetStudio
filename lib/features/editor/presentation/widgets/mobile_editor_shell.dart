@@ -17,16 +17,19 @@ import '../../../presets/domain/preset_record.dart';
 import '../../../presets/presentation/widgets/mobile_preset_panel.dart';
 import '../../application/editor_controller.dart';
 import 'before_after_button.dart';
+import 'composition_guide_controller.dart';
+import 'composition_guide_overlay.dart';
 import 'crop_workspace.dart';
 import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
 import 'mobile_adjustment_panel.dart';
 import 'mobile_editor_canvas.dart';
 import 'mobile_editor_tool_panel.dart';
+import 'mobile_guides_panel.dart';
 
 enum _MobileMenuAction { history }
 
-enum _MobileContextPanel { presets, adjust }
+enum _MobileContextPanel { presets, adjust, guides }
 
 class MobileEditorShell extends StatefulWidget {
   const MobileEditorShell({
@@ -54,6 +57,7 @@ class MobileEditorShell extends StatefulWidget {
 
 class _MobileEditorShellState extends State<MobileEditorShell> {
   final Random _random = Random();
+  late final CompositionGuideController _guideController;
   final List<String> _presetTrail = <String>[];
   final Set<String> _visitedPresetKeys = <String>{};
   final Set<String> _cyclePresetKeys = <String>{};
@@ -76,6 +80,8 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
   @override
   void initState() {
     super.initState();
+    _guideController = CompositionGuideController();
+    _guideController.addListener(_handleGuideChanged);
     _lastSourceImagePath = controller.session.sourceImagePath;
     _lastObservedActivePresetId = controller.session.activePresetId;
     _attachListeners();
@@ -103,7 +109,15 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
   @override
   void dispose() {
     _detachListeners(widget);
+    _guideController.removeListener(_handleGuideChanged);
+    _guideController.dispose();
     super.dispose();
+  }
+
+  void _handleGuideChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _attachListeners() {
@@ -751,6 +765,17 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                       crop: controller.session.crop,
                       onImportImage: widget.onImportImage,
                       isImporting: widget.isImporting,
+                      imageOverlay:
+                          _activeContextPanel == _MobileContextPanel.guides &&
+                              _guideController.hasGuide
+                          ? CompositionGuideOverlay(
+                              guide: _guideController.guide,
+                              emphasize: true,
+                              orientation: _guideController.orientation,
+                              color: _guideController.color,
+                              opacity: _guideController.opacity,
+                            )
+                          : null,
                       onTap:
                           controller.session.hasImage &&
                               _activeContextPanel == null
@@ -844,6 +869,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                     title: switch (_activeContextPanel) {
                       _MobileContextPanel.presets => 'Presets',
                       _MobileContextPanel.adjust => 'Adjust',
+                      _MobileContextPanel.guides => 'Guides',
                       null => '',
                     },
                     maxHeight: contextualPanelMaxHeight,
@@ -862,6 +888,9 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                         controller: controller,
                         onPrecisionInteractionChanged:
                             _handlePrecisionInteractionChanged,
+                      ),
+                      _MobileContextPanel.guides => MobileGuidesPanel(
+                        controller: _guideController,
                       ),
                       null => const SizedBox.shrink(),
                     },
@@ -884,6 +913,8 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                             _activeContextPanel == _MobileContextPanel.presets,
                         adjustSelected:
                             _activeContextPanel == _MobileContextPanel.adjust,
+                        guidesSelected:
+                            _activeContextPanel == _MobileContextPanel.guides,
                         onOpenPresets: presetLibraryController == null
                             ? null
                             : () {
@@ -900,6 +931,11 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                             ? () {
                                 _closeContextPanel();
                                 unawaited(_showCropWorkspace(context));
+                              }
+                            : null,
+                        onOpenGuides: controller.session.hasImage
+                            ? () {
+                                _toggleContextPanel(_MobileContextPanel.guides);
                               }
                             : null,
                       ),
@@ -927,6 +963,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
             body: CropWorkspace(
               controller: controller,
               compact: true,
+              compositionGuideController: _guideController,
               onCancel: () {
                 Navigator.of(routeContext).pop();
               },
@@ -1120,19 +1157,23 @@ class _MobileToolDock extends StatelessWidget {
     required this.controller,
     required this.presetsSelected,
     required this.adjustSelected,
+    required this.guidesSelected,
     this.presetLibraryController,
     this.onOpenPresets,
     this.onOpenEdit,
     this.onOpenCrop,
+    this.onOpenGuides,
   });
 
   final EditorController controller;
   final bool presetsSelected;
   final bool adjustSelected;
+  final bool guidesSelected;
   final PresetLibraryController? presetLibraryController;
   final VoidCallback? onOpenPresets;
   final VoidCallback? onOpenEdit;
   final VoidCallback? onOpenCrop;
+  final VoidCallback? onOpenGuides;
 
   @override
   Widget build(BuildContext context) {
@@ -1186,12 +1227,14 @@ class _MobileToolDock extends StatelessWidget {
                 onTap: onOpenCrop,
               ),
             ),
-            const Expanded(
+            Expanded(
               child: _DockButton(
-                key: ValueKey('mobile-tool-guides'),
+                key: const ValueKey('mobile-tool-guides'),
                 icon: Icons.grid_4x4_rounded,
                 label: 'Guides',
-                enabled: false,
+                enabled: hasImage,
+                selected: guidesSelected,
+                onTap: onOpenGuides,
               ),
             ),
           ],

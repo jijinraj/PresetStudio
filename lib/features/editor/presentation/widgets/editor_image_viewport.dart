@@ -32,6 +32,7 @@ class EditorImageViewport extends StatefulWidget {
     this.contentPadding = const EdgeInsets.all(AppSpacing.lg),
     this.imageFit = BoxFit.contain,
     this.imageBorderRadius = BorderRadius.zero,
+    this.imageOverlay,
     this.onTap,
     this.onHorizontalSwipe,
     super.key,
@@ -85,6 +86,11 @@ class EditorImageViewport extends StatefulWidget {
   /// stronger rounded-image language without changing editor geometry or
   /// export output.
   final BorderRadius imageBorderRadius;
+
+  /// Optional presentation-only overlay constrained to the rendered image
+  /// bounds. Useful for composition guides without affecting image/export
+  /// state.
+  final Widget? imageOverlay;
 
   /// Optional single-tap action for the loaded image.
   final VoidCallback? onTap;
@@ -167,6 +173,7 @@ class _EditorImageViewportState extends State<EditorImageViewport> {
       contentPadding: widget.contentPadding,
       imageFit: widget.imageFit,
       imageBorderRadius: widget.imageBorderRadius,
+      imageOverlay: widget.imageOverlay,
       onTap: widget.onTap,
       onHorizontalSwipe: widget.onHorizontalSwipe,
     );
@@ -234,6 +241,7 @@ class _LoadedViewport extends StatefulWidget {
     required this.contentPadding,
     required this.imageFit,
     required this.imageBorderRadius,
+    required this.imageOverlay,
     required this.onTap,
     required this.onHorizontalSwipe,
   });
@@ -267,6 +275,7 @@ class _LoadedViewport extends StatefulWidget {
   /// stronger rounded-image language without changing editor geometry or
   /// export output.
   final BorderRadius imageBorderRadius;
+  final Widget? imageOverlay;
 
   /// Optional single-tap action for the loaded image.
   final VoidCallback? onTap;
@@ -458,19 +467,30 @@ class _LoadedViewportState extends State<_LoadedViewport> {
                         child: ClipRRect(
                           key: const ValueKey('editor-viewport-image-clip'),
                           borderRadius: widget.imageBorderRadius,
-                          child: EditorCropPreview(
-                            sourceImagePath: widget.sourceImagePath,
-                            adjustments: widget.adjustments,
-                            transform: widget.transform,
-                            crop: widget.crop,
-                            filterQuality: FilterQuality.medium,
-                            uncroppedFit: widget.imageFit,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _ImageLoadError(
-                                onImportImage: widget.onImportImage,
-                                isImporting: widget.isImporting,
-                              );
-                            },
+                          child: Stack(
+                            fit: StackFit.passthrough,
+                            children: [
+                              EditorCropPreview(
+                                sourceImagePath: widget.sourceImagePath,
+                                adjustments: widget.adjustments,
+                                transform: widget.transform,
+                                crop: widget.crop,
+                                filterQuality: FilterQuality.medium,
+                                uncroppedFit: widget.imageFit,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _ImageLoadError(
+                                    onImportImage: widget.onImportImage,
+                                    isImporting: widget.isImporting,
+                                  );
+                                },
+                              ),
+                              if (widget.imageOverlay != null)
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: widget.imageOverlay!,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),

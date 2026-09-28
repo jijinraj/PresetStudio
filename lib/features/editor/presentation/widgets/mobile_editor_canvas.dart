@@ -23,6 +23,7 @@ class MobileEditorCanvas extends StatelessWidget {
     required this.onImportImage,
     required this.isImporting,
     this.topAction,
+    this.imageOverlay,
     this.onTap,
     this.onHorizontalSwipe,
     super.key,
@@ -35,6 +36,7 @@ class MobileEditorCanvas extends StatelessWidget {
   final Future<void> Function() onImportImage;
   final bool isImporting;
   final Widget? topAction;
+  final Widget? imageOverlay;
   final VoidCallback? onTap;
   final ValueChanged<EditorViewportSwipeDirection>? onHorizontalSwipe;
 
@@ -60,6 +62,7 @@ class MobileEditorCanvas extends StatelessWidget {
           contentPadding: EdgeInsets.zero,
           imageFit: BoxFit.contain,
           imageBorderRadius: BorderRadius.circular(AppRadii.editorImage),
+          imageOverlay: imageOverlay,
           onTap: onTap,
           onHorizontalSwipe: onHorizontalSwipe,
           topAction: topAction,

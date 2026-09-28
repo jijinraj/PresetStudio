@@ -15,6 +15,7 @@ import '../../domain/crop_resize_geometry.dart';
 import '../../domain/crop_state.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
+import 'composition_guide_controller.dart';
 import 'composition_guide_overlay.dart';
 import 'editor_rendered_image.dart';
 import 'editor_ruler_control.dart';
@@ -25,6 +26,7 @@ class CropWorkspace extends StatefulWidget {
     required this.onCancel,
     required this.onDone,
     this.compact = false,
+    this.compositionGuideController,
     super.key,
   });
 
@@ -32,6 +34,11 @@ class CropWorkspace extends StatefulWidget {
   final VoidCallback onCancel;
   final VoidCallback onDone;
   final bool compact;
+
+  /// Optional shared presentation-only guide controller. Mobile passes the
+  /// same instance used by its dedicated Guides mode so crop and main-editor
+  /// guide controls stay in sync without entering EditorSession or History.
+  final CompositionGuideController? compositionGuideController;
 
   @override
   State<CropWorkspace> createState() => _CropWorkspaceState();
@@ -57,11 +64,15 @@ class _CropWorkspaceState extends State<CropWorkspace> {
 
   double? _originalAspectRatio;
   String _selectedRatioId = 'original';
-  CompositionGuideType _selectedGuide = CompositionGuideType.ruleOfThirds;
-  CompositionGuideOrientation _guideOrientation =
-      const CompositionGuideOrientation();
-  CompositionGuideColor _guideColor = CompositionGuideColor.white;
-  double _guideOpacity = 1.0;
+
+  late final CompositionGuideController _guideController;
+  late final bool _ownsGuideController;
+
+  CompositionGuideType get _selectedGuide => _guideController.guide;
+  CompositionGuideOrientation get _guideOrientation =>
+      _guideController.orientation;
+  CompositionGuideColor get _guideColor => _guideController.color;
+  double get _guideOpacity => _guideController.opacity;
 
   bool _ownsTransaction = false;
   bool _finalized = false;
@@ -75,6 +86,10 @@ class _CropWorkspaceState extends State<CropWorkspace> {
 
     _initialCrop = controller.session.crop;
     _initialTransform = controller.session.transform;
+
+    _ownsGuideController = widget.compositionGuideController == null;
+    _guideController =
+        widget.compositionGuideController ?? CompositionGuideController();
 
     _selectedRatioId = _ratioIdForCrop(_initialCrop);
 
@@ -92,6 +107,9 @@ class _CropWorkspaceState extends State<CropWorkspace> {
   @override
   void dispose() {
     _detachImageStream();
+    if (_ownsGuideController) {
+      _guideController.dispose();
+    }
 
     // Crop is finalized through Cancel, Done, or PopScope before the workspace
     // closes. Do not mutate the externally-owned EditorController from dispose:
@@ -392,26 +410,20 @@ class _CropWorkspaceState extends State<CropWorkspace> {
     }
 
     setState(() {
-      _selectedGuide = guide;
+      _guideController.selectGuide(guide);
     });
   }
 
   void _rotateCompositionGuide() {
-    setState(() {
-      _guideOrientation = _guideOrientation.rotateClockwise();
-    });
+    setState(_guideController.rotateClockwise);
   }
 
   void _flipCompositionGuideHorizontal() {
-    setState(() {
-      _guideOrientation = _guideOrientation.flipHorizontal();
-    });
+    setState(_guideController.flipHorizontal);
   }
 
   void _flipCompositionGuideVertical() {
-    setState(() {
-      _guideOrientation = _guideOrientation.flipVertical();
-    });
+    setState(_guideController.flipVertical);
   }
 
   void _updateCompositionGuideColor(CompositionGuideColor color) {
@@ -420,13 +432,13 @@ class _CropWorkspaceState extends State<CropWorkspace> {
     }
 
     setState(() {
-      _guideColor = color;
+      _guideController.setColor(color);
     });
   }
 
   void _updateCompositionGuideOpacity(double opacity) {
     setState(() {
-      _guideOpacity = opacity.clamp(0.1, 1.0).toDouble();
+      _guideController.setOpacity(opacity);
     });
   }
 
