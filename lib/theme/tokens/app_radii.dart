@@ -9,4 +9,7 @@ class AppRadii {
   /// Primary mobile editor image radius. Kept separate from generic surfaces
   /// so the photo can carry a stronger rounded visual identity.
   static const double editorImage = 18;
+
+  /// Floating mobile editor contextual-panel radius.
+  static const double editorPanel = 22;
 }

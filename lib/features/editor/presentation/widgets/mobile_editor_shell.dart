@@ -24,8 +24,11 @@ import 'crop_workspace.dart';
 import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
 import 'mobile_editor_canvas.dart';
+import 'mobile_editor_tool_panel.dart';
 
 enum _MobileMenuAction { history }
+
+enum _MobileContextPanel { presets }
 
 class MobileEditorShell extends StatefulWidget {
   const MobileEditorShell({
@@ -63,6 +66,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
   int _applyGeneration = 0;
   bool _pendingInitialRandomPreset = false;
   bool _isApplyingPreset = false;
+  _MobileContextPanel? _activeContextPanel;
 
   EditorController get controller => widget.controller;
   PresetLibraryController? get presetLibraryController =>
@@ -121,6 +125,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
     if (sourceImagePath != _lastSourceImagePath) {
       _lastSourceImagePath = sourceImagePath;
       _lastObservedActivePresetId = controller.session.activePresetId;
+      _activeContextPanel = null;
       _resetPresetSession(autoApply: sourceImagePath != null);
       return;
     }
@@ -662,6 +667,24 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _togglePresetsPanel() {
+    setState(() {
+      _activeContextPanel = _activeContextPanel == _MobileContextPanel.presets
+          ? null
+          : _MobileContextPanel.presets;
+    });
+  }
+
+  void _closeContextPanel() {
+    if (_activeContextPanel == null) {
+      return;
+    }
+
+    setState(() {
+      _activeContextPanel = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -674,6 +697,9 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
           final safeBottom = mediaQuery.padding.bottom;
           const topChromeHeight = 56.0;
           const bottomChromeHeight = 84.0;
+          final contextualPanelMaxHeight = (mediaQuery.size.height * 0.38)
+              .clamp(240.0, 360.0)
+              .toDouble();
           final bodyTopPadding = safeTop + topChromeHeight + AppSpacing.sm;
           // The bottom dock is floating chrome, so the image workspace is
           // allowed to continue behind it. Reserving the full dock height
@@ -741,7 +767,8 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                         : null,
                   ),
                 ),
-                if (controller.session.hasImage &&
+                if (_activeContextPanel == null &&
+                    controller.session.hasImage &&
                     (activeCandidate != null || _isApplyingPreset))
                   Positioned(
                     key: const ValueKey('mobile-active-filter-label'),
@@ -775,24 +802,57 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                     ),
                   ),
                 Positioned(
+                  left: AppSpacing.sm,
+                  right: AppSpacing.sm,
+                  bottom: safeBottom + bottomChromeHeight + AppSpacing.sm,
+                  child: MobileEditorToolPanel(
+                    visible:
+                        _activeContextPanel == _MobileContextPanel.presets &&
+                        presetLibraryController != null,
+                    title: 'Presets',
+                    maxHeight: contextualPanelMaxHeight,
+                    onClose: _closeContextPanel,
+                    child:
+                        _activeContextPanel == _MobileContextPanel.presets &&
+                            presetLibraryController != null
+                        ? Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.sm,
+                              AppSpacing.xs,
+                              AppSpacing.sm,
+                              AppSpacing.sm,
+                            ),
+                            child: PresetLibraryView(
+                              libraryController: presetLibraryController!,
+                              remoteController: presetRemoteController,
+                              editorController: controller,
+                              showTitle: false,
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+                Positioned(
                   left: AppSpacing.md,
                   right: AppSpacing.md,
                   bottom: AppSpacing.md,
                   child: _MobileToolDock(
                     controller: controller,
                     presetLibraryController: presetLibraryController,
+                    presetsSelected:
+                        _activeContextPanel == _MobileContextPanel.presets,
                     onOpenPresets: presetLibraryController == null
                         ? null
-                        : () {
-                            _showPresetsSheet(context);
-                          },
+                        : _togglePresetsPanel,
                     onOpenEdit: controller.session.hasImage
                         ? () {
+                            _closeContextPanel();
                             _showEditSheet(context);
                           }
                         : null,
                     onOpenCrop: controller.session.hasImage
                         ? () {
+                            _closeContextPanel();
                             unawaited(_showCropWorkspace(context));
                           }
                         : null,
@@ -803,51 +863,6 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
           );
         },
       ),
-    );
-  }
-
-  void _showPresetsSheet(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        final height = MediaQuery.sizeOf(sheetContext).height * 0.68;
-
-        return SafeArea(
-          top: false,
-          child: SizedBox(
-            height: height,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                AppSpacing.lg,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Presets', style: AppTypography.title),
-                  const SizedBox(height: AppSpacing.md),
-                  Expanded(
-                    child: PresetLibraryView(
-                      libraryController: presetLibraryController!,
-                      remoteController: presetRemoteController,
-                      editorController: controller,
-                      showTitle: false,
-                      onPresetApplied: () {
-                        Navigator.of(sheetContext).pop();
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -1581,6 +1596,7 @@ class _MobileTopBar extends StatelessWidget {
 class _MobileToolDock extends StatelessWidget {
   const _MobileToolDock({
     required this.controller,
+    required this.presetsSelected,
     this.presetLibraryController,
     this.onOpenPresets,
     this.onOpenEdit,
@@ -1588,6 +1604,7 @@ class _MobileToolDock extends StatelessWidget {
   });
 
   final EditorController controller;
+  final bool presetsSelected;
   final PresetLibraryController? presetLibraryController;
   final VoidCallback? onOpenPresets;
   final VoidCallback? onOpenEdit;
@@ -1622,6 +1639,7 @@ class _MobileToolDock extends StatelessWidget {
                 icon: Icons.auto_awesome_outlined,
                 label: 'Presets',
                 enabled: hasImage && presetLibraryController != null,
+                selected: presetsSelected,
                 onTap: onOpenPresets,
               ),
             ),
@@ -1773,6 +1791,7 @@ class _DockButton extends StatelessWidget {
     required this.label,
     this.onTap,
     this.enabled = true,
+    this.selected = false,
     super.key,
   });
 
@@ -1780,11 +1799,20 @@ class _DockButton extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final bool enabled;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    final background = enabled ? AppColors.surfaceElevated : Colors.transparent;
-    final color = enabled ? AppColors.textPrimary : AppColors.textDisabled;
+    final background = selected
+        ? AppColors.accentMuted
+        : enabled
+        ? AppColors.surfaceElevated
+        : Colors.transparent;
+    final color = selected
+        ? AppColors.accent
+        : enabled
+        ? AppColors.textPrimary
+        : AppColors.textDisabled;
 
     return Material(
       color: Colors.transparent,

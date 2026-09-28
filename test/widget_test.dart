@@ -36,9 +36,9 @@ void main() {
     expect(find.text('Open an image'), findsOneWidget);
     expect(find.text('Choose image'), findsOneWidget);
 
-    expect(find.text('Presets'), findsOneWidget);
-    expect(find.text('Adjust'), findsOneWidget);
-    expect(find.text('Crop'), findsOneWidget);
-    expect(find.text('Guides'), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-tool-presets')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-tool-adjust')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-tool-crop')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-tool-guides')), findsOneWidget);
   });
 }

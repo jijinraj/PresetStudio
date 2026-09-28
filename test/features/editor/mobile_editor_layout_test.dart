@@ -4,6 +4,7 @@ import 'package:presetstudio/features/editor/application/editor_controller.dart'
 import 'package:presetstudio/features/editor/presentation/widgets/editor_image_viewport.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/mobile_editor_canvas.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/mobile_editor_shell.dart';
+import 'package:presetstudio/features/editor/presentation/widgets/mobile_editor_tool_panel.dart';
 import 'package:presetstudio/theme/preset_studio_theme.dart';
 import 'package:presetstudio/theme/tokens/app_colors.dart';
 import 'package:presetstudio/theme/tokens/app_radii.dart';
@@ -51,6 +52,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('mobile-top-import')), findsOneWidget);
     expect(find.byKey(const ValueKey('mobile-bottom-dock')), findsOneWidget);
+    expect(find.byType(MobileEditorToolPanel), findsOneWidget);
     expect(find.byType(AppBar), findsNothing);
 
     final imageWorkspace = tester.widget<Padding>(

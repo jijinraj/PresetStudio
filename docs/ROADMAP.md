@@ -147,7 +147,7 @@
 - [x] Add mobile-only rounded image clipping and comfortable canvas margins
 - [x] Add premium mobile top bar and four-tool bottom dock
 - [x] Allow portrait previews to use device width behind floating bottom chrome
-- [ ] Add contextual tool-panel host
+- [x] Add contextual tool-panel host
 - [ ] Redesign mobile preset browser
 - [ ] Add reusable precision ruler control
 - [ ] Redesign mobile adjustment workflow
