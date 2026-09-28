@@ -46,11 +46,12 @@ void main() {
     );
     expect(
       frame.padding,
-      const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.sm,
-      ),
+      const EdgeInsets.symmetric(horizontal: 0, vertical: AppSpacing.sm),
     );
+
+    expect(find.byKey(const ValueKey('mobile-top-import')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-bottom-dock')), findsOneWidget);
+    expect(find.byType(AppBar), findsNothing);
 
     final viewport = tester.widget<EditorImageViewport>(
       find.byType(EditorImageViewport),

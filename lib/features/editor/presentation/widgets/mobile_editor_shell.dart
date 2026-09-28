@@ -666,81 +666,17 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.canvas,
-      appBar: AppBar(
-        backgroundColor: AppColors.canvas,
-        surfaceTintColor: Colors.transparent,
-        title: const Text(AppConstants.appName),
-        actions: [
-          AnimatedBuilder(
-            animation: controller,
-            builder: (context, _) {
-              final hasImage = controller.session.hasImage;
-
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    key: const ValueKey('mobile-undo'),
-                    tooltip: 'Undo',
-                    onPressed: controller.canUndo ? controller.undo : null,
-                    icon: const Icon(Icons.undo),
-                  ),
-                  IconButton(
-                    key: const ValueKey('mobile-redo'),
-                    tooltip: 'Redo',
-                    onPressed: controller.canRedo ? controller.redo : null,
-                    icon: const Icon(Icons.redo),
-                  ),
-                  IconButton(
-                    key: const ValueKey('mobile-export'),
-                    tooltip: 'Export',
-                    onPressed:
-                        hasImage &&
-                            !widget.isExporting &&
-                            widget.onExportImage != null
-                        ? () {
-                            unawaited(widget.onExportImage!());
-                          }
-                        : null,
-                    icon: widget.isExporting
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.file_download_outlined),
-                  ),
-                  PopupMenuButton<_MobileMenuAction>(
-                    enabled: hasImage,
-                    onSelected: (action) {
-                      switch (action) {
-                        case _MobileMenuAction.history:
-                          _showHistorySheet(context);
-                      }
-                    },
-                    itemBuilder: (context) {
-                      return const [
-                        PopupMenuItem(
-                          value: _MobileMenuAction.history,
-                          child: Row(
-                            children: [
-                              Icon(Icons.history),
-                              SizedBox(width: AppSpacing.sm),
-                              Text('History'),
-                            ],
-                          ),
-                        ),
-                      ];
-                    },
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
       body: AnimatedBuilder(
         animation: controller,
         builder: (context, _) {
+          final mediaQuery = MediaQuery.of(context);
+          final safeTop = mediaQuery.padding.top;
+          final safeBottom = mediaQuery.padding.bottom;
+          const topChromeHeight = 56.0;
+          const bottomChromeHeight = 84.0;
+          final bodyTopPadding = safeTop + topChromeHeight + AppSpacing.sm;
+          final bodyBottomPadding =
+              safeBottom + bottomChromeHeight + AppSpacing.md;
           final activeCandidate = _candidateForSessionPresetId(
             controller.session.activePresetId,
           );
@@ -750,26 +686,53 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                MobileEditorCanvas(
-                  sourceImagePath: controller.session.sourceImagePath,
-                  adjustments: controller.previewAdjustments,
-                  transform: controller.session.transform,
-                  crop: controller.session.crop,
-                  onImportImage: widget.onImportImage,
-                  isImporting: widget.isImporting,
-                  onTap: controller.session.hasImage ? _showImageActions : null,
-                  onHorizontalSwipe: controller.session.hasImage
-                      ? (direction) {
-                          unawaited(_handlePresetSwipe(direction));
-                        }
-                      : null,
-                  topAction: BeforeAfterButton(
-                    key: const ValueKey('mobile-before-after'),
-                    enabled: controller.canCompareBefore,
-                    isShowingBefore: controller.isShowingBefore,
-                    onPreviewStart: controller.beginBeforePreview,
-                    onPreviewEnd: controller.endBeforePreview,
-                    compact: true,
+                Positioned.fill(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: bodyTopPadding,
+                      bottom: bodyBottomPadding,
+                    ),
+                    child: MobileEditorCanvas(
+                      sourceImagePath: controller.session.sourceImagePath,
+                      adjustments: controller.previewAdjustments,
+                      transform: controller.session.transform,
+                      crop: controller.session.crop,
+                      onImportImage: widget.onImportImage,
+                      isImporting: widget.isImporting,
+                      onTap: controller.session.hasImage
+                          ? _showImageActions
+                          : null,
+                      onHorizontalSwipe: controller.session.hasImage
+                          ? (direction) {
+                              unawaited(_handlePresetSwipe(direction));
+                            }
+                          : null,
+                      topAction: BeforeAfterButton(
+                        key: const ValueKey('mobile-before-after'),
+                        enabled: controller.canCompareBefore,
+                        isShowingBefore: controller.isShowingBefore,
+                        onPreviewStart: controller.beginBeforePreview,
+                        onPreviewEnd: controller.endBeforePreview,
+                        compact: true,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _MobileTopBar(
+                    controller: controller,
+                    hasImage: controller.session.hasImage,
+                    isExporting: widget.isExporting,
+                    onImportImage: widget.onImportImage,
+                    onExportImage: widget.onExportImage,
+                    onShowHistory: controller.session.hasImage
+                        ? () {
+                            _showHistorySheet(context);
+                          }
+                        : null,
                   ),
                 ),
                 if (controller.session.hasImage &&
@@ -778,7 +741,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                     key: const ValueKey('mobile-active-filter-label'),
                     left: AppSpacing.md,
                     right: AppSpacing.md,
-                    bottom: AppSpacing.xxl + AppSpacing.sm,
+                    bottom: safeBottom + bottomChromeHeight + AppSpacing.xs,
                     child: IgnorePointer(
                       child: Center(
                         child: Container(
@@ -787,7 +750,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                             vertical: AppSpacing.xs,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surface.withValues(alpha: 0.88),
+                            color: AppColors.surface.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(color: AppColors.border),
                           ),
@@ -805,160 +768,35 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                       ),
                     ),
                   ),
+                Positioned(
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
+                  bottom: AppSpacing.md,
+                  child: _MobileToolDock(
+                    controller: controller,
+                    presetLibraryController: presetLibraryController,
+                    onOpenPresets: presetLibraryController == null
+                        ? null
+                        : () {
+                            _showPresetsSheet(context);
+                          },
+                    onOpenEdit: controller.session.hasImage
+                        ? () {
+                            _showEditSheet(context);
+                          }
+                        : null,
+                    onOpenCrop: controller.session.hasImage
+                        ? () {
+                            unawaited(_showCropWorkspace(context));
+                          }
+                        : null,
+                  ),
+                ),
               ],
             ),
           );
         },
       ),
-      bottomNavigationBar: _MobileToolBar(
-        controller: controller,
-        presetLibraryController: presetLibraryController,
-        presetRemoteController: presetRemoteController,
-      ),
-    );
-  }
-
-  void _showHistorySheet(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) {
-        final height = MediaQuery.sizeOf(context).height * 0.55;
-
-        return SafeArea(
-          top: false,
-          child: SizedBox(
-            height: height,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                AppSpacing.lg,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('History', style: AppTypography.title),
-                  const SizedBox(height: AppSpacing.md),
-                  Expanded(child: EditorHistoryList(controller: controller)),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _MobilePresetCandidate {
-  const _MobilePresetCandidate._({
-    required this.key,
-    required this.sessionPresetId,
-    required this.name,
-    this.remoteItem,
-    this.localRecord,
-  });
-
-  factory _MobilePresetCandidate.remote(RemotePresetCatalogItem item) {
-    final sessionPresetId = 'remote:${item.source.id}:${item.entry.id}';
-    return _MobilePresetCandidate._(
-      key: sessionPresetId,
-      sessionPresetId: sessionPresetId,
-      name: item.entry.name,
-      remoteItem: item,
-    );
-  }
-
-  factory _MobilePresetCandidate.local(PresetRecord record) {
-    return _MobilePresetCandidate._(
-      key: 'library:${record.libraryId}',
-      sessionPresetId: record.libraryId,
-      name: record.preset.name,
-      localRecord: record,
-    );
-  }
-
-  final String key;
-  final String sessionPresetId;
-  final String name;
-  final RemotePresetCatalogItem? remoteItem;
-  final PresetRecord? localRecord;
-}
-
-class _MobileToolBar extends StatelessWidget {
-  const _MobileToolBar({
-    required this.controller,
-    this.presetLibraryController,
-    this.presetRemoteController,
-  });
-
-  final EditorController controller;
-  final PresetLibraryController? presetLibraryController;
-  final PresetRemoteController? presetRemoteController;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        final hasImage = controller.session.hasImage;
-
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            border: Border(top: BorderSide(color: AppColors.border)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              height: AppDimensions.mobileBottomBarHeight,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _MobileTool(
-                      icon: Icons.auto_awesome_outlined,
-                      label: 'Looks',
-                      onTap: presetLibraryController == null
-                          ? null
-                          : () {
-                              _showPresetsSheet(context);
-                            },
-                    ),
-                  ),
-                  Expanded(
-                    child: _MobileTool(
-                      icon: Icons.tune,
-                      label: 'Edit',
-                      enabled: hasImage,
-                      onTap: hasImage
-                          ? () {
-                              _showEditSheet(context);
-                            }
-                          : null,
-                    ),
-                  ),
-                  Expanded(
-                    child: _MobileTool(
-                      icon: Icons.crop,
-                      label: 'Crop',
-                      enabled: hasImage,
-                      onTap: hasImage
-                          ? () {
-                              _showCropWorkspace(context);
-                            }
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -1401,6 +1239,76 @@ class _MobileToolBar extends StatelessWidget {
       ),
     );
   }
+
+  void _showHistorySheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        final height = MediaQuery.sizeOf(context).height * 0.55;
+
+        return SafeArea(
+          top: false,
+          child: SizedBox(
+            height: height,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('History', style: AppTypography.title),
+                  const SizedBox(height: AppSpacing.md),
+                  Expanded(child: EditorHistoryList(controller: controller)),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MobilePresetCandidate {
+  const _MobilePresetCandidate._({
+    required this.key,
+    required this.sessionPresetId,
+    required this.name,
+    this.remoteItem,
+    this.localRecord,
+  });
+
+  factory _MobilePresetCandidate.remote(RemotePresetCatalogItem item) {
+    final sessionPresetId = 'remote:${item.source.id}:${item.entry.id}';
+    return _MobilePresetCandidate._(
+      key: sessionPresetId,
+      sessionPresetId: sessionPresetId,
+      name: item.entry.name,
+      remoteItem: item,
+    );
+  }
+
+  factory _MobilePresetCandidate.local(PresetRecord record) {
+    return _MobilePresetCandidate._(
+      key: 'library:${record.libraryId}',
+      sessionPresetId: record.libraryId,
+      name: record.preset.name,
+      localRecord: record,
+    );
+  }
+
+  final String key;
+  final String sessionPresetId;
+  final String name;
+  final RemotePresetCatalogItem? remoteItem;
+  final PresetRecord? localRecord;
 }
 
 class _MobileFocusedAdjustmentBar extends StatelessWidget {
@@ -1560,12 +1468,306 @@ class _MobileFocusedAdjustmentBar extends StatelessWidget {
   }
 }
 
-class _MobileTool extends StatelessWidget {
-  const _MobileTool({
+class _MobileTopBar extends StatelessWidget {
+  const _MobileTopBar({
+    required this.controller,
+    required this.hasImage,
+    required this.isExporting,
+    required this.onImportImage,
+    this.onExportImage,
+    this.onShowHistory,
+  });
+
+  final EditorController controller;
+  final bool hasImage;
+  final bool isExporting;
+  final Future<void> Function() onImportImage;
+  final Future<void> Function()? onExportImage;
+  final VoidCallback? onShowHistory;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          0,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _FloatingActionPill(
+                key: const ValueKey('mobile-top-import'),
+                icon: Icons.add_photo_alternate_outlined,
+                label: hasImage ? 'Change image' : AppConstants.appName,
+                onTap: onImportImage,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _FloatingIconButton(
+              key: const ValueKey('mobile-undo'),
+              icon: Icons.undo,
+              tooltip: 'Undo',
+              onPressed: controller.canUndo ? controller.undo : null,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            _FloatingIconButton(
+              key: const ValueKey('mobile-redo'),
+              icon: Icons.redo,
+              tooltip: 'Redo',
+              onPressed: controller.canRedo ? controller.redo : null,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            _FloatingIconButton(
+              key: const ValueKey('mobile-export'),
+              icon: Icons.file_download_outlined,
+              tooltip: 'Export',
+              isBusy: isExporting,
+              onPressed: hasImage && !isExporting && onExportImage != null
+                  ? () {
+                      unawaited(onExportImage!());
+                    }
+                  : null,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            PopupMenuButton<_MobileMenuAction>(
+              key: const ValueKey('mobile-top-menu'),
+              enabled: hasImage && onShowHistory != null,
+              color: AppColors.surfaceElevated,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadii.xl),
+                side: const BorderSide(color: AppColors.border),
+              ),
+              onSelected: (action) {
+                switch (action) {
+                  case _MobileMenuAction.history:
+                    onShowHistory?.call();
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: _MobileMenuAction.history,
+                  child: Row(
+                    children: [
+                      Icon(Icons.history),
+                      SizedBox(width: AppSpacing.sm),
+                      Text('History'),
+                    ],
+                  ),
+                ),
+              ],
+              child: const _FloatingIconButton(
+                icon: Icons.more_horiz,
+                tooltip: 'More',
+                enabledStyle: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileToolDock extends StatelessWidget {
+  const _MobileToolDock({
+    required this.controller,
+    this.presetLibraryController,
+    this.onOpenPresets,
+    this.onOpenEdit,
+    this.onOpenCrop,
+  });
+
+  final EditorController controller;
+  final PresetLibraryController? presetLibraryController;
+  final VoidCallback? onOpenPresets;
+  final VoidCallback? onOpenEdit;
+  final VoidCallback? onOpenCrop;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = controller.session.hasImage;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        key: const ValueKey('mobile-bottom-dock'),
+        padding: const EdgeInsets.all(AppSpacing.xs),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: AppColors.border),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _DockButton(
+                key: const ValueKey('mobile-tool-presets'),
+                icon: Icons.auto_awesome_outlined,
+                label: 'Presets',
+                enabled: hasImage && presetLibraryController != null,
+                onTap: onOpenPresets,
+              ),
+            ),
+            Expanded(
+              child: _DockButton(
+                key: const ValueKey('mobile-tool-adjust'),
+                icon: Icons.tune,
+                label: 'Adjust',
+                enabled: hasImage,
+                onTap: onOpenEdit,
+              ),
+            ),
+            Expanded(
+              child: _DockButton(
+                key: const ValueKey('mobile-tool-crop'),
+                icon: Icons.crop,
+                label: 'Crop',
+                enabled: hasImage,
+                onTap: onOpenCrop,
+              ),
+            ),
+            const Expanded(
+              child: _DockButton(
+                key: ValueKey('mobile-tool-guides'),
+                icon: Icons.grid_4x4_rounded,
+                label: 'Guides',
+                enabled: false,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingActionPill extends StatelessWidget {
+  const _FloatingActionPill({
+    required this.icon,
+    required this.label,
+    this.onTap,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface.withValues(alpha: 0.92),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: AppDimensions.iconMd,
+                color: AppColors.textPrimary,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingIconButton extends StatelessWidget {
+  const _FloatingIconButton({
+    required this.icon,
+    this.tooltip,
+    this.onPressed,
+    this.isBusy = false,
+    this.enabledStyle = false,
+    super.key,
+  });
+
+  final IconData icon;
+  final String? tooltip;
+  final VoidCallback? onPressed;
+  final bool isBusy;
+  final bool enabledStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = enabledStyle || onPressed != null;
+    return Tooltip(
+      message: tooltip ?? '',
+      child: Material(
+        color: AppColors.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Center(
+              child: isBusy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      icon,
+                      size: AppDimensions.iconMd,
+                      color: enabled
+                          ? AppColors.textPrimary
+                          : AppColors.textDisabled,
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DockButton extends StatelessWidget {
+  const _DockButton({
     required this.icon,
     required this.label,
     this.onTap,
     this.enabled = true,
+    super.key,
   });
 
   final IconData icon;
@@ -1575,19 +1777,38 @@ class _MobileTool extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = enabled ? AppColors.textSecondary : AppColors.textDisabled;
+    final background = enabled ? AppColors.surfaceElevated : Colors.transparent;
+    final color = enabled ? AppColors.textPrimary : AppColors.textDisabled;
 
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: AppDimensions.iconMd, color: color),
-            const SizedBox(height: AppSpacing.xxs),
-            Text(label, style: AppTypography.label.copyWith(color: color)),
-          ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xxs,
+            vertical: AppSpacing.xs,
+          ),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: AppDimensions.iconMd, color: color),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.label.copyWith(color: color),
+              ),
+            ],
+          ),
         ),
       ),
     );

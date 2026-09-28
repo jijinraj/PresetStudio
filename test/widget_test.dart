@@ -36,8 +36,9 @@ void main() {
     expect(find.text('Open an image'), findsOneWidget);
     expect(find.text('Choose image'), findsOneWidget);
 
-    expect(find.text('Looks'), findsOneWidget);
-    expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Presets'), findsOneWidget);
+    expect(find.text('Adjust'), findsOneWidget);
     expect(find.text('Crop'), findsOneWidget);
+    expect(find.text('Guides'), findsOneWidget);
   });
 }

@@ -145,7 +145,7 @@
 
 - [x] Establish image-first mobile editor scaffold with adaptive contain-fit presentation
 - [x] Add mobile-only rounded image clipping and comfortable canvas margins
-- [ ] Add premium mobile top bar and four-tool bottom dock
+- [x] Add premium mobile top bar and four-tool bottom dock
 - [ ] Add contextual tool-panel host
 - [ ] Redesign mobile preset browser
 - [ ] Add reusable precision ruler control

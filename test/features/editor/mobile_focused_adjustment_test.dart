@@ -29,7 +29,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Edit'));
+    await tester.tap(find.byKey(const ValueKey('mobile-tool-adjust')));
 
     await tester.pumpAndSettle();
 

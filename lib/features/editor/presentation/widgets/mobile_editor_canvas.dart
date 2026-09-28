@@ -46,7 +46,7 @@ class MobileEditorCanvas extends StatelessWidget {
       child: Padding(
         key: const ValueKey('mobile-editor-canvas-frame'),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
+          horizontal: 0,
           vertical: AppSpacing.sm,
         ),
         child: EditorImageViewport(
