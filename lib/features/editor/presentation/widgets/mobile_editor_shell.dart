@@ -23,6 +23,7 @@ import 'before_after_button.dart';
 import 'crop_workspace.dart';
 import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
+import 'mobile_editor_canvas.dart';
 
 enum _MobileMenuAction { history }
 
@@ -664,7 +665,10 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
+        backgroundColor: AppColors.canvas,
+        surfaceTintColor: Colors.transparent,
         title: const Text(AppConstants.appName),
         actions: [
           AnimatedBuilder(
@@ -746,16 +750,13 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                EditorImageViewport(
+                MobileEditorCanvas(
                   sourceImagePath: controller.session.sourceImagePath,
                   adjustments: controller.previewAdjustments,
                   transform: controller.session.transform,
                   crop: controller.session.crop,
                   onImportImage: widget.onImportImage,
                   isImporting: widget.isImporting,
-                  compactZoomControls: true,
-                  contentPadding: EdgeInsets.zero,
-                  imageFit: BoxFit.fitWidth,
                   onTap: controller.session.hasImage ? _showImageActions : null,
                   onHorizontalSwipe: controller.session.hasImage
                       ? (direction) {

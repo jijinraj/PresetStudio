@@ -141,6 +141,19 @@
 - [x] Track unique filters viewed and record every applied preset in editor History
 - [x] Tap the mobile image for Save image / Save filter actions
 
+## Mobile editor UI revamp
+
+- [x] Establish image-first mobile editor scaffold with adaptive contain-fit presentation
+- [x] Add mobile-only rounded image clipping and comfortable canvas margins
+- [ ] Add premium mobile top bar and four-tool bottom dock
+- [ ] Add contextual tool-panel host
+- [ ] Redesign mobile preset browser
+- [ ] Add reusable precision ruler control
+- [ ] Redesign mobile adjustment workflow
+- [ ] Redesign crop presentation around the existing crop engine
+- [ ] Add dedicated composition guides mode
+- [ ] Finish responsive, accessibility, motion, and interaction polish
+
 ## Settings backlog
 
 - [ ] Add Settings feature

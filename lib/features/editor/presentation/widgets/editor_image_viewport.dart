@@ -31,6 +31,7 @@ class EditorImageViewport extends StatefulWidget {
     this.viewportLabel,
     this.contentPadding = const EdgeInsets.all(AppSpacing.lg),
     this.imageFit = BoxFit.contain,
+    this.imageBorderRadius = BorderRadius.zero,
     this.onTap,
     this.onHorizontalSwipe,
     super.key,
@@ -77,6 +78,13 @@ class EditorImageViewport extends StatefulWidget {
   /// Fit used for an uncropped image. Crop compositions retain their own
   /// geometry so a committed crop remains exact.
   final BoxFit imageFit;
+
+  /// Presentation-only clipping applied to the rendered image.
+  ///
+  /// Desktop keeps the default square image bounds. Mobile can opt into a
+  /// stronger rounded-image language without changing editor geometry or
+  /// export output.
+  final BorderRadius imageBorderRadius;
 
   /// Optional single-tap action for the loaded image.
   final VoidCallback? onTap;
@@ -158,6 +166,7 @@ class _EditorImageViewportState extends State<EditorImageViewport> {
       viewportLabel: widget.viewportLabel,
       contentPadding: widget.contentPadding,
       imageFit: widget.imageFit,
+      imageBorderRadius: widget.imageBorderRadius,
       onTap: widget.onTap,
       onHorizontalSwipe: widget.onHorizontalSwipe,
     );
@@ -224,6 +233,7 @@ class _LoadedViewport extends StatefulWidget {
     required this.viewportLabel,
     required this.contentPadding,
     required this.imageFit,
+    required this.imageBorderRadius,
     required this.onTap,
     required this.onHorizontalSwipe,
   });
@@ -250,6 +260,13 @@ class _LoadedViewport extends StatefulWidget {
   /// Fit used for an uncropped image. Crop compositions retain their own
   /// geometry so a committed crop remains exact.
   final BoxFit imageFit;
+
+  /// Presentation-only clipping applied to the rendered image.
+  ///
+  /// Desktop keeps the default square image bounds. Mobile can opt into a
+  /// stronger rounded-image language without changing editor geometry or
+  /// export output.
+  final BorderRadius imageBorderRadius;
 
   /// Optional single-tap action for the loaded image.
   final VoidCallback? onTap;
@@ -438,19 +455,23 @@ class _LoadedViewportState extends State<_LoadedViewport> {
                     child: Padding(
                       padding: widget.contentPadding,
                       child: Center(
-                        child: EditorCropPreview(
-                          sourceImagePath: widget.sourceImagePath,
-                          adjustments: widget.adjustments,
-                          transform: widget.transform,
-                          crop: widget.crop,
-                          filterQuality: FilterQuality.medium,
-                          uncroppedFit: widget.imageFit,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _ImageLoadError(
-                              onImportImage: widget.onImportImage,
-                              isImporting: widget.isImporting,
-                            );
-                          },
+                        child: ClipRRect(
+                          key: const ValueKey('editor-viewport-image-clip'),
+                          borderRadius: widget.imageBorderRadius,
+                          child: EditorCropPreview(
+                            sourceImagePath: widget.sourceImagePath,
+                            adjustments: widget.adjustments,
+                            transform: widget.transform,
+                            crop: widget.crop,
+                            filterQuality: FilterQuality.medium,
+                            uncroppedFit: widget.imageFit,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _ImageLoadError(
+                                onImportImage: widget.onImportImage,
+                                isImporting: widget.isImporting,
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),

@@ -16,6 +16,7 @@ import 'package:presetstudio/features/presets/domain/preset_catalog.dart';
 import 'package:presetstudio/features/presets/domain/preset_record.dart';
 import 'package:presetstudio/features/presets/domain/preset_source.dart';
 import 'package:presetstudio/theme/preset_studio_theme.dart';
+import 'package:presetstudio/theme/tokens/app_radii.dart';
 
 void main() {
   testWidgets('new mobile image gets a random preset and swipes keep a trail', (
@@ -60,7 +61,11 @@ void main() {
       find.byType(EditorImageViewport),
     );
     expect(viewport.contentPadding, EdgeInsets.zero);
-    expect(viewport.imageFit, BoxFit.fitWidth);
+    expect(viewport.imageFit, BoxFit.contain);
+    expect(
+      viewport.imageBorderRadius,
+      BorderRadius.circular(AppRadii.editorImage),
+    );
 
     final surface = find.byKey(
       const ValueKey('editor-viewport-pointer-surface'),
