@@ -14,7 +14,7 @@ import '../../../presets/application/preset_library_controller.dart';
 import '../../../presets/application/preset_remote_controller.dart';
 import '../../../presets/domain/preset.dart';
 import '../../../presets/domain/preset_record.dart';
-import '../../../presets/presentation/widgets/preset_library_view.dart';
+import '../../../presets/presentation/widgets/mobile_preset_panel.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
@@ -815,19 +815,10 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                     child:
                         _activeContextPanel == _MobileContextPanel.presets &&
                             presetLibraryController != null
-                        ? Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.sm,
-                              AppSpacing.xs,
-                              AppSpacing.sm,
-                              AppSpacing.sm,
-                            ),
-                            child: PresetLibraryView(
-                              libraryController: presetLibraryController!,
-                              remoteController: presetRemoteController,
-                              editorController: controller,
-                              showTitle: false,
-                            ),
+                        ? MobilePresetPanel(
+                            libraryController: presetLibraryController!,
+                            remoteController: presetRemoteController,
+                            editorController: controller,
                           )
                         : const SizedBox.shrink(),
                   ),

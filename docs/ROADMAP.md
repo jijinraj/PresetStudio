@@ -148,7 +148,7 @@
 - [x] Add premium mobile top bar and four-tool bottom dock
 - [x] Allow portrait previews to use device width behind floating bottom chrome
 - [x] Add contextual tool-panel host
-- [ ] Redesign mobile preset browser
+- [x] Redesign mobile preset browser
 - [ ] Add reusable precision ruler control
 - [ ] Redesign mobile adjustment workflow
 - [ ] Redesign crop presentation around the existing crop engine
