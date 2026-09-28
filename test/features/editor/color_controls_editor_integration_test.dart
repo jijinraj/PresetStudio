@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/application/editor_controller.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/desktop_editor_shell.dart';
+import 'package:presetstudio/features/editor/presentation/widgets/editor_ruler_control.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/mobile_editor_shell.dart';
 
 void main() {
@@ -65,7 +66,7 @@ void main() {
       expect(controller.session.adjustments.vibrance, 50);
     });
 
-    testWidgets('mobile edit sheet exposes the complete Color group', (
+    testWidgets('mobile adjustment selector exposes the complete Color group', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(390, 844);
@@ -78,7 +79,6 @@ void main() {
 
       final controller = EditorController();
       addTearDown(controller.dispose);
-
       controller.setSourceImage('missing-test-image.jpg');
 
       await tester.pumpWidget(
@@ -94,33 +94,26 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('mobile-tool-adjust')));
       await tester.pumpAndSettle();
 
-      final sheetScrollable = find.descendant(
-        of: find.byKey(const ValueKey('mobile-edit-scroll')),
-        matching: find.byType(Scrollable),
-      );
-
       for (final id in <String>[
-        'adjustment-temperature-slider',
-        'adjustment-tint-slider',
-        'adjustment-vibrance-slider',
-        'adjustment-saturation-slider',
+        'mobile-adjustment-temperature',
+        'mobile-adjustment-tint',
+        'mobile-adjustment-vibrance',
+        'mobile-adjustment-saturation',
       ]) {
-        final finder = find.byKey(ValueKey(id));
-        await tester.scrollUntilVisible(
-          finder,
-          250,
-          scrollable: sheetScrollable.first,
-        );
-        expect(finder, findsOneWidget);
+        expect(find.byKey(ValueKey(id)), findsOneWidget);
       }
 
-      tester
-          .widget<Slider>(
-            find.byKey(const ValueKey('adjustment-vibrance-slider')),
-          )
-          .onChanged
-          ?.call(60);
+      final vibrance = find.byKey(const ValueKey('mobile-adjustment-vibrance'));
+      await tester.ensureVisible(vibrance);
+      await tester.tap(vibrance);
+      await tester.pumpAndSettle();
 
+      final ruler = tester.widget<EditorRulerControl>(
+        find.byType(EditorRulerControl),
+      );
+      ruler.onInteractionStart?.call();
+      ruler.onChanged(60);
+      ruler.onInteractionEnd?.call();
       await tester.pump();
 
       expect(controller.session.adjustments.vibrance, 60);

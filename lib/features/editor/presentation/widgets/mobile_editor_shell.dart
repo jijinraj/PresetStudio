@@ -16,19 +16,17 @@ import '../../../presets/domain/preset.dart';
 import '../../../presets/domain/preset_record.dart';
 import '../../../presets/presentation/widgets/mobile_preset_panel.dart';
 import '../../application/editor_controller.dart';
-import '../../domain/adjustment_definition.dart';
-import '../../domain/adjustment_type.dart';
-import 'adjustment_control.dart';
 import 'before_after_button.dart';
 import 'crop_workspace.dart';
 import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
+import 'mobile_adjustment_panel.dart';
 import 'mobile_editor_canvas.dart';
 import 'mobile_editor_tool_panel.dart';
 
 enum _MobileMenuAction { history }
 
-enum _MobileContextPanel { presets }
+enum _MobileContextPanel { presets, adjust }
 
 class MobileEditorShell extends StatefulWidget {
   const MobileEditorShell({
@@ -66,6 +64,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
   int _applyGeneration = 0;
   bool _pendingInitialRandomPreset = false;
   bool _isApplyingPreset = false;
+  bool _isPrecisionInteractionActive = false;
   _MobileContextPanel? _activeContextPanel;
 
   EditorController get controller => widget.controller;
@@ -126,6 +125,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
       _lastSourceImagePath = sourceImagePath;
       _lastObservedActivePresetId = controller.session.activePresetId;
       _activeContextPanel = null;
+      _isPrecisionInteractionActive = false;
       _resetPresetSession(autoApply: sourceImagePath != null);
       return;
     }
@@ -667,11 +667,14 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _togglePresetsPanel() {
+  void _toggleContextPanel(_MobileContextPanel panel) {
+    if (controller.isEditTransactionActive) {
+      controller.endEditTransaction();
+    }
+
     setState(() {
-      _activeContextPanel = _activeContextPanel == _MobileContextPanel.presets
-          ? null
-          : _MobileContextPanel.presets;
+      _isPrecisionInteractionActive = false;
+      _activeContextPanel = _activeContextPanel == panel ? null : panel;
     });
   }
 
@@ -680,8 +683,23 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
       return;
     }
 
+    if (controller.isEditTransactionActive) {
+      controller.endEditTransaction();
+    }
+
     setState(() {
+      _isPrecisionInteractionActive = false;
       _activeContextPanel = null;
+    });
+  }
+
+  void _handlePrecisionInteractionChanged(bool active) {
+    if (!mounted || _isPrecisionInteractionActive == active) {
+      return;
+    }
+
+    setState(() {
+      _isPrecisionInteractionActive = active;
     });
   }
 
@@ -700,7 +718,9 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
           final contextualPanelMaxHeight = (mediaQuery.size.height * 0.38)
               .clamp(240.0, 360.0)
               .toDouble();
-          final bodyTopPadding = safeTop + topChromeHeight + AppSpacing.sm;
+          final bodyTopPadding = _isPrecisionInteractionActive
+              ? safeTop + AppSpacing.sm
+              : safeTop + topChromeHeight + AppSpacing.sm;
           // The bottom dock is floating chrome, so the image workspace is
           // allowed to continue behind it. Reserving the full dock height
           // made portrait photos height-bound and therefore narrower than the
@@ -731,22 +751,28 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                       crop: controller.session.crop,
                       onImportImage: widget.onImportImage,
                       isImporting: widget.isImporting,
-                      onTap: controller.session.hasImage
+                      onTap:
+                          controller.session.hasImage &&
+                              _activeContextPanel == null
                           ? _showImageActions
                           : null,
-                      onHorizontalSwipe: controller.session.hasImage
+                      onHorizontalSwipe:
+                          controller.session.hasImage &&
+                              _activeContextPanel == null
                           ? (direction) {
                               unawaited(_handlePresetSwipe(direction));
                             }
                           : null,
-                      topAction: BeforeAfterButton(
-                        key: const ValueKey('mobile-before-after'),
-                        enabled: controller.canCompareBefore,
-                        isShowingBefore: controller.isShowingBefore,
-                        onPreviewStart: controller.beginBeforePreview,
-                        onPreviewEnd: controller.endBeforePreview,
-                        compact: true,
-                      ),
+                      topAction: _isPrecisionInteractionActive
+                          ? null
+                          : BeforeAfterButton(
+                              key: const ValueKey('mobile-before-after'),
+                              enabled: controller.canCompareBefore,
+                              isShowingBefore: controller.isShowingBefore,
+                              onPreviewStart: controller.beginBeforePreview,
+                              onPreviewEnd: controller.endBeforePreview,
+                              compact: true,
+                            ),
                     ),
                   ),
                 ),
@@ -754,17 +780,25 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                   top: 0,
                   left: 0,
                   right: 0,
-                  child: _MobileTopBar(
-                    controller: controller,
-                    hasImage: controller.session.hasImage,
-                    isExporting: widget.isExporting,
-                    onImportImage: widget.onImportImage,
-                    onExportImage: widget.onExportImage,
-                    onShowHistory: controller.session.hasImage
-                        ? () {
-                            _showHistorySheet(context);
-                          }
-                        : null,
+                  child: IgnorePointer(
+                    ignoring: _isPrecisionInteractionActive,
+                    child: AnimatedOpacity(
+                      key: const ValueKey('mobile-top-bar-visibility'),
+                      duration: const Duration(milliseconds: 120),
+                      opacity: _isPrecisionInteractionActive ? 0 : 1,
+                      child: _MobileTopBar(
+                        controller: controller,
+                        hasImage: controller.session.hasImage,
+                        isExporting: widget.isExporting,
+                        onImportImage: widget.onImportImage,
+                        onExportImage: widget.onExportImage,
+                        onShowHistory: controller.session.hasImage
+                            ? () {
+                                _showHistorySheet(context);
+                              }
+                            : null,
+                      ),
+                    ),
                   ),
                 ),
                 if (_activeContextPanel == null &&
@@ -806,47 +840,70 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                   right: AppSpacing.sm,
                   bottom: safeBottom + bottomChromeHeight + AppSpacing.sm,
                   child: MobileEditorToolPanel(
-                    visible:
-                        _activeContextPanel == _MobileContextPanel.presets &&
-                        presetLibraryController != null,
-                    title: 'Presets',
+                    visible: _activeContextPanel != null,
+                    title: switch (_activeContextPanel) {
+                      _MobileContextPanel.presets => 'Presets',
+                      _MobileContextPanel.adjust => 'Adjust',
+                      null => '',
+                    },
                     maxHeight: contextualPanelMaxHeight,
+                    immersive: _isPrecisionInteractionActive,
                     onClose: _closeContextPanel,
-                    child:
-                        _activeContextPanel == _MobileContextPanel.presets &&
-                            presetLibraryController != null
-                        ? MobilePresetPanel(
-                            libraryController: presetLibraryController!,
-                            remoteController: presetRemoteController,
-                            editorController: controller,
-                          )
-                        : const SizedBox.shrink(),
+                    child: switch (_activeContextPanel) {
+                      _MobileContextPanel.presets =>
+                        presetLibraryController == null
+                            ? const SizedBox.shrink()
+                            : MobilePresetPanel(
+                                libraryController: presetLibraryController!,
+                                remoteController: presetRemoteController,
+                                editorController: controller,
+                              ),
+                      _MobileContextPanel.adjust => MobileAdjustmentPanel(
+                        controller: controller,
+                        onPrecisionInteractionChanged:
+                            _handlePrecisionInteractionChanged,
+                      ),
+                      null => const SizedBox.shrink(),
+                    },
                   ),
                 ),
                 Positioned(
                   left: AppSpacing.md,
                   right: AppSpacing.md,
                   bottom: AppSpacing.md,
-                  child: _MobileToolDock(
-                    controller: controller,
-                    presetLibraryController: presetLibraryController,
-                    presetsSelected:
-                        _activeContextPanel == _MobileContextPanel.presets,
-                    onOpenPresets: presetLibraryController == null
-                        ? null
-                        : _togglePresetsPanel,
-                    onOpenEdit: controller.session.hasImage
-                        ? () {
-                            _closeContextPanel();
-                            _showEditSheet(context);
-                          }
-                        : null,
-                    onOpenCrop: controller.session.hasImage
-                        ? () {
-                            _closeContextPanel();
-                            unawaited(_showCropWorkspace(context));
-                          }
-                        : null,
+                  child: IgnorePointer(
+                    ignoring: _isPrecisionInteractionActive,
+                    child: AnimatedOpacity(
+                      key: const ValueKey('mobile-bottom-dock-visibility'),
+                      duration: const Duration(milliseconds: 120),
+                      opacity: _isPrecisionInteractionActive ? 0 : 1,
+                      child: _MobileToolDock(
+                        controller: controller,
+                        presetLibraryController: presetLibraryController,
+                        presetsSelected:
+                            _activeContextPanel == _MobileContextPanel.presets,
+                        adjustSelected:
+                            _activeContextPanel == _MobileContextPanel.adjust,
+                        onOpenPresets: presetLibraryController == null
+                            ? null
+                            : () {
+                                _toggleContextPanel(
+                                  _MobileContextPanel.presets,
+                                );
+                              },
+                        onOpenEdit: controller.session.hasImage
+                            ? () {
+                                _toggleContextPanel(_MobileContextPanel.adjust);
+                              }
+                            : null,
+                        onOpenCrop: controller.session.hasImage
+                            ? () {
+                                _closeContextPanel();
+                                unawaited(_showCropWorkspace(context));
+                              }
+                            : null,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -855,375 +912,6 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
         },
       ),
     );
-  }
-
-  void _showEditSheet(BuildContext context) {
-    final exposureDefinition = AdjustmentDefinitions.of(
-      AdjustmentType.exposure,
-    );
-
-    final contrastDefinition = AdjustmentDefinitions.of(
-      AdjustmentType.contrast,
-    );
-
-    final highlightsDefinition = AdjustmentDefinitions.of(
-      AdjustmentType.highlights,
-    );
-
-    final shadowsDefinition = AdjustmentDefinitions.of(AdjustmentType.shadows);
-
-    final whitesDefinition = AdjustmentDefinitions.of(AdjustmentType.whites);
-
-    final blacksDefinition = AdjustmentDefinitions.of(AdjustmentType.blacks);
-
-    final temperatureDefinition = AdjustmentDefinitions.of(
-      AdjustmentType.temperature,
-    );
-
-    final tintDefinition = AdjustmentDefinitions.of(AdjustmentType.tint);
-
-    final vibranceDefinition = AdjustmentDefinitions.of(
-      AdjustmentType.vibrance,
-    );
-
-    final saturationDefinition = AdjustmentDefinitions.of(
-      AdjustmentType.saturation,
-    );
-
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.transparent,
-      showDragHandle: false,
-      isScrollControlled: true,
-      builder: (context) {
-        AdjustmentType? activeAdjustment;
-
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
-            final availableHeight = MediaQuery.sizeOf(context).height;
-
-            final isFocused = activeAdjustment != null;
-
-            void focusAdjustment(AdjustmentType type) {
-              if (activeAdjustment == type) {
-                return;
-              }
-
-              if (!controller.isEditTransactionActive) {
-                controller.beginEditTransaction();
-              }
-
-              setSheetState(() {
-                activeAdjustment = type;
-              });
-            }
-
-            void leaveFocusedMode() {
-              if (activeAdjustment == null) {
-                return;
-              }
-
-              if (controller.isEditTransactionActive) {
-                controller.endEditTransaction();
-              }
-
-              setSheetState(() {
-                activeAdjustment = null;
-              });
-            }
-
-            return SizedBox(
-              height: availableHeight * 0.68,
-              child: Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                  IgnorePointer(
-                    ignoring: isFocused,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 120),
-                      opacity: isFocused ? 0.0 : 1.0,
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Container(
-                          key: const ValueKey('mobile-edit-sheet-surface'),
-                          constraints: BoxConstraints(
-                            maxHeight: availableHeight * 0.68,
-                          ),
-                          decoration: const BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(AppRadii.md),
-                            ),
-                          ),
-                          child: SafeArea(
-                            top: false,
-                            child: SingleChildScrollView(
-                              key: const ValueKey('mobile-edit-scroll'),
-                              padding: EdgeInsets.fromLTRB(
-                                AppSpacing.md,
-                                AppSpacing.sm,
-                                AppSpacing.md,
-                                AppSpacing.lg + bottomInset,
-                              ),
-                              child: AnimatedBuilder(
-                                animation: controller,
-                                builder: (context, _) {
-                                  final session = controller.session;
-
-                                  return Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Center(
-                                        child: Container(
-                                          width: 36,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.borderStrong,
-                                            borderRadius: BorderRadius.circular(
-                                              999,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: AppSpacing.md),
-                                      Row(
-                                        children: [
-                                          const Expanded(
-                                            child: Text(
-                                              'Edit',
-                                              style: AppTypography.title,
-                                            ),
-                                          ),
-                                          TextButton(
-                                            key: const ValueKey(
-                                              'mobile-reset-adjustments',
-                                            ),
-                                            onPressed:
-                                                controller.canResetAdjustments
-                                                ? controller.resetAdjustments
-                                                : null,
-                                            child: const Text('Reset'),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      const Text(
-                                        'Light',
-                                        style: AppTypography.label,
-                                      ),
-                                      const SizedBox(height: AppSpacing.md),
-                                      AdjustmentControl(
-                                        definition: exposureDefinition,
-                                        value: session.adjustments.exposure,
-                                        onChanged: (value) {
-                                          controller.updateAdjustment(
-                                            AdjustmentType.exposure,
-                                            value,
-                                          );
-                                        },
-                                        onInteractionStart: () {
-                                          focusAdjustment(
-                                            AdjustmentType.exposure,
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      AdjustmentControl(
-                                        definition: contrastDefinition,
-                                        value: session.adjustments.contrast,
-                                        onChanged: (value) {
-                                          controller.updateAdjustment(
-                                            AdjustmentType.contrast,
-                                            value,
-                                          );
-                                        },
-                                        onInteractionStart: () {
-                                          focusAdjustment(
-                                            AdjustmentType.contrast,
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      AdjustmentControl(
-                                        definition: highlightsDefinition,
-                                        value: session.adjustments.highlights,
-                                        onChanged: (value) {
-                                          controller.updateAdjustment(
-                                            AdjustmentType.highlights,
-                                            value,
-                                          );
-                                        },
-                                        onInteractionStart: () {
-                                          focusAdjustment(
-                                            AdjustmentType.highlights,
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      AdjustmentControl(
-                                        definition: shadowsDefinition,
-                                        value: session.adjustments.shadows,
-                                        onChanged: (value) {
-                                          controller.updateAdjustment(
-                                            AdjustmentType.shadows,
-                                            value,
-                                          );
-                                        },
-                                        onInteractionStart: () {
-                                          focusAdjustment(
-                                            AdjustmentType.shadows,
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      AdjustmentControl(
-                                        definition: whitesDefinition,
-                                        value: session.adjustments.whites,
-                                        onChanged: (value) {
-                                          controller.updateAdjustment(
-                                            AdjustmentType.whites,
-                                            value,
-                                          );
-                                        },
-                                        onInteractionStart: () {
-                                          focusAdjustment(
-                                            AdjustmentType.whites,
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      AdjustmentControl(
-                                        definition: blacksDefinition,
-                                        value: session.adjustments.blacks,
-                                        onChanged: (value) {
-                                          controller.updateAdjustment(
-                                            AdjustmentType.blacks,
-                                            value,
-                                          );
-                                        },
-                                        onInteractionStart: () {
-                                          focusAdjustment(
-                                            AdjustmentType.blacks,
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      const Divider(height: 1),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      const Text(
-                                        'Color',
-                                        style: AppTypography.label,
-                                      ),
-                                      const SizedBox(height: AppSpacing.md),
-                                      AdjustmentControl(
-                                        definition: temperatureDefinition,
-                                        value: session.adjustments.temperature,
-                                        onChanged: (value) {
-                                          controller.updateAdjustment(
-                                            AdjustmentType.temperature,
-                                            value,
-                                          );
-                                        },
-                                        onInteractionStart: () {
-                                          focusAdjustment(
-                                            AdjustmentType.temperature,
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      AdjustmentControl(
-                                        definition: tintDefinition,
-                                        value: session.adjustments.tint,
-                                        onChanged: (value) {
-                                          controller.updateAdjustment(
-                                            AdjustmentType.tint,
-                                            value,
-                                          );
-                                        },
-                                        onInteractionStart: () {
-                                          focusAdjustment(AdjustmentType.tint);
-                                        },
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      AdjustmentControl(
-                                        definition: vibranceDefinition,
-                                        value: session.adjustments.vibrance,
-                                        onChanged: (value) {
-                                          controller.updateAdjustment(
-                                            AdjustmentType.vibrance,
-                                            value,
-                                          );
-                                        },
-                                        onInteractionStart: () {
-                                          focusAdjustment(
-                                            AdjustmentType.vibrance,
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      AdjustmentControl(
-                                        definition: saturationDefinition,
-                                        value: session.adjustments.saturation,
-                                        onChanged: (value) {
-                                          controller.updateAdjustment(
-                                            AdjustmentType.saturation,
-                                            value,
-                                          );
-                                        },
-                                        onInteractionStart: () {
-                                          focusAdjustment(
-                                            AdjustmentType.saturation,
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (isFocused)
-                    AnimatedBuilder(
-                      animation: controller,
-                      builder: (context, _) {
-                        final type = activeAdjustment!;
-
-                        final definition = AdjustmentDefinitions.of(type);
-
-                        final value = controller.session.adjustments.valueFor(
-                          type,
-                        );
-
-                        return _MobileFocusedAdjustmentBar(
-                          definition: definition,
-                          value: value,
-                          onChanged: (nextValue) {
-                            controller.updateAdjustment(type, nextValue);
-                          },
-                          onClose: leaveFocusedMode,
-                        );
-                      },
-                    ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    ).whenComplete(() {
-      if (controller.isEditTransactionActive) {
-        controller.endEditTransaction();
-      }
-    });
   }
 
   Future<void> _showCropWorkspace(BuildContext context) async {
@@ -1321,163 +1009,6 @@ class _MobilePresetCandidate {
   final String name;
   final RemotePresetCatalogItem? remoteItem;
   final PresetRecord? localRecord;
-}
-
-class _MobileFocusedAdjustmentBar extends StatelessWidget {
-  const _MobileFocusedAdjustmentBar({
-    required this.definition,
-    required this.value,
-    required this.onChanged,
-    required this.onClose,
-  });
-
-  final AdjustmentDefinition definition;
-  final double value;
-  final ValueChanged<double> onChanged;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) {
-    final sanitizedValue = definition.sanitize(value);
-
-    final divisions =
-        ((definition.maxValue - definition.minValue) /
-                definition.interactionStep)
-            .round();
-
-    return Container(
-      key: const ValueKey('mobile-focused-adjustment-bar'),
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.sm,
-            AppSpacing.xs,
-            AppSpacing.sm,
-            AppSpacing.xs,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 32,
-                child: Row(
-                  children: [
-                    const SizedBox(width: 40),
-                    Expanded(
-                      child: Text(
-                        definition.label,
-                        textAlign: TextAlign.center,
-                        style: AppTypography.label,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 40,
-                      child: IconButton(
-                        key: const ValueKey('mobile-focused-close'),
-                        onPressed: onClose,
-                        tooltip: 'Back to adjustments',
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                _formatValue(definition, sanitizedValue),
-                key: const ValueKey('mobile-focused-value'),
-                style: AppTypography.title,
-              ),
-              const SizedBox(height: AppSpacing.xxs),
-              Row(
-                children: [
-                  SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: IconButton(
-                      key: const ValueKey('mobile-focused-decrement'),
-                      onPressed: sanitizedValue <= definition.minValue
-                          ? null
-                          : () {
-                              onChanged(
-                                definition.sanitize(
-                                  sanitizedValue - definition.interactionStep,
-                                ),
-                              );
-                            },
-                      tooltip: 'Decrease ${definition.label}',
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.remove, size: 20),
-                    ),
-                  ),
-                  Expanded(
-                    child: Slider(
-                      key: const ValueKey('mobile-focused-slider'),
-                      value: sanitizedValue,
-                      min: definition.minValue,
-                      max: definition.maxValue,
-                      divisions: divisions,
-                      onChanged: (nextValue) {
-                        onChanged(definition.sanitize(nextValue));
-                      },
-                    ),
-                  ),
-                  SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: IconButton(
-                      key: const ValueKey('mobile-focused-increment'),
-                      onPressed: sanitizedValue >= definition.maxValue
-                          ? null
-                          : () {
-                              onChanged(
-                                definition.sanitize(
-                                  sanitizedValue + definition.interactionStep,
-                                ),
-                              );
-                            },
-                      tooltip: 'Increase ${definition.label}',
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.add, size: 20),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  static String _formatValue(AdjustmentDefinition definition, double value) {
-    final decimalPlaces = _decimalPlaces(definition.precisionStep);
-
-    final formatted = value.toStringAsFixed(decimalPlaces);
-
-    return value > 0 ? '+$formatted' : formatted;
-  }
-
-  static int _decimalPlaces(double value) {
-    if (value == value.roundToDouble()) {
-      return 0;
-    }
-
-    final text = value.toString();
-
-    if (!text.contains('.')) {
-      return 0;
-    }
-
-    return text.split('.').last.length;
-  }
 }
 
 class _MobileTopBar extends StatelessWidget {
@@ -1588,6 +1119,7 @@ class _MobileToolDock extends StatelessWidget {
   const _MobileToolDock({
     required this.controller,
     required this.presetsSelected,
+    required this.adjustSelected,
     this.presetLibraryController,
     this.onOpenPresets,
     this.onOpenEdit,
@@ -1596,6 +1128,7 @@ class _MobileToolDock extends StatelessWidget {
 
   final EditorController controller;
   final bool presetsSelected;
+  final bool adjustSelected;
   final PresetLibraryController? presetLibraryController;
   final VoidCallback? onOpenPresets;
   final VoidCallback? onOpenEdit;
@@ -1640,6 +1173,7 @@ class _MobileToolDock extends StatelessWidget {
                 icon: Icons.tune,
                 label: 'Adjust',
                 enabled: hasImage,
+                selected: adjustSelected,
                 onTap: onOpenEdit,
               ),
             ),

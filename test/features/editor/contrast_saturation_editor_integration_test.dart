@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/application/editor_controller.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/desktop_editor_shell.dart';
+import 'package:presetstudio/features/editor/presentation/widgets/editor_ruler_control.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/mobile_editor_shell.dart';
 
 void main() {
@@ -54,7 +55,7 @@ void main() {
       expect(controller.session.adjustments.saturation, -40.0);
     });
 
-    testWidgets('mobile edit sheet exposes contrast and saturation controls', (
+    testWidgets('mobile adjustment selector exposes contrast and saturation', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(390, 844);
@@ -66,7 +67,7 @@ void main() {
       });
 
       final controller = EditorController();
-
+      addTearDown(controller.dispose);
       controller.setSourceImage('missing-test-image.jpg');
 
       await tester.pumpWidget(
@@ -80,38 +81,39 @@ void main() {
       );
 
       await tester.tap(find.byKey(const ValueKey('mobile-tool-adjust')));
-
       await tester.pumpAndSettle();
 
-      expect(
-        find.byKey(const ValueKey('adjustment-contrast-slider')),
-        findsOneWidget,
+      final contrast = find.byKey(const ValueKey('mobile-adjustment-contrast'));
+      await tester.ensureVisible(contrast);
+      await tester.tap(contrast);
+      await tester.pumpAndSettle();
+
+      var ruler = tester.widget<EditorRulerControl>(
+        find.byType(EditorRulerControl),
       );
-
-      expect(
-        find.byKey(const ValueKey('adjustment-saturation-slider')),
-        findsOneWidget,
-      );
-
-      final contrastSlider = tester.widget<Slider>(
-        find.byKey(const ValueKey('adjustment-contrast-slider')),
-      );
-
-      contrastSlider.onChanged?.call(-25.0);
-
+      ruler.onInteractionStart?.call();
+      ruler.onChanged(-25);
+      ruler.onInteractionEnd?.call();
       await tester.pump();
 
-      expect(controller.session.adjustments.contrast, -25.0);
+      expect(controller.session.adjustments.contrast, -25);
 
-      final saturationSlider = tester.widget<Slider>(
-        find.byKey(const ValueKey('adjustment-saturation-slider')),
+      final saturation = find.byKey(
+        const ValueKey('mobile-adjustment-saturation'),
       );
+      await tester.ensureVisible(saturation);
+      await tester.tap(saturation);
+      await tester.pumpAndSettle();
 
-      saturationSlider.onChanged?.call(60.0);
-
+      ruler = tester.widget<EditorRulerControl>(
+        find.byType(EditorRulerControl),
+      );
+      ruler.onInteractionStart?.call();
+      ruler.onChanged(60);
+      ruler.onInteractionEnd?.call();
       await tester.pump();
 
-      expect(controller.session.adjustments.saturation, 60.0);
+      expect(controller.session.adjustments.saturation, 60);
     });
   });
 }

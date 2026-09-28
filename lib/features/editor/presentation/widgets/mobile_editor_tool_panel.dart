@@ -18,6 +18,7 @@ class MobileEditorToolPanel extends StatelessWidget {
     required this.child,
     required this.onClose,
     this.maxHeight = 340,
+    this.immersive = false,
     super.key,
   });
 
@@ -26,6 +27,11 @@ class MobileEditorToolPanel extends StatelessWidget {
   final Widget child;
   final VoidCallback onClose;
   final double maxHeight;
+
+  /// Hides panel chrome while preserving the child's layout position.
+  /// Used by precision controls so the active ruler can remain stationary
+  /// under the user's finger while the surrounding editor chrome disappears.
+  final bool immersive;
 
   static const Duration transitionDuration = Duration(milliseconds: 180);
 
@@ -43,19 +49,25 @@ class MobileEditorToolPanel extends StatelessWidget {
           opacity: visible ? 1 : 0,
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
-            child: Container(
+            child: AnimatedContainer(
               key: const ValueKey('mobile-context-tool-panel'),
+              duration: const Duration(milliseconds: 140),
+              curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
-                color: AppColors.surface.withValues(alpha: 0.96),
+                color: immersive
+                    ? Colors.transparent
+                    : AppColors.surface.withValues(alpha: 0.96),
                 borderRadius: BorderRadius.circular(AppRadii.editorPanel),
-                border: Border.all(color: AppColors.border),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x44000000),
-                    blurRadius: 24,
-                    offset: Offset(0, 12),
-                  ),
-                ],
+                border: immersive ? null : Border.all(color: AppColors.border),
+                boxShadow: immersive
+                    ? const []
+                    : const [
+                        BoxShadow(
+                          color: Color(0x44000000),
+                          blurRadius: 24,
+                          offset: Offset(0, 12),
+                        ),
+                      ],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadii.editorPanel),
@@ -63,29 +75,43 @@ class MobileEditorToolPanel extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.md,
-                        AppSpacing.sm,
-                        AppSpacing.xs,
-                        AppSpacing.xs,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(title, style: AppTypography.title),
+                    IgnorePointer(
+                      ignoring: immersive,
+                      child: AnimatedOpacity(
+                        key: const ValueKey('mobile-context-panel-header'),
+                        duration: const Duration(milliseconds: 120),
+                        opacity: immersive ? 0 : 1,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.md,
+                            AppSpacing.sm,
+                            AppSpacing.xs,
+                            AppSpacing.xs,
                           ),
-                          IconButton(
-                            key: const ValueKey('mobile-context-panel-close'),
-                            onPressed: onClose,
-                            tooltip: 'Close $title',
-                            visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.close, size: 20),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(title, style: AppTypography.title),
+                              ),
+                              IconButton(
+                                key: const ValueKey(
+                                  'mobile-context-panel-close',
+                                ),
+                                onPressed: onClose,
+                                tooltip: 'Close $title',
+                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(Icons.close, size: 20),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                    const Divider(height: 1),
+                    AnimatedOpacity(
+                      duration: const Duration(milliseconds: 120),
+                      opacity: immersive ? 0 : 1,
+                      child: const Divider(height: 1),
+                    ),
                     Flexible(child: child),
                   ],
                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/application/editor_controller.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/desktop_editor_shell.dart';
+import 'package:presetstudio/features/editor/presentation/widgets/editor_ruler_control.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/mobile_editor_shell.dart';
 
 void main() {
@@ -85,8 +86,9 @@ void main() {
       expect(find.text('Exposure'), findsNothing);
     });
 
-    testWidgets('mobile Edit tool opens exposure controls', (tester) async {
+    testWidgets('mobile Adjust tool opens exposure ruler', (tester) async {
       final controller = EditorController();
+      addTearDown(controller.dispose);
 
       controller.setSourceImage('missing-test-image.jpg');
 
@@ -101,24 +103,25 @@ void main() {
       );
 
       await tester.tap(find.byKey(const ValueKey('mobile-tool-adjust')));
-
       await tester.pumpAndSettle();
 
       expect(find.text('Exposure'), findsOneWidget);
+      expect(find.byType(EditorRulerControl), findsOneWidget);
 
-      final slider = tester.widget<Slider>(
-        find.byKey(const ValueKey('adjustment-exposure-slider')),
+      final ruler = tester.widget<EditorRulerControl>(
+        find.byType(EditorRulerControl),
       );
 
-      expect(slider.onChanged, isNotNull);
+      expect(ruler.minValue, -5);
+      expect(ruler.maxValue, 5);
+      expect(ruler.interactionStep, 0.1);
 
-      // The mobile slider uses the same 0.10 EV interaction step.
-      slider.onChanged?.call(-1.3);
-
+      ruler.onInteractionStart?.call();
+      ruler.onChanged(-1.3);
+      ruler.onInteractionEnd?.call();
       await tester.pump();
 
       expect(controller.session.adjustments.exposure, -1.3);
-
       expect(find.text('-1.30'), findsOneWidget);
     });
   });
