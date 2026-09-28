@@ -149,7 +149,7 @@
 - [x] Allow portrait previews to use device width behind floating bottom chrome
 - [x] Add contextual tool-panel host
 - [x] Redesign mobile preset browser
-- [ ] Add reusable precision ruler control
+- [x] Add reusable precision ruler control
 - [ ] Redesign mobile adjustment workflow
 - [ ] Redesign crop presentation around the existing crop engine
 - [ ] Add dedicated composition guides mode
