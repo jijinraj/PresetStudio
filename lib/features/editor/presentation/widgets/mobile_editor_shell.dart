@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -8,8 +9,11 @@ import '../../../../theme/tokens/app_dimensions.dart';
 import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
+import '../../../presets/application/preset_adjustment_mapper.dart';
 import '../../../presets/application/preset_library_controller.dart';
 import '../../../presets/application/preset_remote_controller.dart';
+import '../../../presets/domain/preset.dart';
+import '../../../presets/domain/preset_record.dart';
 import '../../../presets/presentation/widgets/preset_library_view.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
@@ -22,7 +26,7 @@ import 'editor_image_viewport.dart';
 
 enum _MobileMenuAction { history }
 
-class MobileEditorShell extends StatelessWidget {
+class MobileEditorShell extends StatefulWidget {
   const MobileEditorShell({
     required this.controller,
     this.presetLibraryController,
@@ -41,6 +45,621 @@ class MobileEditorShell extends StatelessWidget {
   final bool isImporting;
   final Future<void> Function()? onExportImage;
   final bool isExporting;
+
+  @override
+  State<MobileEditorShell> createState() => _MobileEditorShellState();
+}
+
+class _MobileEditorShellState extends State<MobileEditorShell> {
+  final Random _random = Random();
+  final List<String> _presetTrail = <String>[];
+  final Set<String> _visitedPresetKeys = <String>{};
+  final Set<String> _cyclePresetKeys = <String>{};
+
+  String? _lastSourceImagePath;
+  String? _lastObservedActivePresetId;
+  int _presetTrailIndex = -1;
+  int _applyGeneration = 0;
+  bool _pendingInitialRandomPreset = false;
+  bool _isApplyingPreset = false;
+
+  EditorController get controller => widget.controller;
+  PresetLibraryController? get presetLibraryController =>
+      widget.presetLibraryController;
+  PresetRemoteController? get presetRemoteController =>
+      widget.presetRemoteController;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastSourceImagePath = controller.session.sourceImagePath;
+    _lastObservedActivePresetId = controller.session.activePresetId;
+    _attachListeners();
+
+    if (_lastSourceImagePath != null) {
+      _resetPresetSession(autoApply: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MobileEditorShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.controller != widget.controller ||
+        oldWidget.presetLibraryController != widget.presetLibraryController ||
+        oldWidget.presetRemoteController != widget.presetRemoteController) {
+      _detachListeners(oldWidget);
+      _lastSourceImagePath = controller.session.sourceImagePath;
+      _lastObservedActivePresetId = controller.session.activePresetId;
+      _attachListeners();
+      _resetPresetSession(autoApply: controller.session.hasImage);
+    }
+  }
+
+  @override
+  void dispose() {
+    _detachListeners(widget);
+    super.dispose();
+  }
+
+  void _attachListeners() {
+    controller.addListener(_handleEditorChanged);
+    presetLibraryController?.addListener(_handlePresetSourcesChanged);
+    presetRemoteController?.addListener(_handlePresetSourcesChanged);
+  }
+
+  void _detachListeners(MobileEditorShell shell) {
+    shell.controller.removeListener(_handleEditorChanged);
+    shell.presetLibraryController?.removeListener(_handlePresetSourcesChanged);
+    shell.presetRemoteController?.removeListener(_handlePresetSourcesChanged);
+  }
+
+  void _handleEditorChanged() {
+    final sourceImagePath = controller.session.sourceImagePath;
+
+    if (sourceImagePath != _lastSourceImagePath) {
+      _lastSourceImagePath = sourceImagePath;
+      _lastObservedActivePresetId = controller.session.activePresetId;
+      _resetPresetSession(autoApply: sourceImagePath != null);
+      return;
+    }
+
+    final activePresetId = controller.session.activePresetId;
+    if (activePresetId == _lastObservedActivePresetId) {
+      return;
+    }
+
+    _lastObservedActivePresetId = activePresetId;
+    _syncActivePresetWithTrail(activePresetId);
+  }
+
+  void _syncActivePresetWithTrail(String? presetId) {
+    final candidate = _candidateForSessionPresetId(presetId);
+    if (candidate == null) {
+      return;
+    }
+
+    final currentKey =
+        _presetTrailIndex >= 0 && _presetTrailIndex < _presetTrail.length
+        ? _presetTrail[_presetTrailIndex]
+        : null;
+
+    if (currentKey == candidate.key) {
+      return;
+    }
+
+    final existingIndex = _presetTrail.lastIndexOf(candidate.key);
+    if (existingIndex >= 0) {
+      _presetTrailIndex = existingIndex;
+    } else {
+      if (_presetTrailIndex < _presetTrail.length - 1) {
+        _presetTrail.removeRange(_presetTrailIndex + 1, _presetTrail.length);
+      }
+      _presetTrail.add(candidate.key);
+      _presetTrailIndex = _presetTrail.length - 1;
+    }
+
+    _visitedPresetKeys.add(candidate.key);
+    _cyclePresetKeys.add(candidate.key);
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _handlePresetSourcesChanged() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {});
+    _scheduleInitialRandomPreset();
+  }
+
+  void _resetPresetSession({required bool autoApply}) {
+    _applyGeneration += 1;
+    _presetTrail.clear();
+    _visitedPresetKeys.clear();
+    _cyclePresetKeys.clear();
+    _presetTrailIndex = -1;
+    _lastObservedActivePresetId = controller.session.activePresetId;
+    _pendingInitialRandomPreset = autoApply;
+    _isApplyingPreset = false;
+
+    if (mounted) {
+      setState(() {});
+    }
+
+    _scheduleInitialRandomPreset();
+  }
+
+  void _scheduleInitialRandomPreset() {
+    if (!_pendingInitialRandomPreset || !controller.session.hasImage) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(_ensureInitialRandomPreset());
+      }
+    });
+  }
+
+  Future<void> _ensureInitialRandomPreset() async {
+    if (!_pendingInitialRandomPreset ||
+        _isApplyingPreset ||
+        !controller.session.hasImage) {
+      return;
+    }
+
+    final candidates = _presetCandidates();
+    if (candidates.isEmpty) {
+      // Keep this pending. A remote catalog or local library listener will
+      // retry as soon as presets become available.
+      return;
+    }
+
+    _pendingInitialRandomPreset = false;
+    await _advanceToRandomPreset();
+  }
+
+  List<_MobilePresetCandidate> _presetCandidates() {
+    final remoteItems =
+        presetRemoteController?.items ?? const <RemotePresetCatalogItem>[];
+    final records = presetLibraryController?.records ?? const <PresetRecord>[];
+    final candidates = <_MobilePresetCandidate>[];
+    final discoverableRemoteKeys = <String>{};
+
+    for (final item in remoteItems) {
+      final candidate = _MobilePresetCandidate.remote(item);
+      candidates.add(candidate);
+      discoverableRemoteKeys.add(candidate.sessionPresetId);
+    }
+
+    for (final record in records) {
+      final origin = record.origin;
+
+      if (origin.type == PresetOriginType.remoteInstalled) {
+        final sourceId = origin.sourceId;
+        final remotePresetId = origin.remotePresetId;
+
+        if (sourceId != null && remotePresetId != null) {
+          final remoteSessionId = 'remote:$sourceId:$remotePresetId';
+          if (discoverableRemoteKeys.contains(remoteSessionId)) {
+            continue;
+          }
+        }
+      }
+
+      candidates.add(_MobilePresetCandidate.local(record));
+    }
+
+    return List<_MobilePresetCandidate>.unmodifiable(candidates);
+  }
+
+  _MobilePresetCandidate? _candidateByKey(String key) {
+    for (final candidate in _presetCandidates()) {
+      if (candidate.key == key) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  _MobilePresetCandidate? _activeCandidate() {
+    final activePresetId = controller.session.activePresetId;
+    if (activePresetId == null) {
+      return null;
+    }
+
+    for (final candidate in _presetCandidates()) {
+      if (candidate.sessionPresetId == activePresetId) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  _MobilePresetCandidate? _candidateForSessionPresetId(String? presetId) {
+    if (presetId == null) {
+      return null;
+    }
+
+    for (final candidate in _presetCandidates()) {
+      if (candidate.sessionPresetId == presetId) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _handlePresetSwipe(
+    EditorViewportSwipeDirection direction,
+  ) async {
+    if (_isApplyingPreset || !controller.session.hasImage) {
+      return;
+    }
+
+    switch (direction) {
+      case EditorViewportSwipeDirection.left:
+        if (_presetTrailIndex < _presetTrail.length - 1) {
+          _presetTrailIndex += 1;
+          await _applyTrailEntry();
+        } else {
+          await _advanceToRandomPreset();
+        }
+        return;
+      case EditorViewportSwipeDirection.right:
+        if (_presetTrailIndex <= 0) {
+          return;
+        }
+
+        _presetTrailIndex -= 1;
+        await _applyTrailEntry();
+        return;
+    }
+  }
+
+  Future<void> _advanceToRandomPreset() async {
+    final candidates = _presetCandidates();
+    if (candidates.isEmpty) {
+      return;
+    }
+
+    var pool = candidates
+        .where((candidate) => !_cyclePresetKeys.contains(candidate.key))
+        .toList(growable: false);
+
+    // Finish a shuffled/random cycle before allowing repeats. Unique-viewed
+    // tracking remains intact across cycles for the current image.
+    if (pool.isEmpty) {
+      _cyclePresetKeys.clear();
+      final activeKey =
+          _presetTrailIndex >= 0 && _presetTrailIndex < _presetTrail.length
+          ? _presetTrail[_presetTrailIndex]
+          : null;
+      pool = candidates
+          .where(
+            (candidate) => candidates.length == 1 || candidate.key != activeKey,
+          )
+          .toList(growable: false);
+    }
+
+    if (pool.isEmpty) {
+      return;
+    }
+
+    final candidate = pool[_random.nextInt(pool.length)];
+
+    if (_presetTrailIndex < _presetTrail.length - 1) {
+      _presetTrail.removeRange(_presetTrailIndex + 1, _presetTrail.length);
+    }
+
+    _presetTrail.add(candidate.key);
+    _presetTrailIndex = _presetTrail.length - 1;
+    _visitedPresetKeys.add(candidate.key);
+    _cyclePresetKeys.add(candidate.key);
+
+    if (mounted) {
+      setState(() {});
+    }
+
+    await _applyCandidate(candidate);
+  }
+
+  Future<void> _applyTrailEntry() async {
+    if (_presetTrailIndex < 0 || _presetTrailIndex >= _presetTrail.length) {
+      return;
+    }
+
+    final candidate = _candidateByKey(_presetTrail[_presetTrailIndex]);
+    if (candidate == null) {
+      return;
+    }
+
+    await _applyCandidate(candidate);
+  }
+
+  Future<void> _applyCandidate(_MobilePresetCandidate candidate) async {
+    final sourceImagePath = controller.session.sourceImagePath;
+    if (sourceImagePath == null) {
+      return;
+    }
+
+    final generation = ++_applyGeneration;
+
+    setState(() {
+      _isApplyingPreset = true;
+    });
+
+    try {
+      final localRecord = candidate.localRecord;
+      if (localRecord != null) {
+        controller.applyPreset(
+          presetId: localRecord.libraryId,
+          presetName: localRecord.preset.name,
+          adjustments: PresetAdjustmentMapper.toImageAdjustments(
+            localRecord.preset.adjustments,
+          ),
+        );
+        return;
+      }
+
+      final item = candidate.remoteItem;
+      final remote = presetRemoteController;
+      final library = presetLibraryController;
+
+      if (item == null || remote == null || library == null) {
+        return;
+      }
+
+      final saved = library.remoteRecordFor(
+        sourceId: item.source.id,
+        remotePresetId: item.entry.id,
+      );
+      final savedRevision = saved?.origin.remoteRevision;
+      final preset =
+          saved != null &&
+              savedRevision != null &&
+              savedRevision >= item.entry.revision
+          ? saved.preset
+          : await _loadRemotePresetWithSavedFallback(
+              remote: remote,
+              item: item,
+              saved: saved,
+            );
+
+      if (!mounted ||
+          generation != _applyGeneration ||
+          controller.session.sourceImagePath != sourceImagePath) {
+        return;
+      }
+
+      controller.applyPreset(
+        presetId: candidate.sessionPresetId,
+        presetName: preset.name,
+        adjustments: PresetAdjustmentMapper.toImageAdjustments(
+          preset.adjustments,
+        ),
+      );
+    } on Object catch (error) {
+      if (mounted) {
+        _showMessage('Could not apply filter: $error');
+      }
+    } finally {
+      if (mounted && generation == _applyGeneration) {
+        setState(() {
+          _isApplyingPreset = false;
+        });
+      }
+    }
+  }
+
+  Future<Preset> _loadRemotePresetWithSavedFallback({
+    required PresetRemoteController remote,
+    required RemotePresetCatalogItem item,
+    required PresetRecord? saved,
+  }) async {
+    try {
+      return await remote.presetForUse(item);
+    } on Object {
+      if (saved != null) {
+        return saved.preset;
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _showImageActions() async {
+    if (!controller.session.hasImage) {
+      return;
+    }
+
+    final activeCandidate = _activeCandidate();
+    final hasCustomLook = !controller.session.adjustments.isDefault;
+    final activeRemoteItem = activeCandidate?.remoteItem;
+    final activeLocalRecord = activeCandidate?.localRecord;
+    final savedRemote = activeRemoteItem == null
+        ? null
+        : presetLibraryController?.remoteRecordFor(
+            sourceId: activeRemoteItem.source.id,
+            remotePresetId: activeRemoteItem.entry.id,
+          );
+    final remoteIsSaved =
+        savedRemote != null &&
+        (savedRemote.origin.remoteRevision ?? 0) >=
+            activeRemoteItem!.entry.revision;
+    final filterAlreadySaved = activeLocalRecord != null || remoteIsSaved;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: Text(
+                    activeCandidate?.name ?? 'Current image',
+                    style: AppTypography.title,
+                  ),
+                  subtitle: Text(
+                    '${_visitedPresetKeys.length} of '
+                    '${_presetCandidates().length} filters viewed',
+                    style: AppTypography.bodyMuted,
+                  ),
+                ),
+                ListTile(
+                  key: const ValueKey('mobile-image-action-save-image'),
+                  leading: const Icon(Icons.file_download_outlined),
+                  title: const Text('Save image'),
+                  enabled: widget.onExportImage != null && !widget.isExporting,
+                  onTap: widget.onExportImage == null || widget.isExporting
+                      ? null
+                      : () {
+                          Navigator.of(sheetContext).pop();
+                          unawaited(widget.onExportImage!());
+                        },
+                ),
+                ListTile(
+                  key: const ValueKey('mobile-image-action-save-filter'),
+                  leading: Icon(
+                    filterAlreadySaved ? Icons.bookmark : Icons.bookmark_border,
+                  ),
+                  title: Text(
+                    filterAlreadySaved ? 'Filter saved' : 'Save filter',
+                  ),
+                  enabled:
+                      !filterAlreadySaved &&
+                      (activeCandidate != null || hasCustomLook),
+                  onTap:
+                      filterAlreadySaved ||
+                          (activeCandidate == null && !hasCustomLook)
+                      ? null
+                      : () {
+                          Navigator.of(sheetContext).pop();
+                          unawaited(_saveActiveFilter(activeCandidate));
+                        },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _saveActiveFilter(_MobilePresetCandidate? candidate) async {
+    final library = presetLibraryController;
+    if (library == null) {
+      return;
+    }
+
+    final remoteItem = candidate?.remoteItem;
+    final remote = presetRemoteController;
+
+    if (remoteItem != null && remote != null) {
+      try {
+        await remote.save(remoteItem, libraryController: library);
+        if (mounted) {
+          setState(() {});
+          _showMessage('${remoteItem.entry.name} saved for offline use.');
+        }
+      } on Object catch (error) {
+        if (mounted) {
+          _showMessage('Could not save filter: $error');
+        }
+      }
+      return;
+    }
+
+    if (candidate?.localRecord != null) {
+      _showMessage('This filter is already saved.');
+      return;
+    }
+
+    await _saveCurrentAdjustmentsAsFilter();
+  }
+
+  Future<void> _saveCurrentAdjustmentsAsFilter() async {
+    final library = presetLibraryController;
+    if (library == null) {
+      return;
+    }
+
+    final nameController = TextEditingController(text: 'My filter');
+
+    try {
+      final name = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Save filter'),
+            content: TextField(
+              key: const ValueKey('mobile-save-filter-name'),
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Name'),
+              onSubmitted: (value) {
+                final normalized = value.trim();
+                if (normalized.isNotEmpty) {
+                  Navigator.of(dialogContext).pop(normalized);
+                }
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final normalized = nameController.text.trim();
+                  if (normalized.isNotEmpty) {
+                    Navigator.of(dialogContext).pop(normalized);
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (!mounted || name == null) {
+        return;
+      }
+
+      await library.saveCurrent(
+        name: name,
+        adjustments: controller.session.adjustments,
+      );
+
+      if (mounted) {
+        _showMessage('$name saved.');
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        _showMessage('Could not save filter: $error');
+      }
+    } finally {
+      nameController.dispose();
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,12 +690,15 @@ class MobileEditorShell extends StatelessWidget {
                   IconButton(
                     key: const ValueKey('mobile-export'),
                     tooltip: 'Export',
-                    onPressed: hasImage && !isExporting && onExportImage != null
+                    onPressed:
+                        hasImage &&
+                            !widget.isExporting &&
+                            widget.onExportImage != null
                         ? () {
-                            unawaited(onExportImage!());
+                            unawaited(widget.onExportImage!());
                           }
                         : null,
-                    icon: isExporting
+                    icon: widget.isExporting
                         ? const SizedBox.square(
                             dimension: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
@@ -115,24 +737,74 @@ class MobileEditorShell extends StatelessWidget {
       body: AnimatedBuilder(
         animation: controller,
         builder: (context, _) {
+          final activeCandidate = _candidateForSessionPresetId(
+            controller.session.activePresetId,
+          );
+
           return ColoredBox(
             color: AppColors.canvas,
-            child: EditorImageViewport(
-              sourceImagePath: controller.session.sourceImagePath,
-              adjustments: controller.previewAdjustments,
-              transform: controller.session.transform,
-              crop: controller.session.crop,
-              onImportImage: onImportImage,
-              isImporting: isImporting,
-              compactZoomControls: true,
-              topAction: BeforeAfterButton(
-                key: const ValueKey('mobile-before-after'),
-                enabled: controller.canCompareBefore,
-                isShowingBefore: controller.isShowingBefore,
-                onPreviewStart: controller.beginBeforePreview,
-                onPreviewEnd: controller.endBeforePreview,
-                compact: true,
-              ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                EditorImageViewport(
+                  sourceImagePath: controller.session.sourceImagePath,
+                  adjustments: controller.previewAdjustments,
+                  transform: controller.session.transform,
+                  crop: controller.session.crop,
+                  onImportImage: widget.onImportImage,
+                  isImporting: widget.isImporting,
+                  compactZoomControls: true,
+                  contentPadding: EdgeInsets.zero,
+                  imageFit: BoxFit.fitWidth,
+                  onTap: controller.session.hasImage ? _showImageActions : null,
+                  onHorizontalSwipe: controller.session.hasImage
+                      ? (direction) {
+                          unawaited(_handlePresetSwipe(direction));
+                        }
+                      : null,
+                  topAction: BeforeAfterButton(
+                    key: const ValueKey('mobile-before-after'),
+                    enabled: controller.canCompareBefore,
+                    isShowingBefore: controller.isShowingBefore,
+                    onPreviewStart: controller.beginBeforePreview,
+                    onPreviewEnd: controller.endBeforePreview,
+                    compact: true,
+                  ),
+                ),
+                if (controller.session.hasImage &&
+                    (activeCandidate != null || _isApplyingPreset))
+                  Positioned(
+                    key: const ValueKey('mobile-active-filter-label'),
+                    left: AppSpacing.md,
+                    right: AppSpacing.md,
+                    bottom: AppSpacing.xxl + AppSpacing.sm,
+                    child: IgnorePointer(
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface.withValues(alpha: 0.88),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Text(
+                            _isApplyingPreset
+                                ? 'Applying filter…'
+                                : '${activeCandidate!.name}  ·  '
+                                      '${_visitedPresetKeys.length}/'
+                                      '${_presetCandidates().length} viewed',
+                            style: AppTypography.bodyMuted,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           );
         },
@@ -179,6 +851,41 @@ class MobileEditorShell extends StatelessWidget {
       },
     );
   }
+}
+
+class _MobilePresetCandidate {
+  const _MobilePresetCandidate._({
+    required this.key,
+    required this.sessionPresetId,
+    required this.name,
+    this.remoteItem,
+    this.localRecord,
+  });
+
+  factory _MobilePresetCandidate.remote(RemotePresetCatalogItem item) {
+    final sessionPresetId = 'remote:${item.source.id}:${item.entry.id}';
+    return _MobilePresetCandidate._(
+      key: sessionPresetId,
+      sessionPresetId: sessionPresetId,
+      name: item.entry.name,
+      remoteItem: item,
+    );
+  }
+
+  factory _MobilePresetCandidate.local(PresetRecord record) {
+    return _MobilePresetCandidate._(
+      key: 'library:${record.libraryId}',
+      sessionPresetId: record.libraryId,
+      name: record.preset.name,
+      localRecord: record,
+    );
+  }
+
+  final String key;
+  final String sessionPresetId;
+  final String name;
+  final RemotePresetCatalogItem? remoteItem;
+  final PresetRecord? localRecord;
 }
 
 class _MobileToolBar extends StatelessWidget {

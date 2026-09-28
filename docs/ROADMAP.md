@@ -135,6 +135,11 @@
 - [x] Apply remote presets immediately on click without saving them first
 - [x] Save remote presets explicitly for offline use
 - [x] Keep desktop History independently collapsible in the Library sidebar
+- [x] Fit mobile editor images to the available screen width
+- [x] Start each newly opened mobile image with a random preset
+- [x] Add gesture-driven mobile preset discovery with previous/forward trail navigation
+- [x] Track unique filters viewed and record every applied preset in editor History
+- [x] Tap the mobile image for Save image / Save filter actions
 
 ## Settings backlog
 

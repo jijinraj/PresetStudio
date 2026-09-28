@@ -21,6 +21,7 @@ class EditorCropPreview extends StatefulWidget {
     required this.transform,
     required this.crop,
     this.filterQuality = FilterQuality.medium,
+    this.uncroppedFit = BoxFit.contain,
     this.errorBuilder,
     super.key,
   });
@@ -30,6 +31,7 @@ class EditorCropPreview extends StatefulWidget {
   final ImageTransform transform;
   final CropState crop;
   final FilterQuality filterQuality;
+  final BoxFit uncroppedFit;
   final ImageErrorWidgetBuilder? errorBuilder;
 
   @override
@@ -123,7 +125,7 @@ class _EditorCropPreviewState extends State<EditorCropPreview> {
         sourceImagePath: widget.sourceImagePath,
         adjustments: widget.adjustments,
         transform: widget.transform,
-        fit: BoxFit.contain,
+        fit: widget.uncroppedFit,
         filterQuality: widget.filterQuality,
         errorBuilder: widget.errorBuilder,
       );

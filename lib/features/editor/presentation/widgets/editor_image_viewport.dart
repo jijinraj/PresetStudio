@@ -12,6 +12,8 @@ import '../../domain/image_transform.dart';
 import 'editor_crop_preview.dart';
 import 'editor_viewport_controller.dart';
 
+enum EditorViewportSwipeDirection { left, right }
+
 class EditorImageViewport extends StatefulWidget {
   const EditorImageViewport({
     required this.sourceImagePath,
@@ -27,6 +29,10 @@ class EditorImageViewport extends StatefulWidget {
     this.showChangeImageAction = true,
     this.showZoomControls = true,
     this.viewportLabel,
+    this.contentPadding = const EdgeInsets.all(AppSpacing.lg),
+    this.imageFit = BoxFit.contain,
+    this.onTap,
+    this.onHorizontalSwipe,
     super.key,
   });
 
@@ -64,6 +70,20 @@ class EditorImageViewport extends StatefulWidget {
 
   /// Optional small label shown in the top-left of the loaded viewport.
   final String? viewportLabel;
+
+  /// Padding around the rendered image inside the viewport.
+  final EdgeInsetsGeometry contentPadding;
+
+  /// Fit used for an uncropped image. Crop compositions retain their own
+  /// geometry so a committed crop remains exact.
+  final BoxFit imageFit;
+
+  /// Optional single-tap action for the loaded image.
+  final VoidCallback? onTap;
+
+  /// Optional touch-swipe action. Only fires while the viewport is fitted so
+  /// zoomed image panning keeps normal direct-manipulation behavior.
+  final ValueChanged<EditorViewportSwipeDirection>? onHorizontalSwipe;
 
   @override
   State<EditorImageViewport> createState() => _EditorImageViewportState();
@@ -136,6 +156,10 @@ class _EditorImageViewportState extends State<EditorImageViewport> {
       showChangeImageAction: widget.showChangeImageAction,
       showZoomControls: widget.showZoomControls,
       viewportLabel: widget.viewportLabel,
+      contentPadding: widget.contentPadding,
+      imageFit: widget.imageFit,
+      onTap: widget.onTap,
+      onHorizontalSwipe: widget.onHorizontalSwipe,
     );
   }
 }
@@ -198,6 +222,10 @@ class _LoadedViewport extends StatefulWidget {
     required this.showChangeImageAction,
     required this.showZoomControls,
     required this.viewportLabel,
+    required this.contentPadding,
+    required this.imageFit,
+    required this.onTap,
+    required this.onHorizontalSwipe,
   });
 
   final String sourceImagePath;
@@ -216,6 +244,20 @@ class _LoadedViewport extends StatefulWidget {
   final bool showZoomControls;
   final String? viewportLabel;
 
+  /// Padding around the rendered image inside the viewport.
+  final EdgeInsetsGeometry contentPadding;
+
+  /// Fit used for an uncropped image. Crop compositions retain their own
+  /// geometry so a committed crop remains exact.
+  final BoxFit imageFit;
+
+  /// Optional single-tap action for the loaded image.
+  final VoidCallback? onTap;
+
+  /// Optional touch-swipe action. Only fires while the viewport is fitted so
+  /// zoomed image panning keeps normal direct-manipulation behavior.
+  final ValueChanged<EditorViewportSwipeDirection>? onHorizontalSwipe;
+
   @override
   State<_LoadedViewport> createState() => _LoadedViewportState();
 }
@@ -223,6 +265,10 @@ class _LoadedViewport extends StatefulWidget {
 class _LoadedViewportState extends State<_LoadedViewport> {
   Offset _doubleTapPosition = Offset.zero;
   int? _desktopPanPointer;
+  int? _touchSwipePointer;
+  Offset? _touchSwipeStart;
+  Offset? _touchSwipeLatest;
+  int _activeTouchPointers = 0;
 
   bool get _usesCustomDesktopMousePan {
     if (!widget.invertDesktopVerticalPan) {
@@ -237,7 +283,21 @@ class _LoadedViewportState extends State<_LoadedViewport> {
     };
   }
 
-  void _handleDesktopPointerDown(PointerDownEvent event) {
+  void _handlePointerDown(PointerDownEvent event) {
+    if (event.kind == PointerDeviceKind.touch) {
+      _activeTouchPointers += 1;
+
+      if (_activeTouchPointers == 1 &&
+          widget.onHorizontalSwipe != null &&
+          widget.viewportController.isFitted) {
+        _touchSwipePointer = event.pointer;
+        _touchSwipeStart = event.localPosition;
+        _touchSwipeLatest = event.localPosition;
+      } else {
+        _cancelTouchSwipe();
+      }
+    }
+
     if (!_usesCustomDesktopMousePan ||
         event.kind != PointerDeviceKind.mouse ||
         event.buttons & kPrimaryMouseButton == 0 ||
@@ -248,7 +308,16 @@ class _LoadedViewportState extends State<_LoadedViewport> {
     _desktopPanPointer = event.pointer;
   }
 
-  void _handleDesktopPointerMove(PointerMoveEvent event, Size viewportSize) {
+  void _handlePointerMove(PointerMoveEvent event, Size viewportSize) {
+    if (event.pointer == _touchSwipePointer &&
+        event.kind == PointerDeviceKind.touch) {
+      if (!widget.viewportController.isFitted) {
+        _cancelTouchSwipe();
+      } else {
+        _touchSwipeLatest = event.localPosition;
+      }
+    }
+
     if (_desktopPanPointer != event.pointer ||
         event.kind != PointerDeviceKind.mouse ||
         event.buttons & kPrimaryMouseButton == 0) {
@@ -263,10 +332,54 @@ class _LoadedViewportState extends State<_LoadedViewport> {
     );
   }
 
-  void _handleDesktopPointerEnd(PointerEvent event) {
+  void _handlePointerEnd(PointerEvent event) {
     if (_desktopPanPointer == event.pointer) {
       _desktopPanPointer = null;
     }
+
+    if (event.kind == PointerDeviceKind.touch) {
+      if (_touchSwipePointer == event.pointer &&
+          event is PointerUpEvent &&
+          widget.viewportController.isFitted) {
+        _finishTouchSwipe();
+      } else if (_touchSwipePointer == event.pointer) {
+        _cancelTouchSwipe();
+      }
+
+      _activeTouchPointers = (_activeTouchPointers - 1).clamp(0, 10).toInt();
+    }
+  }
+
+  void _finishTouchSwipe() {
+    final start = _touchSwipeStart;
+    final end = _touchSwipeLatest;
+    final callback = widget.onHorizontalSwipe;
+
+    _cancelTouchSwipe();
+
+    if (start == null || end == null || callback == null) {
+      return;
+    }
+
+    final delta = end - start;
+    const minimumSwipeDistance = 56.0;
+
+    if (delta.dx.abs() < minimumSwipeDistance ||
+        delta.dx.abs() <= delta.dy.abs() * 1.15) {
+      return;
+    }
+
+    callback(
+      delta.dx < 0
+          ? EditorViewportSwipeDirection.left
+          : EditorViewportSwipeDirection.right,
+    );
+  }
+
+  void _cancelTouchSwipe() {
+    _touchSwipePointer = null;
+    _touchSwipeStart = null;
+    _touchSwipeLatest = null;
   }
 
   @override
@@ -286,15 +399,16 @@ class _LoadedViewportState extends State<_LoadedViewport> {
             Listener(
               key: const ValueKey('editor-viewport-pointer-surface'),
               behavior: HitTestBehavior.opaque,
-              onPointerDown: _handleDesktopPointerDown,
+              onPointerDown: _handlePointerDown,
               onPointerMove: (event) {
-                _handleDesktopPointerMove(event, viewportSize);
+                _handlePointerMove(event, viewportSize);
               },
-              onPointerUp: _handleDesktopPointerEnd,
-              onPointerCancel: _handleDesktopPointerEnd,
+              onPointerUp: _handlePointerEnd,
+              onPointerCancel: _handlePointerEnd,
               child: GestureDetector(
                 key: const ValueKey('editor-viewport-gesture-surface'),
                 behavior: HitTestBehavior.opaque,
+                onTap: widget.onTap,
                 onDoubleTapDown: (details) {
                   _doubleTapPosition = details.localPosition;
                 },
@@ -322,7 +436,7 @@ class _LoadedViewportState extends State<_LoadedViewport> {
                     width: viewportSize.width,
                     height: viewportSize.height,
                     child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      padding: widget.contentPadding,
                       child: Center(
                         child: EditorCropPreview(
                           sourceImagePath: widget.sourceImagePath,
@@ -330,6 +444,7 @@ class _LoadedViewportState extends State<_LoadedViewport> {
                           transform: widget.transform,
                           crop: widget.crop,
                           filterQuality: FilterQuality.medium,
+                          uncroppedFit: widget.imageFit,
                           errorBuilder: (context, error, stackTrace) {
                             return _ImageLoadError(
                               onImportImage: widget.onImportImage,
