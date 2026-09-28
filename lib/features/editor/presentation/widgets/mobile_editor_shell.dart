@@ -675,8 +675,13 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
           const topChromeHeight = 56.0;
           const bottomChromeHeight = 84.0;
           final bodyTopPadding = safeTop + topChromeHeight + AppSpacing.sm;
-          final bodyBottomPadding =
-              safeBottom + bottomChromeHeight + AppSpacing.md;
+          // The bottom dock is floating chrome, so the image workspace is
+          // allowed to continue behind it. Reserving the full dock height
+          // made portrait photos height-bound and therefore narrower than the
+          // device even though horizontal canvas padding was already zero.
+          // Keep only safe-area breathing room here so ordinary portrait
+          // ratios can use the full device width without cropping.
+          final bodyBottomPadding = safeBottom + AppSpacing.sm;
           final activeCandidate = _candidateForSessionPresetId(
             controller.session.activePresetId,
           );
@@ -688,6 +693,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
               children: [
                 Positioned.fill(
                   child: Padding(
+                    key: const ValueKey('mobile-editor-image-workspace'),
                     padding: EdgeInsets.only(
                       top: bodyTopPadding,
                       bottom: bodyBottomPadding,

@@ -53,6 +53,14 @@ void main() {
     expect(find.byKey(const ValueKey('mobile-bottom-dock')), findsOneWidget);
     expect(find.byType(AppBar), findsNothing);
 
+    final imageWorkspace = tester.widget<Padding>(
+      find.byKey(const ValueKey('mobile-editor-image-workspace')),
+    );
+    final workspacePadding = imageWorkspace.padding as EdgeInsets;
+    expect(workspacePadding.bottom, AppSpacing.sm);
+    expect(workspacePadding.left, 0);
+    expect(workspacePadding.right, 0);
+
     final viewport = tester.widget<EditorImageViewport>(
       find.byType(EditorImageViewport),
     );
