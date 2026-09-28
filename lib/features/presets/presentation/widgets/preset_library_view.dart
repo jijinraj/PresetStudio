@@ -209,7 +209,7 @@ class PresetLibraryView extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Text(
                 remote.errorMessage != null || remote.sourceErrors.isNotEmpty
-                    ? 'Remote presets are unavailable. Installed presets '
+                    ? 'Remote presets are unavailable. Saved presets '
                           'still work offline.'
                     : 'No remote presets available.',
                 style: AppTypography.bodyMuted,
@@ -262,49 +262,106 @@ class PresetLibraryView extends StatelessWidget {
         installed != null &&
         installedRevision != null &&
         installedRevision < item.entry.revision;
-    final isInstalling = remote.isInstalling(item);
+    final isSaving = remote.isSaving(item);
     final sourceImagePath = editorController.session.sourceImagePath;
 
     return _RemotePresetTile(
       item: item,
       remoteController: remote,
-      installedPreset: installed?.preset,
+      installedPreset: isCurrent ? installed.preset : null,
       sourceImagePath: sourceImagePath,
       editorController: editorController,
       state: isCurrent
-          ? _RemotePresetState.installed
+          ? _RemotePresetState.saved
           : isUpdate
           ? _RemotePresetState.updateAvailable
           : _RemotePresetState.available,
-      isBusy: isInstalling,
-      onInstall: isCurrent || isInstalling
+      isBusy: isSaving,
+      enabled: editorController.session.hasImage,
+      isActive:
+          editorController.session.activePresetId ==
+          _remotePresetSessionId(item),
+      onApply: () => _applyRemotePreset(context, item),
+      onSave: isCurrent || isSaving
           ? null
-          : () => _installRemotePreset(context, item),
+          : () => _saveRemotePreset(context, item),
     );
   }
 
-  Future<void> _installRemotePreset(
+  Future<void> _applyRemotePreset(
     BuildContext context,
     RemotePresetCatalogItem item,
   ) async {
     final remote = remoteController;
 
-    if (remote == null) {
+    if (remote == null || !editorController.session.hasImage) {
       return;
     }
 
     try {
-      final record = await remote.install(
+      final saved = libraryController.remoteRecordFor(
+        sourceId: item.source.id,
+        remotePresetId: item.entry.id,
+      );
+      final savedRevision = saved?.origin.remoteRevision;
+      Preset preset;
+
+      if (saved != null &&
+          savedRevision != null &&
+          savedRevision >= item.entry.revision) {
+        preset = saved.preset;
+      } else {
+        try {
+          preset = await remote.presetForUse(item);
+        } on Object {
+          if (saved == null) {
+            rethrow;
+          }
+          preset = saved.preset;
+        }
+      }
+
+      if (!context.mounted) {
+        return;
+      }
+
+      editorController.applyPreset(
+        presetId: _remotePresetSessionId(item),
+        presetName: preset.name,
+        adjustments: PresetAdjustmentMapper.toImageAdjustments(
+          preset.adjustments,
+        ),
+      );
+      onPresetApplied?.call();
+    } on Object catch (error) {
+      if (context.mounted) {
+        _showMessage(context, 'Could not apply preset: $error');
+      }
+    }
+  }
+
+  Future<void> _saveRemotePreset(
+    BuildContext context,
+    RemotePresetCatalogItem item,
+  ) async {
+    final remote = remoteController;
+
+    if (remote == null || remote.isSaving(item)) {
+      return;
+    }
+
+    try {
+      final record = await remote.save(
         item,
         libraryController: libraryController,
       );
 
       if (context.mounted) {
-        _showMessage(context, 'Installed ${record.preset.name}.');
+        _showMessage(context, 'Saved ${record.preset.name} for offline use.');
       }
     } on Object catch (error) {
       if (context.mounted) {
-        _showMessage(context, 'Could not install preset: $error');
+        _showMessage(context, 'Could not save preset: $error');
       }
     }
   }
@@ -542,7 +599,7 @@ class _RemoteSectionHeader extends StatelessWidget {
   }
 }
 
-enum _RemotePresetState { available, updateAvailable, installed }
+enum _RemotePresetState { available, updateAvailable, saved }
 
 class _RemotePresetTile extends StatelessWidget {
   const _RemotePresetTile({
@@ -553,7 +610,10 @@ class _RemotePresetTile extends StatelessWidget {
     required this.editorController,
     required this.state,
     required this.isBusy,
-    required this.onInstall,
+    required this.enabled,
+    required this.isActive,
+    required this.onApply,
+    required this.onSave,
   });
 
   final RemotePresetCatalogItem item;
@@ -563,14 +623,17 @@ class _RemotePresetTile extends StatelessWidget {
   final EditorController editorController;
   final _RemotePresetState state;
   final bool isBusy;
-  final VoidCallback? onInstall;
+  final bool enabled;
+  final bool isActive;
+  final VoidCallback onApply;
+  final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
     final buttonLabel = switch (state) {
-      _RemotePresetState.available => 'Install',
-      _RemotePresetState.updateAvailable => 'Update',
-      _RemotePresetState.installed => 'Installed',
+      _RemotePresetState.available => 'Save',
+      _RemotePresetState.updateAvailable => 'Save latest',
+      _RemotePresetState.saved => 'Saved',
     };
     final description = item.entry.description;
     final tags = item.entry.tags;
@@ -581,76 +644,86 @@ class _RemotePresetTile extends StatelessWidget {
         ? Future<Preset?>.value(installedPreset)
         : remoteController.presetForPreview(item);
 
-    return Container(
-      key: ValueKey('preset-remote-${item.source.id}-${item.entry.id}'),
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
+    return Material(
+      color: isActive ? AppColors.accentMuted : Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        key: ValueKey('preset-remote-${item.source.id}-${item.entry.id}'),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _RemotePresetPreview(
-            key: ValueKey(
-              'preset-remote-preview-${item.source.id}-${item.entry.id}',
+        onTap: enabled ? onApply : null,
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isActive ? AppColors.accent : AppColors.border,
             ),
-            remoteFuture: remotePreviewFuture,
-            livePreviewFuture: livePreviewFuture,
-            sourceImagePath: sourceImagePath,
-            editorController: editorController,
-            hasDeclaredPreview: item.entry.previewPath != null,
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            item.entry.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.body,
-          ),
-          Text(
-            item.entry.author == null
-                ? item.source.name
-                : '${item.entry.author} · ${item.source.name}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.bodyMuted,
-          ),
-          if (description != null) ...[
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodyMuted,
-            ),
-          ],
-          if (tags.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              _tagSummary(tags),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodyMuted,
-            ),
-          ],
-          const SizedBox(height: AppSpacing.xs),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              key: ValueKey(
-                'preset-remote-install-${item.source.id}-${item.entry.id}',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _RemotePresetPreview(
+                key: ValueKey(
+                  'preset-remote-preview-${item.source.id}-${item.entry.id}',
+                ),
+                remoteFuture: remotePreviewFuture,
+                livePreviewFuture: livePreviewFuture,
+                sourceImagePath: sourceImagePath,
+                editorController: editorController,
+                hasDeclaredPreview: item.entry.previewPath != null,
               ),
-              onPressed: onInstall,
-              child: isBusy
-                  ? const SizedBox.square(
-                      dimension: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(buttonLabel),
-            ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                item.entry.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.body,
+              ),
+              Text(
+                item.entry.author == null
+                    ? item.source.name
+                    : '${item.entry.author} · ${item.source.name}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodyMuted,
+              ),
+              if (description != null) ...[
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodyMuted,
+                ),
+              ],
+              if (tags.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  _tagSummary(tags),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodyMuted,
+                ),
+              ],
+              const SizedBox(height: AppSpacing.xs),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  key: ValueKey(
+                    'preset-remote-save-${item.source.id}-${item.entry.id}',
+                  ),
+                  onPressed: onSave,
+                  child: isBusy
+                      ? const SizedBox.square(
+                          dimension: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(buttonLabel),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -892,10 +965,14 @@ class _PresetTile extends StatelessWidget {
         return 'My preset';
       case PresetOriginType.remoteInstalled:
         return record.origin.sourceId == null
-            ? 'Installed'
-            : 'Installed · ${record.origin.sourceId}';
+            ? 'Saved'
+            : 'Saved · ${record.origin.sourceId}';
     }
   }
+}
+
+String _remotePresetSessionId(RemotePresetCatalogItem item) {
+  return 'remote:${item.source.id}:${item.entry.id}';
 }
 
 enum _PresetMenuAction { export, rename, delete }

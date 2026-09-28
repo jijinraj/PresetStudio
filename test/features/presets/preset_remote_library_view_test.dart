@@ -17,7 +17,7 @@ import 'package:presetstudio/features/presets/presentation/widgets/preset_librar
 import 'package:presetstudio/theme/preset_studio_theme.dart';
 
 void main() {
-  testWidgets('discover section installs a remote preset for offline use', (
+  testWidgets('discover preset applies on click and saves only on request', (
     tester,
   ) async {
     final source = PresetRemoteSource(
@@ -57,7 +57,7 @@ void main() {
       catalogCacheLoader: () async => _MemoryCatalogCache(),
       gateway: _MemoryRemoteGateway(catalog: catalog, preset: preset),
     );
-    final editor = EditorController();
+    final editor = EditorController()..setSourceImage('missing-test-image.jpg');
 
     await library.initialize();
     await remote.initialize();
@@ -90,10 +90,20 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('film · warm · portrait'), findsOneWidget);
-    expect(find.text('Install'), findsOneWidget);
+    expect(find.text('Save'), findsOneWidget);
 
     await tester.tap(
-      find.byKey(const ValueKey('preset-remote-install-default-warm-film')),
+      find.byKey(const ValueKey('preset-remote-default-warm-film')),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(editor.session.adjustments.temperature, 10);
+    expect(editor.history.last.label, 'Preset: Warm Film');
+    expect(library.records, isEmpty);
+
+    await tester.tap(
+      find.byKey(const ValueKey('preset-remote-save-default-warm-film')),
     );
     await tester.pump();
     await tester.pump();
@@ -103,7 +113,7 @@ void main() {
       library.records.single.origin.type,
       PresetOriginType.remoteInstalled,
     );
-    expect(find.text('Installed'), findsOneWidget);
+    expect(find.text('Saved'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     library.dispose();

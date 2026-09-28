@@ -9,7 +9,7 @@ import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../../presets/application/preset_library_controller.dart';
 import '../../../presets/application/preset_remote_controller.dart';
-import '../../../presets/presentation/widgets/preset_library_view.dart';
+import '../../../presets/presentation/widgets/preset_bottom_tray.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
@@ -54,6 +54,7 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
 
   bool _isSideBySide = false;
   bool _isCropping = false;
+  bool _isPresetTrayExpanded = true;
 
   @override
   void initState() {
@@ -128,11 +129,7 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
                   width: AppDimensions.libraryPanelWidth,
                   child: IgnorePointer(
                     ignoring: _isCropping,
-                    child: _LibraryPanel(
-                      controller: controller,
-                      presetLibraryController: widget.presetLibraryController,
-                      presetRemoteController: widget.presetRemoteController,
-                    ),
+                    child: _LibraryPanel(controller: controller),
                   ),
                 ),
                 const VerticalDivider(width: 1),
@@ -183,6 +180,22 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
               ],
             ),
           ),
+          if (!_isCropping && widget.presetLibraryController != null) ...[
+            const Divider(height: 1),
+            _DesktopPresetTray(
+              expanded: _isPresetTrayExpanded,
+              onToggle: () {
+                setState(() {
+                  _isPresetTrayExpanded = !_isPresetTrayExpanded;
+                });
+              },
+              child: PresetBottomTray(
+                libraryController: widget.presetLibraryController!,
+                remoteController: widget.presetRemoteController,
+                editorController: controller,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -339,22 +352,15 @@ class _DesktopTopBar extends StatelessWidget {
 }
 
 class _LibraryPanel extends StatefulWidget {
-  const _LibraryPanel({
-    required this.controller,
-    this.presetLibraryController,
-    this.presetRemoteController,
-  });
+  const _LibraryPanel({required this.controller});
 
   final EditorController controller;
-  final PresetLibraryController? presetLibraryController;
-  final PresetRemoteController? presetRemoteController;
 
   @override
   State<_LibraryPanel> createState() => _LibraryPanelState();
 }
 
 class _LibraryPanelState extends State<_LibraryPanel> {
-  bool _presetsExpanded = true;
   bool _historyExpanded = true;
 
   EditorController get controller => widget.controller;
@@ -376,40 +382,6 @@ class _LibraryPanelState extends State<_LibraryPanel> {
             children: [
               const Text('Library', style: AppTypography.title),
               const SizedBox(height: AppSpacing.lg),
-              _DesktopPresetsHeader(
-                isExpanded: _presetsExpanded,
-                onToggleExpanded: () {
-                  setState(() {
-                    _presetsExpanded = !_presetsExpanded;
-                  });
-                },
-              ),
-              if (_presetsExpanded) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Expanded(
-                  flex: _historyExpanded ? 3 : 1,
-                  child: KeyedSubtree(
-                    key: const ValueKey('desktop-presets-body'),
-                    child: widget.presetLibraryController == null
-                        ? const Align(
-                            alignment: Alignment.topLeft,
-                            child: Text(
-                              'Your preset library will appear here.',
-                              style: AppTypography.bodyMuted,
-                            ),
-                          )
-                        : PresetLibraryView(
-                            libraryController: widget.presetLibraryController!,
-                            remoteController: widget.presetRemoteController,
-                            editorController: controller,
-                            showTitle: false,
-                          ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.md),
-              const Divider(height: 1),
-              const SizedBox(height: AppSpacing.md),
               _DesktopHistoryHeader(
                 isExpanded: _historyExpanded,
                 editCount: editCount,
@@ -425,7 +397,6 @@ class _LibraryPanelState extends State<_LibraryPanel> {
               if (_historyExpanded) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Expanded(
-                  flex: _presetsExpanded ? 2 : 1,
                   child: EditorHistoryList(
                     controller: controller,
                     allowEditToggles: true,
@@ -482,41 +453,83 @@ class _LibraryPanelState extends State<_LibraryPanel> {
   }
 }
 
-class _DesktopPresetsHeader extends StatelessWidget {
-  const _DesktopPresetsHeader({
-    required this.isExpanded,
-    required this.onToggleExpanded,
+class _DesktopPresetTray extends StatelessWidget {
+  const _DesktopPresetTray({
+    required this.expanded,
+    required this.onToggle,
+    required this.child,
   });
 
-  final bool isExpanded;
-  final VoidCallback onToggleExpanded;
+  static const double _collapsedHeight = 42;
+  static const double _expandedHeight = 248;
+
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      key: const ValueKey('desktop-presets-toggle'),
-      borderRadius: BorderRadius.circular(4),
-      onTap: onToggleExpanded,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-        child: Row(
+    return AnimatedContainer(
+      key: const ValueKey('desktop-presets-tray'),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      height: expanded ? _expandedHeight : _collapsedHeight,
+      color: AppColors.surface,
+      child: ClipRect(
+        child: Column(
           children: [
-            Icon(
-              isExpanded
-                  ? Icons.keyboard_arrow_down
-                  : Icons.keyboard_arrow_right,
-              size: 16,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(width: AppSpacing.xxs),
-            const Expanded(
-              child: Text(
-                'Presets',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.label,
+            Material(
+              color: AppColors.surface,
+              child: InkWell(
+                key: const ValueKey('desktop-presets-tray-toggle'),
+                onTap: onToggle,
+                child: SizedBox(
+                  height: _collapsedHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome_outlined,
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        const Text('Presets', style: AppTypography.title),
+                        const Spacer(),
+                        Text(
+                          expanded ? 'Hide' : 'Show',
+                          style: AppTypography.label,
+                        ),
+                        const SizedBox(width: AppSpacing.xxs),
+                        Icon(
+                          expanded
+                              ? Icons.keyboard_arrow_down
+                              : Icons.keyboard_arrow_up,
+                          size: 20,
+                          color: AppColors.textSecondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
+            if (expanded)
+              Expanded(
+                child: Padding(
+                  key: const ValueKey('desktop-presets-tray-body'),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.xs,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                  ),
+                  child: child,
+                ),
+              ),
           ],
         ),
       ),

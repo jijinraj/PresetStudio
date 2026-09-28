@@ -131,7 +131,10 @@
 - [x] Add optional remote preset preview metadata and local preview cache
 - [x] Add remote preset descriptions and tags in Discover
 - [x] Render Discover presets against the currently edited image when available
-- [x] Make desktop Presets and History library sections independently collapsible
+- [x] Move desktop presets from the Library sidebar into a collapsible bottom tray
+- [x] Apply remote presets immediately on click without saving them first
+- [x] Save remote presets explicitly for offline use
+- [x] Keep desktop History independently collapsible in the Library sidebar
 
 ## Settings backlog
 

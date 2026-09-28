@@ -128,6 +128,10 @@ class PresetRemoteController extends ChangeNotifier {
     return _installingKeys.contains(item.key);
   }
 
+  bool isSaving(RemotePresetCatalogItem item) {
+    return isInstalling(item);
+  }
+
   Future<Uint8List?> previewFor(RemotePresetCatalogItem item) {
     if (item.entry.previewPath == null) {
       return Future<Uint8List?>.value(null);
@@ -143,6 +147,28 @@ class PresetRemoteController extends ChangeNotifier {
       key,
       () => _loadPresetForPreview(item),
     );
+  }
+
+  Future<Preset> presetForUse(RemotePresetCatalogItem item) async {
+    final key = _presetPayloadKey(item);
+    final existing = _presetPreviewFutures[key];
+
+    if (existing != null) {
+      final preset = await existing;
+      if (preset != null) {
+        return preset;
+      }
+    }
+
+    try {
+      final preset = await _gateway.fetchPreset(item.source, item.entry);
+      _validateDownloadedPreset(item.entry, preset);
+      _presetPreviewFutures[key] = Future<Preset?>.value(preset);
+      return preset;
+    } on Object {
+      _presetPreviewFutures.remove(key);
+      rethrow;
+    }
   }
 
   Future<void> initialize() async {
@@ -231,28 +257,19 @@ class PresetRemoteController extends ChangeNotifier {
     }
   }
 
-  Future<PresetRecord> install(
+  Future<PresetRecord> save(
     RemotePresetCatalogItem item, {
     required PresetLibraryController libraryController,
   }) async {
     if (_installingKeys.contains(item.key)) {
-      throw const PresetRemoteException(
-        'This preset is already being installed.',
-      );
+      throw const PresetRemoteException('This preset is already being saved.');
     }
 
     _installingKeys.add(item.key);
     _notifyListeners();
 
     try {
-      final previewFuture = _presetPreviewFutures[_presetPayloadKey(item)];
-      final previewPreset = previewFuture == null ? null : await previewFuture;
-      final preset =
-          previewPreset ?? await _gateway.fetchPreset(item.source, item.entry);
-
-      if (previewPreset == null) {
-        _validateDownloadedPreset(item.entry, preset);
-      }
+      final preset = await presetForUse(item);
 
       return await libraryController.installRemote(
         preset: preset,
@@ -264,6 +281,13 @@ class PresetRemoteController extends ChangeNotifier {
       _installingKeys.remove(item.key);
       _notifyListeners();
     }
+  }
+
+  Future<PresetRecord> install(
+    RemotePresetCatalogItem item, {
+    required PresetLibraryController libraryController,
+  }) {
+    return save(item, libraryController: libraryController);
   }
 
   Future<void> addSource(PresetRemoteSource source) async {
