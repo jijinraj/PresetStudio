@@ -18,4 +18,11 @@ class AppDimensions {
   static const double adjustmentsPanelWidth = 260;
 
   static const double mobileBottomBarHeight = 60;
+
+  /// Shared mobile-editor interaction metrics.
+  static const double mobileCompactWidth = 360;
+  static const double mobileCompactHeight = 700;
+  static const double mobileTouchTarget = 44;
+  static const double mobileTopChromeHeight = 56;
+  static const double mobileBottomChromeHeight = 84;
 }

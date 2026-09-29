@@ -12,4 +12,7 @@ class AppRadii {
 
   /// Floating mobile editor contextual-panel radius.
   static const double editorPanel = 22;
+
+  /// Floating mobile editor bottom-dock radius.
+  static const double editorDock = 26;
 }

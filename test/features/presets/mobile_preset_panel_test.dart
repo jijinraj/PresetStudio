@@ -16,6 +16,7 @@ import 'package:presetstudio/features/presets/domain/preset_record.dart';
 import 'package:presetstudio/features/presets/domain/preset_source.dart';
 import 'package:presetstudio/features/presets/presentation/widgets/mobile_preset_panel.dart';
 import 'package:presetstudio/theme/preset_studio_theme.dart';
+import 'package:presetstudio/theme/tokens/app_dimensions.dart';
 
 void main() {
   testWidgets('mobile preset panel uses real tags and applies remote presets', (
@@ -68,6 +69,13 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(EditorCropPreview), findsWidgets);
+    final saveTargetSize = tester.getSize(
+      find.byKey(const ValueKey('mobile-preset-save-default-warm-film')),
+    );
+    expect(
+      saveTargetSize.shortestSide,
+      greaterThanOrEqualTo(AppDimensions.mobileTouchTarget),
+    );
 
     await tester.tap(
       find.byKey(const ValueKey('mobile-preset-remote-default-warm-film')),

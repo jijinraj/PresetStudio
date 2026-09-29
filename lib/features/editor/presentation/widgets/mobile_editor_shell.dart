@@ -727,14 +727,23 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
           final mediaQuery = MediaQuery.of(context);
           final safeTop = mediaQuery.padding.top;
           final safeBottom = mediaQuery.padding.bottom;
-          const topChromeHeight = 56.0;
-          const bottomChromeHeight = 84.0;
-          final contextualPanelMaxHeight = (mediaQuery.size.height * 0.38)
-              .clamp(240.0, 360.0)
-              .toDouble();
+          final isCompactWidth =
+              mediaQuery.size.width < AppDimensions.mobileCompactWidth;
+          final isCompactHeight =
+              mediaQuery.size.height < AppDimensions.mobileCompactHeight;
+          final panelHorizontalInset = isCompactWidth
+              ? AppSpacing.xs
+              : AppSpacing.sm;
+          final chromeHorizontalInset = isCompactWidth
+              ? AppSpacing.sm
+              : AppSpacing.md;
+          final contextualPanelMaxHeight =
+              (mediaQuery.size.height * (isCompactHeight ? 0.42 : 0.38))
+                  .clamp(220.0, 360.0)
+                  .toDouble();
           final bodyTopPadding = _isPrecisionInteractionActive
               ? safeTop + AppSpacing.sm
-              : safeTop + topChromeHeight + AppSpacing.sm;
+              : safeTop + AppDimensions.mobileTopChromeHeight + AppSpacing.sm;
           // The bottom dock is floating chrome, so the image workspace is
           // allowed to continue behind it. Reserving the full dock height
           // made portrait photos height-bound and therefore narrower than the
@@ -809,10 +818,11 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                     ignoring: _isPrecisionInteractionActive,
                     child: AnimatedOpacity(
                       key: const ValueKey('mobile-top-bar-visibility'),
-                      duration: const Duration(milliseconds: 120),
+                      duration: const Duration(milliseconds: 160),
                       opacity: _isPrecisionInteractionActive ? 0 : 1,
                       child: _MobileTopBar(
                         controller: controller,
+                        compact: isCompactWidth,
                         hasImage: controller.session.hasImage,
                         isExporting: widget.isExporting,
                         onImportImage: widget.onImportImage,
@@ -833,7 +843,10 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                     key: const ValueKey('mobile-active-filter-label'),
                     left: AppSpacing.md,
                     right: AppSpacing.md,
-                    bottom: safeBottom + bottomChromeHeight + AppSpacing.xs,
+                    bottom:
+                        safeBottom +
+                        AppDimensions.mobileBottomChromeHeight +
+                        AppSpacing.xs,
                     child: IgnorePointer(
                       child: Center(
                         child: Container(
@@ -849,6 +862,8 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                           child: Text(
                             _isApplyingPreset
                                 ? 'Applying filter…'
+                                : isCompactWidth
+                                ? activeCandidate!.name
                                 : '${activeCandidate!.name}  ·  '
                                       '${_visitedPresetKeys.length}/'
                                       '${_presetCandidates().length} viewed',
@@ -861,9 +876,12 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                     ),
                   ),
                 Positioned(
-                  left: AppSpacing.sm,
-                  right: AppSpacing.sm,
-                  bottom: safeBottom + bottomChromeHeight + AppSpacing.sm,
+                  left: panelHorizontalInset,
+                  right: panelHorizontalInset,
+                  bottom:
+                      safeBottom +
+                      AppDimensions.mobileBottomChromeHeight +
+                      AppSpacing.sm,
                   child: MobileEditorToolPanel(
                     visible: _activeContextPanel != null,
                     title: switch (_activeContextPanel) {
@@ -897,14 +915,14 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                   ),
                 ),
                 Positioned(
-                  left: AppSpacing.md,
-                  right: AppSpacing.md,
+                  left: chromeHorizontalInset,
+                  right: chromeHorizontalInset,
                   bottom: AppSpacing.md,
                   child: IgnorePointer(
                     ignoring: _isPrecisionInteractionActive,
                     child: AnimatedOpacity(
                       key: const ValueKey('mobile-bottom-dock-visibility'),
-                      duration: const Duration(milliseconds: 120),
+                      duration: const Duration(milliseconds: 160),
                       opacity: _isPrecisionInteractionActive ? 0 : 1,
                       child: _MobileToolDock(
                         controller: controller,
@@ -1051,6 +1069,7 @@ class _MobilePresetCandidate {
 class _MobileTopBar extends StatelessWidget {
   const _MobileTopBar({
     required this.controller,
+    required this.compact,
     required this.hasImage,
     required this.isExporting,
     required this.onImportImage,
@@ -1059,6 +1078,7 @@ class _MobileTopBar extends StatelessWidget {
   });
 
   final EditorController controller;
+  final bool compact;
   final bool hasImage;
   final bool isExporting;
   final Future<void> Function() onImportImage;
@@ -1070,23 +1090,34 @@ class _MobileTopBar extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md,
+        padding: EdgeInsets.fromLTRB(
+          compact ? AppSpacing.sm : AppSpacing.md,
           AppSpacing.sm,
-          AppSpacing.md,
+          compact ? AppSpacing.sm : AppSpacing.md,
           0,
         ),
         child: Row(
           children: [
-            Expanded(
-              child: _FloatingActionPill(
+            if (compact)
+              _FloatingIconButton(
                 key: const ValueKey('mobile-top-import'),
                 icon: Icons.add_photo_alternate_outlined,
-                label: hasImage ? 'Change image' : AppConstants.appName,
-                onTap: onImportImage,
+                tooltip: hasImage ? 'Change image' : 'Import image',
+                enabledStyle: true,
+                onPressed: () {
+                  unawaited(onImportImage());
+                },
+              )
+            else
+              Expanded(
+                child: _FloatingActionPill(
+                  key: const ValueKey('mobile-top-import'),
+                  icon: Icons.add_photo_alternate_outlined,
+                  label: hasImage ? 'Change image' : AppConstants.appName,
+                  onTap: onImportImage,
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
+            SizedBox(width: compact ? AppSpacing.xs : AppSpacing.sm),
             _FloatingIconButton(
               key: const ValueKey('mobile-undo'),
               icon: Icons.undo,
@@ -1186,7 +1217,7 @@ class _MobileToolDock extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.xs),
         decoration: BoxDecoration(
           color: AppColors.surface.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(AppRadii.editorDock),
           border: Border.all(color: AppColors.border),
           boxShadow: const [
             BoxShadow(
@@ -1265,7 +1296,7 @@ class _FloatingActionPill extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-          height: 44,
+          height: AppDimensions.mobileTouchTarget,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
@@ -1326,8 +1357,8 @@ class _FloatingIconButton extends StatelessWidget {
           onTap: onPressed,
           borderRadius: BorderRadius.circular(999),
           child: Container(
-            width: 44,
-            height: 44,
+            width: AppDimensions.mobileTouchTarget,
+            height: AppDimensions.mobileTouchTarget,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: AppColors.border),
@@ -1371,45 +1402,50 @@ class _DockButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background = selected
-        ? AppColors.accentMuted
-        : enabled
-        ? AppColors.surfaceElevated
-        : Colors.transparent;
+    final background = selected ? AppColors.accentMuted : Colors.transparent;
     final color = selected
         ? AppColors.accent
         : enabled
-        ? AppColors.textPrimary
+        ? AppColors.textSecondary
         : AppColors.textDisabled;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xxs,
-            vertical: AppSpacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: AppDimensions.iconMd, color: color),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.label.copyWith(color: color),
-              ),
-            ],
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      selected: selected,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            constraints: const BoxConstraints(
+              minHeight: AppDimensions.mobileTouchTarget,
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xxs,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: AppDimensions.iconMd, color: color),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.label.copyWith(color: color),
+                ),
+              ],
+            ),
           ),
         ),
       ),

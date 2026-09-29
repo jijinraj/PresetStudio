@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/tokens/app_colors.dart';
+import '../../../../theme/tokens/app_dimensions.dart';
 import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
@@ -51,7 +52,7 @@ class MobileEditorToolPanel extends StatelessWidget {
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: AnimatedContainer(
               key: const ValueKey('mobile-context-tool-panel'),
-              duration: const Duration(milliseconds: 140),
+              duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
                 color: immersive
@@ -79,7 +80,7 @@ class MobileEditorToolPanel extends StatelessWidget {
                       ignoring: immersive,
                       child: AnimatedOpacity(
                         key: const ValueKey('mobile-context-panel-header'),
-                        duration: const Duration(milliseconds: 120),
+                        duration: const Duration(milliseconds: 160),
                         opacity: immersive ? 0 : 1,
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(
@@ -99,7 +100,11 @@ class MobileEditorToolPanel extends StatelessWidget {
                                 ),
                                 onPressed: onClose,
                                 tooltip: 'Close $title',
-                                visualDensity: VisualDensity.compact,
+                                style: IconButton.styleFrom(
+                                  minimumSize: const Size.square(
+                                    AppDimensions.mobileTouchTarget,
+                                  ),
+                                ),
                                 icon: const Icon(Icons.close, size: 20),
                               ),
                             ],
@@ -108,7 +113,7 @@ class MobileEditorToolPanel extends StatelessWidget {
                       ),
                     ),
                     AnimatedOpacity(
-                      duration: const Duration(milliseconds: 120),
+                      duration: const Duration(milliseconds: 160),
                       opacity: immersive ? 0 : 1,
                       child: const Divider(height: 1),
                     ),

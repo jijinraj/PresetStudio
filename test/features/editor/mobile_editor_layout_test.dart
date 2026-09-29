@@ -7,6 +7,7 @@ import 'package:presetstudio/features/editor/presentation/widgets/mobile_editor_
 import 'package:presetstudio/features/editor/presentation/widgets/mobile_editor_tool_panel.dart';
 import 'package:presetstudio/theme/preset_studio_theme.dart';
 import 'package:presetstudio/theme/tokens/app_colors.dart';
+import 'package:presetstudio/theme/tokens/app_dimensions.dart';
 import 'package:presetstudio/theme/tokens/app_radii.dart';
 import 'package:presetstudio/theme/tokens/app_spacing.dart';
 
@@ -78,5 +79,54 @@ void main() {
       find.byKey(const ValueKey('editor-viewport-image-clip')),
       findsOneWidget,
     );
+  });
+  testWidgets('compact mobile editor keeps chrome usable with larger text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1.0;
+
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final controller = EditorController();
+    addTearDown(controller.dispose);
+    controller.setSourceImage('missing-compact-mobile-layout-image.jpg');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: PresetStudioTheme.dark,
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(1.3)),
+            child: child!,
+          );
+        },
+        home: MobileEditorShell(
+          controller: controller,
+          onImportImage: () async {},
+          isImporting: false,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final importButton = find.byKey(const ValueKey('mobile-top-import'));
+    expect(importButton, findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-bottom-dock')), findsOneWidget);
+
+    final importSize = tester.getSize(importButton);
+    expect(importSize.width, AppDimensions.mobileTouchTarget);
+    expect(importSize.height, AppDimensions.mobileTouchTarget);
+
+    final dockRect = tester.getRect(
+      find.byKey(const ValueKey('mobile-bottom-dock')),
+    );
+    expect(dockRect.left, greaterThanOrEqualTo(0));
+    expect(dockRect.right, lessThanOrEqualTo(320));
+    expect(tester.takeException(), isNull);
   });
 }

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../../theme/tokens/app_colors.dart';
+import '../../../../theme/tokens/app_dimensions.dart';
 import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
@@ -568,7 +569,7 @@ class _CategoryStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 36,
+      height: AppDimensions.mobileTouchTarget,
       child: ListView.separated(
         key: const ValueKey('mobile-preset-categories'),
         scrollDirection: Axis.horizontal,
@@ -578,30 +579,38 @@ class _CategoryStrip extends StatelessWidget {
           final category = categories[index];
           final selected = category.key == selectedKey;
 
-          return Material(
-            color: selected ? AppColors.accentMuted : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-            child: InkWell(
-              key: ValueKey('mobile-preset-category-${category.key}'),
-              onTap: () => onSelected(category.key),
+          return Semantics(
+            button: true,
+            selected: selected,
+            label: '${category.label} presets',
+            child: Material(
+              color: selected ? AppColors.accentMuted : Colors.transparent,
               borderRadius: BorderRadius.circular(999),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: selected ? AppColors.accent : AppColors.border,
+              child: InkWell(
+                key: ValueKey('mobile-preset-category-${category.key}'),
+                onTap: () => onSelected(category.key),
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minHeight: AppDimensions.mobileTouchTarget,
                   ),
-                ),
-                child: Text(
-                  category.label,
-                  style: AppTypography.label.copyWith(
-                    color: selected
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: selected ? AppColors.accent : AppColors.border,
+                    ),
+                  ),
+                  child: Text(
+                    category.label,
+                    style: AppTypography.label.copyWith(
+                      color: selected
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ),
@@ -739,64 +748,72 @@ class _MobilePresetCardFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 116,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadii.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      curve: Curves.easeOut,
-                      padding: EdgeInsets.all(active ? 2 : 0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(AppRadii.lg),
-                        border: Border.all(
-                          color: active ? AppColors.accent : Colors.transparent,
-                          width: 1.5,
+    return Semantics(
+      button: onTap != null,
+      enabled: onTap != null,
+      selected: active,
+      label: '$name preset',
+      child: SizedBox(
+        width: 116,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadii.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        padding: EdgeInsets.all(active ? 2 : 0),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppRadii.xl),
+                          border: Border.all(
+                            color: active
+                                ? AppColors.accent
+                                : Colors.transparent,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(AppRadii.xl - 2),
+                          child: preview,
                         ),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(AppRadii.lg - 2),
-                        child: preview,
-                      ),
-                    ),
-                    if (topRight != null)
-                      Positioned(
-                        top: AppSpacing.xxs,
-                        right: AppSpacing.xxs,
-                        child: topRight!,
-                      ),
-                    if (active)
-                      const Positioned(
-                        left: AppSpacing.xs,
-                        bottom: AppSpacing.xs,
-                        child: _ActiveBadge(),
-                      ),
-                  ],
+                      if (topRight != null)
+                        Positioned(
+                          top: AppSpacing.xxs,
+                          right: AppSpacing.xxs,
+                          child: topRight!,
+                        ),
+                      if (active)
+                        const Positioned(
+                          left: AppSpacing.xs,
+                          bottom: AppSpacing.xs,
+                          child: _ActiveBadge(),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTypography.label.copyWith(
-                  color: active
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.label.copyWith(
+                    color: active
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -947,31 +964,47 @@ class _RemoteSaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.background.withValues(alpha: 0.78),
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onPressed,
-        customBorder: const CircleBorder(),
-        child: SizedBox.square(
-          dimension: 34,
-          child: Center(
-            child: isBusy
-                ? const SizedBox.square(
-                    dimension: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(
-                    savedCurrent
-                        ? Icons.bookmark
-                        : updateAvailable
-                        ? Icons.download_outlined
-                        : Icons.bookmark_border,
-                    size: 17,
-                    color: savedCurrent
-                        ? AppColors.accent
-                        : AppColors.textPrimary,
-                  ),
+    final label = savedCurrent
+        ? 'Preset saved'
+        : updateAvailable
+        ? 'Save latest preset'
+        : 'Save preset';
+
+    return Semantics(
+      button: true,
+      enabled: onPressed != null,
+      label: label,
+      child: SizedBox.square(
+        dimension: AppDimensions.mobileTouchTarget,
+        child: Center(
+          child: Material(
+            color: AppColors.background.withValues(alpha: 0.78),
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: onPressed,
+              customBorder: const CircleBorder(),
+              child: SizedBox.square(
+                dimension: 34,
+                child: Center(
+                  child: isBusy
+                      ? const SizedBox.square(
+                          dimension: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          savedCurrent
+                              ? Icons.bookmark
+                              : updateAvailable
+                              ? Icons.download_outlined
+                              : Icons.bookmark_border,
+                          size: 17,
+                          color: savedCurrent
+                              ? AppColors.accent
+                              : AppColors.textPrimary,
+                        ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

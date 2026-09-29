@@ -4,6 +4,7 @@ import 'package:presetstudio/features/editor/presentation/widgets/composition_gu
 import 'package:presetstudio/features/editor/presentation/widgets/composition_guide_overlay.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/mobile_guides_panel.dart';
 import 'package:presetstudio/theme/preset_studio_theme.dart';
+import 'package:presetstudio/theme/tokens/app_dimensions.dart';
 
 void main() {
   testWidgets(
@@ -50,6 +51,14 @@ void main() {
       opacity.onChanged?.call(0.5);
       await tester.pump();
       expect(controller.opacity, 0.5);
+
+      final colorTargetSize = tester.getSize(
+        find.byKey(const ValueKey('mobile-guide-color-cyan')),
+      );
+      expect(
+        colorTargetSize.shortestSide,
+        greaterThanOrEqualTo(AppDimensions.mobileTouchTarget),
+      );
 
       await tester.tap(find.byKey(const ValueKey('mobile-guide-color-cyan')));
       await tester.pump();

@@ -214,40 +214,50 @@ class _GuideSelectorItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final foreground = selected ? AppColors.accent : AppColors.textSecondary;
 
-    return Material(
-      color: selected ? AppColors.accentMuted : Colors.transparent,
-      borderRadius: BorderRadius.circular(AppRadii.lg),
-      child: InkWell(
-        onTap: onTap,
+    final label = _shortLabelFor(guide);
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: Material(
+        color: selected ? AppColors.accentMuted : Colors.transparent,
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        child: Container(
-          width: 76,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xxs,
-            vertical: AppSpacing.xs,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-            border: Border.all(
-              color: selected ? AppColors.accent : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          child: Container(
+            width: 76,
+            constraints: const BoxConstraints(
+              minHeight: AppDimensions.mobileTouchTarget,
             ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                _iconFor(guide),
-                size: AppDimensions.iconMd,
-                color: foreground,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xxs,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              border: Border.all(
+                color: selected ? AppColors.accent : Colors.transparent,
               ),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                _shortLabelFor(guide),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.label.copyWith(color: foreground),
-              ),
-            ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _iconFor(guide),
+                  size: AppDimensions.iconMd,
+                  color: foreground,
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.label.copyWith(color: foreground),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -297,26 +307,36 @@ class _GuideColorButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: color.label,
-      child: InkResponse(
-        onTap: onTap,
-        radius: 22,
-        child: Container(
-          width: 30,
-          height: 30,
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: selected ? AppColors.accent : AppColors.borderStrong,
-              width: selected ? 2 : 1,
-            ),
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.color,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${color.label} guide color',
+      child: Tooltip(
+        message: color.label,
+        child: InkResponse(
+          onTap: onTap,
+          radius: AppDimensions.mobileTouchTarget / 2,
+          child: SizedBox.square(
+            dimension: AppDimensions.mobileTouchTarget,
+            child: Center(
+              child: Container(
+                width: 30,
+                height: 30,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected ? AppColors.accent : AppColors.borderStrong,
+                    width: selected ? 2 : 1,
+                  ),
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color.color,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -347,7 +367,7 @@ class _GuideActionButton extends StatelessWidget {
       style: IconButton.styleFrom(
         backgroundColor: AppColors.surfaceElevated,
         foregroundColor: AppColors.textPrimary,
-        minimumSize: const Size.square(40),
+        minimumSize: const Size.square(AppDimensions.mobileTouchTarget),
       ),
       icon: RotatedBox(
         quarterTurns: quarterTurns,

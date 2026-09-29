@@ -153,7 +153,7 @@
 - [x] Redesign mobile adjustment workflow
 - [x] Redesign crop presentation around the existing crop engine
 - [x] Add dedicated composition guides mode
-- [ ] Finish responsive, accessibility, motion, and interaction polish
+- [x] Finish responsive, accessibility, motion, and interaction polish
 
 ## Settings backlog
 

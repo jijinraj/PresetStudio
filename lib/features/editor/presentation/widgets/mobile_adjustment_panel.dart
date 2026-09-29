@@ -85,7 +85,7 @@ class _MobileAdjustmentPanelState extends State<MobileAdjustmentPanel> {
               _PrecisionChromeVisibility(
                 hidden: _isPrecisionInteracting,
                 child: SizedBox(
-                  height: 70,
+                  height: 72,
                   child: SingleChildScrollView(
                     key: const ValueKey('mobile-adjustment-selector'),
                     scrollDirection: Axis.horizontal,
@@ -121,12 +121,13 @@ class _MobileAdjustmentPanelState extends State<MobileAdjustmentPanel> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 160),
+                  duration: const Duration(milliseconds: 180),
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeInCubic,
                   child: KeyedSubtree(
                     key: ValueKey('mobile-adjustment-ruler-${_selected.name}'),
                     child: EditorRulerControl(
+                      semanticsLabel: definition.label,
                       value: value,
                       minValue: definition.minValue,
                       maxValue: definition.maxValue,
@@ -251,7 +252,7 @@ class _PrecisionChromeVisibility extends StatelessWidget {
     return IgnorePointer(
       ignoring: hidden,
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 120),
+        duration: const Duration(milliseconds: 160),
         curve: Curves.easeOut,
         opacity: hidden ? 0 : 1,
         child: child,
@@ -278,36 +279,44 @@ class _AdjustmentSelectorItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final foreground = selected ? AppColors.accent : AppColors.textSecondary;
 
-    return Material(
-      color: selected ? AppColors.accentMuted : Colors.transparent,
-      borderRadius: BorderRadius.circular(AppRadii.lg),
-      child: InkWell(
-        onTap: onTap,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: Material(
+        color: selected ? AppColors.accentMuted : Colors.transparent,
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        child: Container(
-          width: 72,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xxs,
-            vertical: AppSpacing.xs,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-            border: Border.all(
-              color: selected ? AppColors.accent : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          child: Container(
+            width: 72,
+            constraints: const BoxConstraints(
+              minHeight: AppDimensions.mobileTouchTarget,
             ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: AppDimensions.iconMd, color: foreground),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.label.copyWith(color: foreground),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xxs,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              border: Border.all(
+                color: selected ? AppColors.accent : Colors.transparent,
               ),
-            ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: AppDimensions.iconMd, color: foreground),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.label.copyWith(color: foreground),
+                ),
+              ],
+            ),
           ),
         ),
       ),

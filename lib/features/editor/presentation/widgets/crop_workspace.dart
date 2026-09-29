@@ -7,6 +7,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../theme/tokens/app_colors.dart';
+import '../../../../theme/tokens/app_dimensions.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../application/editor_controller.dart';
@@ -2169,6 +2170,7 @@ class _MobileCropWorkspaceControls extends StatelessWidget {
             SizedBox(
               key: const ValueKey('crop-straighten-ruler'),
               child: EditorRulerControl(
+                semanticsLabel: 'Straighten',
                 value: crop.straightenDegrees,
                 minValue: CropState.minimumStraightenDegrees,
                 maxValue: CropState.maximumStraightenDegrees,
@@ -2197,7 +2199,7 @@ class _MobileCropWorkspaceControls extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(
-                      height: 38,
+                      height: 48,
                       child: Row(
                         children: [
                           Expanded(
@@ -2223,7 +2225,9 @@ class _MobileCropWorkspaceControls extends StatelessWidget {
                                   ),
                                   selected: isSelected,
                                   showCheckmark: false,
-                                  visualDensity: VisualDensity.compact,
+                                  visualDensity: VisualDensity.standard,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.padded,
                                   selectedColor: AppColors.accentMuted,
                                   side: BorderSide(
                                     color: isSelected
@@ -2244,7 +2248,11 @@ class _MobileCropWorkspaceControls extends StatelessWidget {
                           IconButton(
                             key: const ValueKey('crop-swap-ratio-orientation'),
                             tooltip: 'Swap crop orientation',
-                            visualDensity: VisualDensity.compact,
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size.square(
+                                AppDimensions.mobileTouchTarget,
+                              ),
+                            ),
                             onPressed:
                                 crop.aspectRatio == null ||
                                     _CropWorkspaceControls._isClose(
@@ -2527,26 +2535,37 @@ class _MobileCropActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = isActive ? AppColors.accent : AppColors.textSecondary;
 
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RotatedBox(
-              quarterTurns: quarterTurns,
-              child: Icon(icon, size: 20, color: color),
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: label,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppDimensions.mobileTouchTarget,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                RotatedBox(
+                  quarterTurns: quarterTurns,
+                  child: Icon(icon, size: 20, color: color),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.label.copyWith(color: color),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.label.copyWith(color: color),
-            ),
-          ],
+          ),
         ),
       ),
     );

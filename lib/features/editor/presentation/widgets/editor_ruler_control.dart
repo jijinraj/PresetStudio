@@ -27,6 +27,7 @@ class EditorRulerControl extends StatefulWidget {
     this.onInteractionEnd,
     this.valueFormatter,
     this.labelFormatter,
+    this.semanticsLabel,
     this.unit,
     this.showPositiveSign = true,
     this.enableHaptics = false,
@@ -65,6 +66,7 @@ class EditorRulerControl extends StatefulWidget {
 
   final String Function(double value)? valueFormatter;
   final String Function(double value)? labelFormatter;
+  final String? semanticsLabel;
   final String? unit;
   final bool showPositiveSign;
   final bool enableHaptics;
@@ -88,6 +90,7 @@ class _EditorRulerControlState extends State<EditorRulerControl> {
     final value = _sanitizedValue;
 
     return Semantics(
+      label: widget.semanticsLabel,
       value: _formatCurrentValue(value),
       increasedValue: _formatCurrentValue(
         _sanitize(value + widget.interactionStep),
