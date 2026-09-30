@@ -78,6 +78,7 @@ class ExportImageRenderer {
     final processor = ExportTonalProcessor(
       adjustments,
       toneCurves: session.effectiveToneCurves,
+      hslColorMixer: session.hslColorMixer,
     );
     final raster = img.Image(
       width: plan.outputWidth,
