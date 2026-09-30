@@ -9,12 +9,8 @@ import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
 import 'editor_ruler_control.dart';
+import 'mobile_tone_curve_workspace.dart';
 
-/// Mobile-native adjustment workspace.
-///
-/// The panel deliberately keeps all edit state in [EditorController]. It only
-/// owns the currently selected adjustment so the user can move through the
-/// existing adjustment set while one precision ruler remains on screen.
 class MobileAdjustmentPanel extends StatefulWidget {
   const MobileAdjustmentPanel({
     required this.controller,
@@ -23,9 +19,6 @@ class MobileAdjustmentPanel extends StatefulWidget {
   });
 
   final EditorController controller;
-
-  /// Notifies the editor shell while the precision ruler is actively dragged.
-  /// The shell uses this to enter a distraction-free image + dial mode.
   final ValueChanged<bool>? onPrecisionInteractionChanged;
 
   @override
@@ -112,6 +105,14 @@ class _MobileAdjustmentPanelState extends State<MobileAdjustmentPanel> {
                             onTap: () => _select(AdjustmentType.values[index]),
                           ),
                         ],
+                        const SizedBox(width: AppSpacing.xs),
+                        _AdjustmentSelectorItem(
+                          key: const ValueKey('mobile-adjustment-curves'),
+                          icon: Icons.show_chart_rounded,
+                          label: 'Curves',
+                          selected: false,
+                          onTap: _openCurves,
+                        ),
                       ],
                     ),
                   ),
@@ -120,32 +121,25 @@ class _MobileAdjustmentPanelState extends State<MobileAdjustmentPanel> {
               const SizedBox(height: AppSpacing.sm),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: KeyedSubtree(
-                    key: ValueKey('mobile-adjustment-ruler-${_selected.name}'),
-                    child: EditorRulerControl(
-                      semanticsLabel: definition.label,
-                      value: value,
-                      minValue: definition.minValue,
-                      maxValue: definition.maxValue,
-                      defaultValue: definition.defaultValue,
-                      precisionStep: definition.precisionStep,
-                      interactionStep: definition.interactionStep,
-                      minorTickStep: _minorTickStepFor(_selected),
-                      majorTickStep: _majorTickStepFor(_selected),
-                      pixelsPerMinorTick: _pixelsPerMinorTickFor(_selected),
-                      rulerHeight: 76,
-                      enableHaptics: true,
-                      onInteractionStart: _beginInteraction,
-                      onInteractionEnd: _endInteraction,
-                      onChanged: (nextValue) {
-                        controller.updateAdjustment(_selected, nextValue);
-                      },
-                    ),
-                  ),
+                child: EditorRulerControl(
+                  key: ValueKey('mobile-adjustment-ruler-${_selected.name}'),
+                  semanticsLabel: definition.label,
+                  value: value,
+                  minValue: definition.minValue,
+                  maxValue: definition.maxValue,
+                  defaultValue: definition.defaultValue,
+                  precisionStep: definition.precisionStep,
+                  interactionStep: definition.interactionStep,
+                  minorTickStep: _minorTickStepFor(_selected),
+                  majorTickStep: _majorTickStepFor(_selected),
+                  pixelsPerMinorTick: _pixelsPerMinorTickFor(_selected),
+                  rulerHeight: 76,
+                  enableHaptics: true,
+                  onInteractionStart: _beginInteraction,
+                  onInteractionEnd: _endInteraction,
+                  onChanged: (nextValue) {
+                    controller.updateAdjustment(_selected, nextValue);
+                  },
                 ),
               ),
               const SizedBox(height: AppSpacing.xxs),
@@ -167,28 +161,29 @@ class _MobileAdjustmentPanelState extends State<MobileAdjustmentPanel> {
   }
 
   void _select(AdjustmentType type) {
-    if (type == _selected) {
-      return;
-    }
+    if (type == _selected) return;
+    _finishActiveTransaction();
+    setState(() => _selected = type);
+  }
 
-    if (controller.isEditTransactionActive) {
-      controller.endEditTransaction();
-    }
-
-    setState(() {
-      _selected = type;
-    });
+  Future<void> _openCurves() async {
+    _finishActiveTransaction();
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => MobileToneCurveWorkspace(
+          controller: controller,
+          onClose: () => Navigator.of(routeContext).pop(),
+        ),
+      ),
+    );
   }
 
   void _beginInteraction() {
     if (!controller.isEditTransactionActive) {
       controller.beginEditTransaction();
     }
-
     if (!_isPrecisionInteracting) {
-      setState(() {
-        _isPrecisionInteracting = true;
-      });
+      setState(() => _isPrecisionInteracting = true);
       widget.onPrecisionInteractionChanged?.call(true);
     }
   }
@@ -197,55 +192,52 @@ class _MobileAdjustmentPanelState extends State<MobileAdjustmentPanel> {
     if (controller.isEditTransactionActive) {
       controller.endEditTransaction();
     }
-
     if (_isPrecisionInteracting) {
-      setState(() {
-        _isPrecisionInteracting = false;
-      });
+      setState(() => _isPrecisionInteracting = false);
+      widget.onPrecisionInteractionChanged?.call(false);
+    }
+  }
+
+  void _finishActiveTransaction() {
+    if (controller.isEditTransactionActive) {
+      controller.endEditTransaction();
+    }
+    if (_isPrecisionInteracting) {
+      _isPrecisionInteracting = false;
       widget.onPrecisionInteractionChanged?.call(false);
     }
   }
 
   void _resetAllAdjustments() {
-    if (controller.isEditTransactionActive) {
-      controller.endEditTransaction();
-    }
+    _finishActiveTransaction();
     controller.resetAdjustments();
   }
 
-  static double _minorTickStepFor(AdjustmentType type) {
-    return type == AdjustmentType.exposure ? 0.1 : 5;
-  }
+  static double _minorTickStepFor(AdjustmentType type) =>
+      type == AdjustmentType.exposure ? 0.1 : 5;
+  static double _majorTickStepFor(AdjustmentType type) =>
+      type == AdjustmentType.exposure ? 1 : 25;
+  static double _pixelsPerMinorTickFor(AdjustmentType type) =>
+      type == AdjustmentType.exposure ? 12 : 8;
 
-  static double _majorTickStepFor(AdjustmentType type) {
-    return type == AdjustmentType.exposure ? 1 : 25;
-  }
-
-  static double _pixelsPerMinorTickFor(AdjustmentType type) {
-    return type == AdjustmentType.exposure ? 12 : 8;
-  }
-
-  static IconData _iconFor(AdjustmentType type) {
-    return switch (type) {
-      AdjustmentType.exposure => Icons.brightness_6_outlined,
-      AdjustmentType.contrast => Icons.contrast,
-      AdjustmentType.highlights => Icons.light_mode_outlined,
-      AdjustmentType.shadows => Icons.dark_mode_outlined,
-      AdjustmentType.whites => Icons.flare_outlined,
-      AdjustmentType.blacks => Icons.brightness_2_outlined,
-      AdjustmentType.temperature => Icons.device_thermostat_outlined,
-      AdjustmentType.tint => Icons.water_drop_outlined,
-      AdjustmentType.vibrance => Icons.graphic_eq_rounded,
-      AdjustmentType.saturation => Icons.opacity_outlined,
-      AdjustmentType.vignetteAmount => Icons.vignette_outlined,
-      AdjustmentType.vignetteFeather => Icons.blur_on_outlined,
-    };
-  }
+  static IconData _iconFor(AdjustmentType type) => switch (type) {
+    AdjustmentType.exposure => Icons.brightness_6_outlined,
+    AdjustmentType.contrast => Icons.contrast,
+    AdjustmentType.highlights => Icons.light_mode_outlined,
+    AdjustmentType.shadows => Icons.dark_mode_outlined,
+    AdjustmentType.whites => Icons.flare_outlined,
+    AdjustmentType.blacks => Icons.brightness_2_outlined,
+    AdjustmentType.temperature => Icons.device_thermostat_outlined,
+    AdjustmentType.tint => Icons.water_drop_outlined,
+    AdjustmentType.vibrance => Icons.graphic_eq_rounded,
+    AdjustmentType.saturation => Icons.opacity_outlined,
+    AdjustmentType.vignetteAmount => Icons.vignette_outlined,
+    AdjustmentType.vignetteFeather => Icons.blur_on_outlined,
+  };
 }
 
 class _PrecisionChromeVisibility extends StatelessWidget {
   const _PrecisionChromeVisibility({required this.hidden, required this.child});
-
   final bool hidden;
   final Widget child;
 
@@ -280,7 +272,6 @@ class _AdjustmentSelectorItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = selected ? AppColors.accent : AppColors.textSecondary;
-
     return Semantics(
       button: true,
       selected: selected,

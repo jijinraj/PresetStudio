@@ -4,10 +4,11 @@ import 'package:presetstudio/features/editor/application/editor_controller.dart'
 import 'package:presetstudio/features/editor/domain/adjustment_type.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/editor_ruler_control.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/mobile_adjustment_panel.dart';
+import 'package:presetstudio/features/editor/presentation/widgets/mobile_tone_curve_workspace.dart';
 import 'package:presetstudio/theme/preset_studio_theme.dart';
 
 void main() {
-  testWidgets('adjustment selector exposes every supported adjustment', (
+  testWidgets('adjustment selector exposes scalar adjustments and curves', (
     tester,
   ) async {
     final controller = EditorController();
@@ -27,18 +28,19 @@ void main() {
         findsOneWidget,
       );
     }
-
+    expect(
+      find.byKey(const ValueKey('mobile-adjustment-curves')),
+      findsOneWidget,
+    );
     expect(find.byType(EditorRulerControl), findsOneWidget);
   });
 
-  testWidgets('reset all keeps adjustment reset in existing controller path', (
+  testWidgets('curves selector opens dedicated mobile workspace', (
     tester,
   ) async {
     final controller = EditorController();
     addTearDown(controller.dispose);
     controller.setSourceImage('missing-test-image.jpg');
-    controller.updateAdjustment(AdjustmentType.exposure, 1.5);
-    controller.updateAdjustment(AdjustmentType.temperature, 25);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -47,10 +49,19 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byKey(const ValueKey('mobile-adjustment-reset-all')));
-    await tester.pump();
+    final curves = find.byKey(const ValueKey('mobile-adjustment-curves'));
+    await tester.ensureVisible(curves);
+    await tester.tap(curves);
+    await tester.pumpAndSettle();
 
-    expect(controller.session.adjustments.isDefault, isTrue);
-    expect(controller.history.last.label, 'Reset Adjustments');
+    expect(find.byType(MobileToneCurveWorkspace), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('tone-curve-gesture-surface')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('tone-curve-channel-master')),
+      findsOneWidget,
+    );
   });
 }
