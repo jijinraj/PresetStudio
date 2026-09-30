@@ -3,11 +3,14 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:presetstudio/features/editor/domain/crop_state.dart';
+import 'package:presetstudio/features/editor/domain/curve_point.dart';
 import 'package:presetstudio/features/editor/domain/editor_session.dart';
 import 'package:presetstudio/features/editor/domain/export_settings.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
 import 'package:presetstudio/features/editor/domain/image_transform.dart';
+import 'package:presetstudio/features/editor/domain/tone_curves.dart';
 import 'package:presetstudio/features/editor/rendering/export_image_renderer.dart';
+import 'package:presetstudio/features/editor/rendering/tone_curve_lut.dart';
 
 void main() {
   const renderer = ExportImageRenderer();
@@ -165,6 +168,31 @@ void main() {
     expect(pixel.r, closeTo(128, 1));
     expect(pixel.g, closeTo(64, 1));
     expect(pixel.b, closeTo(32, 1));
+  });
+
+  test('replays tone curves into exported pixels', () {
+    final source = img.Image(width: 1, height: 1, numChannels: 4)
+      ..setPixelRgba(0, 0, 128, 128, 128, 255);
+
+    final toneCurves = ToneCurves.initial.copyWith(
+      master: ToneCurve(points: [CurvePoint(input: 0.5, output: 0.75)]),
+    );
+    final result = renderer.render(
+      sourceBytes: pngSource(source),
+      session: EditorSession(
+        sourceImagePath: 'source.png',
+        toneCurves: toneCurves,
+        exportSettings: const ExportSettings(format: ExportFormat.png),
+      ),
+    );
+
+    final pixel = decode(result.bytes).getPixel(0, 0);
+    final lut = ToneCurveLut.fromToneCurves(toneCurves);
+    final expected = ToneCurveLut.sample(lut.red, 128 / 255) * 255;
+
+    expect(pixel.r, closeTo(expected, 1));
+    expect(pixel.g, closeTo(expected, 1));
+    expect(pixel.b, closeTo(expected, 1));
   });
 
   test('encodes JPEG at the planned dimensions', () {

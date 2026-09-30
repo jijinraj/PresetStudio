@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import '../domain/image_adjustments.dart';
+import '../domain/tone_curves.dart';
+import 'tone_curve_lut.dart';
 
 /// CPU counterpart of `shaders/editor_tonal.frag` used by full-resolution
 /// export.
@@ -9,13 +11,17 @@ import '../domain/image_adjustments.dart';
 /// exported color follows the same edit model instead of the simpler fallback
 /// color matrix.
 class ExportTonalProcessor {
-  const ExportTonalProcessor(this.adjustments);
+  ExportTonalProcessor(this.adjustments, {ToneCurves? toneCurves})
+    : toneCurveLut = ToneCurveLut.fromToneCurves(
+        toneCurves ?? ToneCurves.initial,
+      );
 
   static const double _redLuminance = 0.2126;
   static const double _greenLuminance = 0.7152;
   static const double _blueLuminance = 0.0722;
 
   final ImageAdjustments adjustments;
+  final ToneCurveLut toneCurveLut;
 
   (double, double, double) apply(
     double r,
@@ -81,6 +87,10 @@ class ExportTonalProcessor {
     r = _mix(saturationLuminance, r, saturationFactor);
     g = _mix(saturationLuminance, g, saturationFactor);
     b = _mix(saturationLuminance, b, saturationFactor);
+
+    r = ToneCurveLut.sample(toneCurveLut.red, r);
+    g = ToneCurveLut.sample(toneCurveLut.green, g);
+    b = ToneCurveLut.sample(toneCurveLut.blue, b);
 
     if (adjustments.vignetteAmount != 0.0) {
       final centeredX = (normalizedX - 0.5) * aspectRatio;

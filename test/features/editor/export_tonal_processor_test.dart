@@ -1,10 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:presetstudio/features/editor/domain/curve_point.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
+import 'package:presetstudio/features/editor/domain/tone_curves.dart';
 import 'package:presetstudio/features/editor/rendering/export_tonal_processor.dart';
+import 'package:presetstudio/features/editor/rendering/tone_curve_lut.dart';
 
 void main() {
   test('default processor preserves RGB', () {
-    const processor = ExportTonalProcessor(ImageAdjustments.initial);
+    final processor = ExportTonalProcessor(ImageAdjustments.initial);
 
     final result = processor.apply(0.25, 0.5, 0.75);
 
@@ -14,7 +17,7 @@ void main() {
   });
 
   test('positive one-stop exposure doubles unclipped RGB', () {
-    const processor = ExportTonalProcessor(ImageAdjustments(exposure: 1));
+    final processor = ExportTonalProcessor(ImageAdjustments(exposure: 1));
 
     final result = processor.apply(0.2, 0.1, 0.05);
 
@@ -24,7 +27,7 @@ void main() {
   });
 
   test('positive temperature warms the RGB balance', () {
-    const processor = ExportTonalProcessor(ImageAdjustments(temperature: 100));
+    final processor = ExportTonalProcessor(ImageAdjustments(temperature: 100));
 
     final result = processor.apply(0.5, 0.5, 0.5);
 
@@ -34,7 +37,7 @@ void main() {
   });
 
   test('positive vibrance boosts low-chroma color selectively', () {
-    const processor = ExportTonalProcessor(ImageAdjustments(vibrance: 100));
+    final processor = ExportTonalProcessor(ImageAdjustments(vibrance: 100));
 
     final muted = processor.apply(0.55, 0.50, 0.45);
     final vivid = processor.apply(0.9, 0.5, 0.1);
@@ -48,7 +51,7 @@ void main() {
   });
 
   test('positive vignette darkens edges while preserving center', () {
-    const processor = ExportTonalProcessor(
+    final processor = ExportTonalProcessor(
       ImageAdjustments(vignetteAmount: 80, vignetteFeather: 50),
     );
     final center = processor.apply(0.6, 0.6, 0.6);
@@ -67,7 +70,7 @@ void main() {
   });
 
   test('negative vignette lifts edges', () {
-    const processor = ExportTonalProcessor(
+    final processor = ExportTonalProcessor(
       ImageAdjustments(vignetteAmount: -80, vignetteFeather: 50),
     );
     final corner = processor.apply(
@@ -78,5 +81,41 @@ void main() {
       normalizedY: 1,
     );
     expect(corner.$1, greaterThan(0.4));
+  });
+  test('tone curves are applied after saturation', () {
+    final processor = ExportTonalProcessor(
+      const ImageAdjustments(saturation: -100),
+      toneCurves: ToneCurves.initial.copyWith(
+        red: ToneCurve(points: [CurvePoint(input: 0.5, output: 0.75)]),
+      ),
+    );
+
+    final result = processor.apply(0.8, 0.2, 0.2);
+
+    expect(result.$1, greaterThan(result.$2));
+    expect(result.$2, closeTo(result.$3, 0.000001));
+  });
+
+  test('tone curves are applied before vignette', () {
+    final processor = ExportTonalProcessor(
+      const ImageAdjustments(vignetteAmount: 100, vignetteFeather: 50),
+      toneCurves: ToneCurves.initial.copyWith(
+        master: ToneCurve(points: [CurvePoint(input: 0.5, output: 0.8)]),
+      ),
+    );
+
+    final center = processor.apply(0.5, 0.5, 0.5);
+    final corner = processor.apply(
+      0.5,
+      0.5,
+      0.5,
+      normalizedX: 0,
+      normalizedY: 0,
+    );
+
+    final expectedCenter = ToneCurveLut.sample(processor.toneCurveLut.red, 0.5);
+
+    expect(center.$1, closeTo(expectedCenter, 0.000001));
+    expect(corner.$1, lessThan(center.$1));
   });
 }

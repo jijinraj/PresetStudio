@@ -31,6 +31,20 @@ class ToneCurveLut {
     );
   }
 
+  static double sample(List<double> channel, double input) {
+    assert(channel.length == sampleCount);
+
+    final position = input.clamp(0.0, 1.0).toDouble() * (sampleCount - 1);
+    final lowerIndex = position.floor();
+    final upperIndex = lowerIndex < sampleCount - 1
+        ? lowerIndex + 1
+        : sampleCount - 1;
+    final fraction = position - lowerIndex;
+
+    return channel[lowerIndex] +
+        ((channel[upperIndex] - channel[lowerIndex]) * fraction);
+  }
+
   static double evaluate(ToneCurve curve, double input) {
     final value = input.clamp(0.0, 1.0).toDouble();
     final points = curve.points;

@@ -61,5 +61,17 @@ void main() {
 
       expect(lut.blue, isNot(lut.red));
     });
+
+    test('samples LUT with the same adjacent interpolation as the shader', () {
+      final samples = List<double>.generate(
+        ToneCurveLut.sampleCount,
+        (index) => index == 8 ? 1.0 : 0.0,
+      );
+      final halfway = 7.5 / (ToneCurveLut.sampleCount - 1);
+
+      expect(ToneCurveLut.sample(samples, halfway), closeTo(0.5, 0.000001));
+      expect(ToneCurveLut.sample(samples, -1), 0);
+      expect(ToneCurveLut.sample(samples, 2), 0);
+    });
   });
 }

@@ -75,7 +75,10 @@ class ExportImageRenderer {
       transform: session.transform,
     );
 
-    final processor = ExportTonalProcessor(adjustments);
+    final processor = ExportTonalProcessor(
+      adjustments,
+      toneCurves: session.effectiveToneCurves,
+    );
     final raster = img.Image(
       width: plan.outputWidth,
       height: plan.outputHeight,
