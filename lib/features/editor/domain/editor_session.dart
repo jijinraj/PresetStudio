@@ -2,6 +2,7 @@ import 'crop_state.dart';
 import 'export_settings.dart';
 import 'image_adjustments.dart';
 import 'image_transform.dart';
+import 'tone_curves.dart';
 
 class EditorSession {
   const EditorSession({
@@ -9,6 +10,7 @@ class EditorSession {
     this.adjustments = ImageAdjustments.initial,
     this.transform = ImageTransform.initial,
     this.crop = CropState.initial,
+    this.toneCurves,
     this.activePresetId,
     this.exportSettings = ExportSettings.initial,
     this.isDirty = false,
@@ -19,6 +21,9 @@ class EditorSession {
   final ImageAdjustments adjustments;
   final ImageTransform transform;
   final CropState crop;
+  final ToneCurves? toneCurves;
+
+  ToneCurves get effectiveToneCurves => toneCurves ?? ToneCurves.initial;
 
   final String? activePresetId;
 
@@ -36,6 +41,8 @@ class EditorSession {
     ImageAdjustments? adjustments,
     ImageTransform? transform,
     CropState? crop,
+    ToneCurves? toneCurves,
+    bool clearToneCurves = false,
     String? activePresetId,
     bool clearActivePreset = false,
     ExportSettings? exportSettings,
@@ -48,6 +55,7 @@ class EditorSession {
       adjustments: adjustments ?? this.adjustments,
       transform: transform ?? this.transform,
       crop: crop ?? this.crop,
+      toneCurves: clearToneCurves ? null : toneCurves ?? this.toneCurves,
       activePresetId: clearActivePreset
           ? null
           : activePresetId ?? this.activePresetId,

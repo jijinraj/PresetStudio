@@ -7,6 +7,7 @@ import '../domain/editor_session.dart';
 import '../domain/export_settings.dart';
 import '../domain/image_adjustments.dart';
 import '../domain/image_transform.dart';
+import '../domain/tone_curves.dart';
 import 'editor_history_entry.dart';
 
 class EditorController extends ChangeNotifier {
@@ -87,6 +88,7 @@ class EditorController extends ChangeNotifier {
       adjustments: ImageAdjustments.initial,
       transform: ImageTransform.initial,
       crop: CropState.initial,
+      clearToneCurves: true,
       clearActivePreset: true,
       isDirty: false,
     );
@@ -161,6 +163,14 @@ class EditorController extends ChangeNotifier {
       _session.copyWith(transform: transform),
       label: _transformHistoryLabel(_session.transform, transform),
       action: EditorHistoryAction.transform,
+    );
+  }
+
+  void updateToneCurves(ToneCurves toneCurves) {
+    _applyEdit(
+      _session.copyWith(toneCurves: toneCurves, clearActivePreset: true),
+      label: 'Tone Curves',
+      action: EditorHistoryAction.adjustment,
     );
   }
 
@@ -510,6 +520,8 @@ class EditorController extends ChangeNotifier {
       adjustments: baseline.adjustments,
       transform: baseline.transform,
       crop: baseline.crop,
+      toneCurves: baseline.toneCurves,
+      clearToneCurves: baseline.toneCurves == null,
       activePresetId: baseline.activePresetId,
       clearActivePreset: baseline.activePresetId == null,
     );
@@ -619,6 +631,14 @@ class EditorController extends ChangeNotifier {
       crop = after.crop;
     }
 
+    var toneCurves = current.toneCurves;
+    var clearToneCurves = false;
+
+    if (before.effectiveToneCurves != after.effectiveToneCurves) {
+      toneCurves = after.toneCurves;
+      clearToneCurves = after.toneCurves == null;
+    }
+
     var activePresetId = current.activePresetId;
     var clearActivePreset = false;
 
@@ -635,6 +655,8 @@ class EditorController extends ChangeNotifier {
       adjustments: adjustments,
       transform: transform,
       crop: crop,
+      toneCurves: toneCurves,
+      clearToneCurves: clearToneCurves,
       activePresetId: activePresetId,
       clearActivePreset: clearActivePreset,
     );
@@ -744,6 +766,7 @@ class EditorController extends ChangeNotifier {
         _sameAdjustments(a.adjustments, b.adjustments) &&
         _sameTransform(a.transform, b.transform) &&
         a.crop == b.crop &&
+        a.effectiveToneCurves == b.effectiveToneCurves &&
         a.activePresetId == b.activePresetId;
   }
 
