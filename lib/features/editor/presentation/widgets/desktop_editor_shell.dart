@@ -22,6 +22,7 @@ import 'editor_image_viewport.dart';
 import 'editor_viewport_controller.dart';
 import 'flip_control.dart';
 import 'rotation_control.dart';
+import 'tone_curve_editor.dart';
 
 enum _DesktopHistoryMenuAction { enableAll, clearHistory }
 
@@ -925,6 +926,18 @@ class _AdjustmentsPanelState extends State<_AdjustmentsPanel> {
                       onInteractionStart: controller.beginEditTransaction,
                       onInteractionEnd: controller.endEditTransaction,
                       wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Divider(height: 1),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text('Curves', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.md),
+                    ToneCurveEditor(
+                      key: const ValueKey('desktop-tone-curve-editor'),
+                      toneCurves: session.effectiveToneCurves,
+                      onChanged: controller.updateToneCurves,
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const Divider(height: 1),

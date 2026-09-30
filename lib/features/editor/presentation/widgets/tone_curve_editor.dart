@@ -83,26 +83,32 @@ class _ToneCurveEditorState extends State<ToneCurveEditor> {
               .toList(growable: false),
         ),
         const SizedBox(height: AppSpacing.sm),
-        AspectRatio(
-          aspectRatio: 1,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: widget.graphHeight),
-            child: GestureDetector(
-              key: _graphKey,
-              behavior: HitTestBehavior.opaque,
-              onTapUp: _handleTap,
-              onPanStart: _handlePanStart,
-              onPanUpdate: _handlePanUpdate,
-              onPanEnd: (_) => _finishDrag(),
-              onPanCancel: _finishDrag,
-              child: CustomPaint(
-                key: const ValueKey('tone-curve-gesture-surface'),
-                painter: _ToneCurvePainter(
-                  curve: curve,
-                  channel: _channel,
-                  selectedIndex: selected,
+        Padding(
+          padding: const EdgeInsets.only(
+            left: AppSpacing.xs,
+            right: AppSpacing.lg,
+          ),
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: widget.graphHeight),
+              child: GestureDetector(
+                key: _graphKey,
+                behavior: HitTestBehavior.opaque,
+                onTapUp: _handleTap,
+                onPanStart: _handlePanStart,
+                onPanUpdate: _handlePanUpdate,
+                onPanEnd: (_) => _finishDrag(),
+                onPanCancel: _finishDrag,
+                child: CustomPaint(
+                  key: const ValueKey('tone-curve-gesture-surface'),
+                  painter: _ToneCurvePainter(
+                    curve: curve,
+                    channel: _channel,
+                    selectedIndex: selected,
+                  ),
+                  child: const SizedBox.expand(),
                 ),
-                child: const SizedBox.expand(),
               ),
             ),
           ),
