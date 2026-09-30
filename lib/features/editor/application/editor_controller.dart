@@ -5,6 +5,7 @@ import '../domain/adjustment_type.dart';
 import '../domain/crop_state.dart';
 import '../domain/editor_session.dart';
 import '../domain/export_settings.dart';
+import '../domain/hsl_color_mixer.dart';
 import '../domain/image_adjustments.dart';
 import '../domain/image_transform.dart';
 import '../domain/tone_curves.dart';
@@ -49,12 +50,14 @@ class EditorController extends ChangeNotifier {
   bool get canCompareBefore =>
       _session.hasImage &&
       (!_session.adjustments.isDefault ||
-          !_session.effectiveToneCurves.isDefault);
+          !_session.effectiveToneCurves.isDefault ||
+          !_session.hslColorMixer.isDefault);
 
   bool get canResetAdjustments =>
       _session.hasImage &&
       (!_session.adjustments.isDefault ||
           !_session.effectiveToneCurves.isDefault ||
+          !_session.hslColorMixer.isDefault ||
           _session.activePresetId != null);
 
   ImageAdjustments get previewAdjustments =>
@@ -62,6 +65,9 @@ class EditorController extends ChangeNotifier {
 
   ToneCurves get previewToneCurves =>
       _isShowingBefore ? ToneCurves.initial : _session.effectiveToneCurves;
+
+  HslColorMixer get previewHslColorMixer =>
+      _isShowingBefore ? HslColorMixer.initial : _session.hslColorMixer;
 
   EditorSession get session => _session;
 
@@ -96,6 +102,7 @@ class EditorController extends ChangeNotifier {
       transform: ImageTransform.initial,
       crop: CropState.initial,
       clearToneCurves: true,
+      hslColorMixer: HslColorMixer.initial,
       clearActivePreset: true,
       isDirty: false,
     );
@@ -181,6 +188,14 @@ class EditorController extends ChangeNotifier {
     );
   }
 
+  void updateHslColorMixer(HslColorMixer hslColorMixer) {
+    _applyEdit(
+      _session.copyWith(hslColorMixer: hslColorMixer, clearActivePreset: true),
+      label: 'HSL Color Mixer',
+      action: EditorHistoryAction.adjustment,
+    );
+  }
+
   void applyPreset({
     required String presetId,
     String? presetName,
@@ -235,6 +250,7 @@ class EditorController extends ChangeNotifier {
       _session.copyWith(
         adjustments: ImageAdjustments.initial,
         clearToneCurves: true,
+        hslColorMixer: HslColorMixer.initial,
         clearActivePreset: true,
       ),
       label: 'Reset Adjustments',
@@ -532,6 +548,7 @@ class EditorController extends ChangeNotifier {
       crop: baseline.crop,
       toneCurves: baseline.toneCurves,
       clearToneCurves: baseline.toneCurves == null,
+      hslColorMixer: baseline.hslColorMixer,
       activePresetId: baseline.activePresetId,
       clearActivePreset: baseline.activePresetId == null,
     );
@@ -649,6 +666,12 @@ class EditorController extends ChangeNotifier {
       clearToneCurves = after.toneCurves == null;
     }
 
+    var hslColorMixer = current.hslColorMixer;
+
+    if (before.hslColorMixer != after.hslColorMixer) {
+      hslColorMixer = after.hslColorMixer;
+    }
+
     var activePresetId = current.activePresetId;
     var clearActivePreset = false;
 
@@ -667,6 +690,7 @@ class EditorController extends ChangeNotifier {
       crop: crop,
       toneCurves: toneCurves,
       clearToneCurves: clearToneCurves,
+      hslColorMixer: hslColorMixer,
       activePresetId: activePresetId,
       clearActivePreset: clearActivePreset,
     );
@@ -777,6 +801,7 @@ class EditorController extends ChangeNotifier {
         _sameTransform(a.transform, b.transform) &&
         a.crop == b.crop &&
         a.effectiveToneCurves == b.effectiveToneCurves &&
+        a.hslColorMixer == b.hslColorMixer &&
         a.activePresetId == b.activePresetId;
   }
 

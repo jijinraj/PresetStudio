@@ -1,5 +1,6 @@
 import 'crop_state.dart';
 import 'export_settings.dart';
+import 'hsl_color_mixer.dart';
 import 'image_adjustments.dart';
 import 'image_transform.dart';
 import 'tone_curves.dart';
@@ -11,6 +12,7 @@ class EditorSession {
     this.transform = ImageTransform.initial,
     this.crop = CropState.initial,
     this.toneCurves,
+    this.hslColorMixer = HslColorMixer.initial,
     this.activePresetId,
     this.exportSettings = ExportSettings.initial,
     this.isDirty = false,
@@ -22,6 +24,7 @@ class EditorSession {
   final ImageTransform transform;
   final CropState crop;
   final ToneCurves? toneCurves;
+  final HslColorMixer hslColorMixer;
 
   ToneCurves get effectiveToneCurves => toneCurves ?? ToneCurves.initial;
 
@@ -43,6 +46,7 @@ class EditorSession {
     CropState? crop,
     ToneCurves? toneCurves,
     bool clearToneCurves = false,
+    HslColorMixer? hslColorMixer,
     String? activePresetId,
     bool clearActivePreset = false,
     ExportSettings? exportSettings,
@@ -56,6 +60,7 @@ class EditorSession {
       transform: transform ?? this.transform,
       crop: crop ?? this.crop,
       toneCurves: clearToneCurves ? null : toneCurves ?? this.toneCurves,
+      hslColorMixer: hslColorMixer ?? this.hslColorMixer,
       activePresetId: clearActivePreset
           ? null
           : activePresetId ?? this.activePresetId,
