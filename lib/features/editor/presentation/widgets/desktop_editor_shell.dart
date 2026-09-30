@@ -21,6 +21,7 @@ import 'editor_history_list.dart';
 import 'editor_image_viewport.dart';
 import 'editor_viewport_controller.dart';
 import 'flip_control.dart';
+import 'hsl_color_mixer_editor.dart';
 import 'rotation_control.dart';
 import 'tone_curve_editor.dart';
 
@@ -928,6 +929,18 @@ class _AdjustmentsPanelState extends State<_AdjustmentsPanel> {
                       onInteractionStart: controller.beginEditTransaction,
                       onInteractionEnd: controller.endEditTransaction,
                       wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Divider(height: 1),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text('Color Mixer', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.md),
+                    HslColorMixerEditor(
+                      key: const ValueKey('desktop-hsl-color-mixer'),
+                      colorMixer: session.hslColorMixer,
+                      onChanged: controller.updateHslColorMixer,
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const Divider(height: 1),

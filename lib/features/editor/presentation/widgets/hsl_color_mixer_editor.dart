@@ -178,19 +178,43 @@ class _RangeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: 'Color range',
-      child: Row(
-        key: const ValueKey('hsl-color-mixer-range-selector'),
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: HslColorRange.values
-            .map(
-              (range) => _RangeButton(
-                range: range,
-                selected: range == selectedRange,
-                compact: compact,
-                onPressed: () => onSelected(range),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final buttons = HslColorRange.values
+              .map(
+                (range) => _RangeButton(
+                  range: range,
+                  selected: range == selectedRange,
+                  compact: compact,
+                  onPressed: () => onSelected(range),
+                ),
+              )
+              .toList(growable: false);
+
+          if (constraints.maxWidth >= 280) {
+            return Row(
+              key: const ValueKey('hsl-color-mixer-range-selector'),
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: buttons,
+            );
+          }
+
+          return Column(
+            key: const ValueKey('hsl-color-mixer-range-selector'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: buttons.take(4).toList(growable: false),
               ),
-            )
-            .toList(growable: false),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: buttons.skip(4).toList(growable: false),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
