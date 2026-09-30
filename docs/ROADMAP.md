@@ -7,7 +7,31 @@
 > customizable editing, portable presets, and community sharing across
 > desktop and mobile.
 
-## Current milestone - Advanced Editing / Preset Engine v2
+## Current milestone - Preset Experience v2 / First Public Build
+
+### First public build path
+
+- [x] Vignette
+- [x] Tone Curves
+- [x] HSL / Color Mixer
+- [ ] Preset Experience v2
+  - [ ] Improve preset discovery and browsing
+  - [ ] Improve search, filtering, and category navigation
+  - [ ] Improve saved / favorite preset workflows
+  - [ ] Improve preview experience
+  - [ ] Clarify local, saved, and remote preset states
+  - [ ] Improve preset management
+- [ ] Desktop UI revamp
+- [ ] Build a strong starter preset collection using Curves + HSL
+- [ ] Release hardening
+- [ ] First public build
+
+> Color Grading, Grain, Clarity, Dehaze, Detail, masks, selective editing,
+> templates, and deeper community features are not blockers for the first public build.
+
+---
+
+## Advanced editing / Preset Engine v2
 
 ### Vignette
 
@@ -33,49 +57,57 @@
 
 ### Tone Curves
 
-- [ ] Define structured Tone Curve domain model
-  - [ ] Define normalized curve control points
-  - [ ] Keep curve state separate from scalar AdjustmentType values
-  - [ ] Define neutral / identity curve
-  - [ ] Define curve sanitization and validation
-  - [ ] Define curve interpolation behavior
-- [ ] Add master / RGB curve
-- [ ] Add interactive curve editor
-  - [ ] Add control-point creation
-  - [ ] Add control-point movement
-  - [ ] Add control-point deletion
-  - [ ] Prevent invalid point ordering
-  - [ ] Add curve reset
-- [ ] Integrate Tone Curves with EditorSession
-- [ ] Integrate Tone Curve edits with History
-  - [ ] Group continuous curve interaction into semantic History entries
-  - [ ] Support Undo / Redo
-  - [ ] Support History enable / disable
-  - [ ] Support History reconstruction
-- [ ] Add GPU live-preview rendering
-- [ ] Add CPU full-resolution export rendering
-- [ ] Maintain preview / export parity
-- [ ] Add portable `.presetstudio` serialization
-- [ ] Preserve backwards compatibility with presets without curve data
-- [ ] Add desktop Tone Curve UI
-- [ ] Add mobile Tone Curve UI
-- [ ] Add model and interaction tests
-- [ ] Add History regression coverage
-- [ ] Add preset round-trip coverage
-- [ ] Add export-rendering coverage
+- [x] Define structured Tone Curve domain model
+  - [x] Define normalized curve control points
+  - [x] Keep curve state separate from scalar AdjustmentType values
+  - [x] Define neutral / identity curve
+  - [x] Define curve sanitization and validation
+  - [x] Define curve interpolation behavior
+- [x] Add Master + Red / Green / Blue curves
+- [x] Add interactive curve editor
+  - [x] Add control-point creation
+  - [x] Add control-point movement
+  - [x] Add control-point deletion
+  - [x] Prevent invalid point ordering
+  - [x] Add curve reset
+- [x] Integrate Tone Curves with EditorSession
+- [x] Integrate Tone Curve edits with History
+  - [x] Group continuous curve interaction into semantic History entries
+  - [x] Support Undo / Redo
+  - [x] Support History enable / disable
+  - [x] Support History reconstruction
+- [x] Add GPU live-preview rendering
+- [x] Add CPU full-resolution export rendering
+- [x] Maintain preview / export rendering semantics
+- [x] Add portable `.presetstudio` serialization
+- [x] Preserve backwards compatibility with presets without curve data
+- [x] Add desktop Tone Curve UI
+- [x] Add mobile Tone Curve UI
+- [x] Add model and interaction tests
+- [x] Add History regression coverage
+- [x] Add preset round-trip coverage
+- [x] Add export-rendering coverage
 
 ### HSL / Color Mixer
 
-- [ ] Define HSL / Color Mixer domain state
-- [ ] Add per-color Hue controls
-- [ ] Add per-color Saturation controls
-- [ ] Add per-color Luminance controls
-- [ ] Add GPU preview rendering
-- [ ] Add CPU full-resolution export rendering
-- [ ] Add portable preset serialization
-- [ ] Add desktop UI
-- [ ] Add mobile UI
-- [ ] Add regression coverage
+- [x] Define structured HSL / Color Mixer domain state
+- [x] Add Red, Orange, Yellow, Green, Aqua, Blue, Purple, and Magenta ranges
+- [x] Add per-color Hue controls
+- [x] Add per-color Saturation controls
+- [x] Add per-color Luminance controls
+- [x] Integrate HSL state with EditorSession
+- [x] Integrate HSL edits with semantic History transactions
+- [x] Add GPU preview rendering
+- [x] Add CPU full-resolution export rendering
+- [x] Preserve GPU / CPU HSL ordering with the tonal pipeline
+- [x] Add portable `.presetstudio` serialization
+- [x] Preserve backwards compatibility with presets without HSL data
+- [x] Add reusable Color Mixer editor
+- [x] Add desktop UI
+- [x] Add mobile dedicated Color Mixer workspace
+- [x] Add Cancel / Done transaction semantics on mobile
+- [x] Add per-range reset and Reset All workflows
+- [x] Add regression coverage
 
 ### Color Grading
 
@@ -170,6 +202,8 @@
 - [x] Support crop operations through semantic History transactions
 - [x] Support preset application as a semantic History operation
 - [x] Preserve History reconstruction for Vignette
+- [x] Preserve History reconstruction for Tone Curves
+- [x] Preserve History reconstruction for HSL / Color Mixer
 - [ ] Design permanent operation delete / rebase semantics separately from enable / disable
 
 ---
@@ -278,6 +312,8 @@
 - [x] Export portable `.presetstudio` presets
 - [x] Preserve backwards-compatible schema decoding
 - [x] Extend Presets v1 with Vignette Amount and Feather without breaking older presets
+- [x] Extend Presets v1 with structured Tone Curves without breaking older presets
+- [x] Extend Presets v1 with structured HSL / Color Mixer values without breaking older presets
 
 ### Local preset library
 
@@ -354,6 +390,8 @@
 - [x] Add horizontally scrollable adjustment selector
 - [x] Show one focused adjustment at a time
 - [x] Add immersive adjustment-ruler interaction
+- [x] Add dedicated mobile Tone Curve workspace
+- [x] Add dedicated mobile HSL / Color Mixer workspace
 - [x] Redesign mobile crop workflow
 - [x] Add dedicated composition-guides mode
 - [x] Finish responsive mobile polish
@@ -382,6 +420,7 @@
 - [x] Keep ruler independent from editor domain state
 - [x] Reuse ruler for mobile adjustments
 - [x] Reuse ruler for crop straightening
+- [x] Reuse ruler for HSL / Color Mixer controls
 
 ---
 
@@ -413,6 +452,8 @@
 
 - [x] Add CPU export implementation for existing tonal adjustments
 - [x] Add CPU export implementation for Vignette
+- [x] Add CPU export implementation for Tone Curves
+- [x] Add CPU export implementation for HSL / Color Mixer
 - [ ] Verify complete preview / export parity across every supported adjustment
 - [ ] Expand automated preview / export parity regression coverage
 
