@@ -47,14 +47,21 @@ class EditorController extends ChangeNotifier {
   bool get isShowingBefore => _isShowingBefore;
 
   bool get canCompareBefore =>
-      _session.hasImage && !_session.adjustments.isDefault;
+      _session.hasImage &&
+      (!_session.adjustments.isDefault ||
+          !_session.effectiveToneCurves.isDefault);
 
   bool get canResetAdjustments =>
       _session.hasImage &&
-      (!_session.adjustments.isDefault || _session.activePresetId != null);
+      (!_session.adjustments.isDefault ||
+          !_session.effectiveToneCurves.isDefault ||
+          _session.activePresetId != null);
 
   ImageAdjustments get previewAdjustments =>
       _isShowingBefore ? ImageAdjustments.initial : _session.adjustments;
+
+  ToneCurves get previewToneCurves =>
+      _isShowingBefore ? ToneCurves.initial : _session.effectiveToneCurves;
 
   EditorSession get session => _session;
 
@@ -225,6 +232,7 @@ class EditorController extends ChangeNotifier {
     _applyEdit(
       _session.copyWith(
         adjustments: ImageAdjustments.initial,
+        clearToneCurves: true,
         clearActivePreset: true,
       ),
       label: 'Reset Adjustments',

@@ -156,6 +156,7 @@ class _DesktopEditorShellState extends State<DesktopEditorShell> {
                                 sourceImagePath:
                                     controller.session.sourceImagePath,
                                 adjustments: controller.previewAdjustments,
+                                toneCurves: controller.previewToneCurves,
                                 transform: controller.session.transform,
                                 crop: controller.session.crop,
                                 onImportImage: widget.onImportImage,
@@ -243,6 +244,7 @@ class _DesktopComparisonViewport extends StatelessWidget {
           child: EditorImageViewport(
             sourceImagePath: sourceImagePath,
             adjustments: controller.previewAdjustments,
+            toneCurves: controller.previewToneCurves,
             transform: transform,
             crop: crop,
             onImportImage: onImportImage,

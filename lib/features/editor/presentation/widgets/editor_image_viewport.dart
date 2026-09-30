@@ -9,6 +9,7 @@ import '../../../../theme/tokens/app_typography.dart';
 import '../../domain/crop_state.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
+import '../../domain/tone_curves.dart';
 import 'editor_crop_preview.dart';
 import 'editor_viewport_controller.dart';
 
@@ -22,6 +23,7 @@ class EditorImageViewport extends StatefulWidget {
     required this.onImportImage,
     required this.isImporting,
     this.crop = CropState.initial,
+    this.toneCurves,
     this.viewportController,
     this.compactZoomControls = false,
     this.invertDesktopVerticalPan = true,
@@ -42,6 +44,7 @@ class EditorImageViewport extends StatefulWidget {
   final ImageAdjustments adjustments;
   final ImageTransform transform;
   final CropState crop;
+  final ToneCurves? toneCurves;
 
   final Future<void> Function() onImportImage;
   final bool isImporting;
@@ -161,6 +164,7 @@ class _EditorImageViewportState extends State<EditorImageViewport> {
       adjustments: widget.adjustments,
       transform: widget.transform,
       crop: widget.crop,
+      toneCurves: widget.toneCurves,
       onImportImage: widget.onImportImage,
       isImporting: widget.isImporting,
       viewportController: _viewportController,
@@ -229,6 +233,7 @@ class _LoadedViewport extends StatefulWidget {
     required this.adjustments,
     required this.transform,
     required this.crop,
+    required this.toneCurves,
     required this.onImportImage,
     required this.isImporting,
     required this.viewportController,
@@ -250,6 +255,7 @@ class _LoadedViewport extends StatefulWidget {
   final ImageAdjustments adjustments;
   final ImageTransform transform;
   final CropState crop;
+  final ToneCurves? toneCurves;
 
   final Future<void> Function() onImportImage;
   final bool isImporting;
@@ -475,6 +481,7 @@ class _LoadedViewportState extends State<_LoadedViewport> {
                                 adjustments: widget.adjustments,
                                 transform: widget.transform,
                                 crop: widget.crop,
+                                toneCurves: widget.toneCurves,
                                 filterQuality: FilterQuality.medium,
                                 uncroppedFit: widget.imageFit,
                                 errorBuilder: (context, error, stackTrace) {

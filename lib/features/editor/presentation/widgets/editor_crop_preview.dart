@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../domain/crop_state.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
+import '../../domain/tone_curves.dart';
 import 'editor_rendered_image.dart';
 
 /// Renders the committed, non-destructive crop composition outside the
@@ -20,6 +21,7 @@ class EditorCropPreview extends StatefulWidget {
     required this.adjustments,
     required this.transform,
     required this.crop,
+    this.toneCurves,
     this.filterQuality = FilterQuality.medium,
     this.uncroppedFit = BoxFit.contain,
     this.errorBuilder,
@@ -30,6 +32,7 @@ class EditorCropPreview extends StatefulWidget {
   final ImageAdjustments adjustments;
   final ImageTransform transform;
   final CropState crop;
+  final ToneCurves? toneCurves;
   final FilterQuality filterQuality;
   final BoxFit uncroppedFit;
   final ImageErrorWidgetBuilder? errorBuilder;
@@ -125,6 +128,7 @@ class _EditorCropPreviewState extends State<EditorCropPreview> {
         sourceImagePath: widget.sourceImagePath,
         adjustments: widget.adjustments,
         transform: widget.transform,
+        toneCurves: widget.toneCurves,
         fit: widget.uncroppedFit,
         filterQuality: widget.filterQuality,
         errorBuilder: widget.errorBuilder,
@@ -193,6 +197,7 @@ class _EditorCropPreviewState extends State<EditorCropPreview> {
                       sourceImagePath: widget.sourceImagePath,
                       adjustments: widget.adjustments,
                       transform: previewTransform,
+                      toneCurves: widget.toneCurves,
                       fit: BoxFit.contain,
                       filterQuality: widget.filterQuality,
                       errorBuilder: widget.errorBuilder,

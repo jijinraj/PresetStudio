@@ -16,11 +16,99 @@ uniform float u_saturation;
 uniform float u_vignetteAmount;
 uniform float u_vignetteFeather;
 
+uniform vec4 u_curveRed0;
+uniform vec4 u_curveRed1;
+uniform vec4 u_curveRed2;
+uniform vec4 u_curveRed3;
+uniform vec4 u_curveGreen0;
+uniform vec4 u_curveGreen1;
+uniform vec4 u_curveGreen2;
+uniform vec4 u_curveGreen3;
+uniform vec4 u_curveBlue0;
+uniform vec4 u_curveBlue1;
+uniform vec4 u_curveBlue2;
+uniform vec4 u_curveBlue3;
+
 uniform sampler2D u_texture;
 
 out vec4 fragColor;
 
 const vec3 kLuminance = vec3(0.2126, 0.7152, 0.0722);
+
+float curveSample(
+  int index,
+  vec4 group0,
+  vec4 group1,
+  vec4 group2,
+  vec4 group3
+) {
+  if (index == 0) return group0.x;
+  if (index == 1) return group0.y;
+  if (index == 2) return group0.z;
+  if (index == 3) return group0.w;
+  if (index == 4) return group1.x;
+  if (index == 5) return group1.y;
+  if (index == 6) return group1.z;
+  if (index == 7) return group1.w;
+  if (index == 8) return group2.x;
+  if (index == 9) return group2.y;
+  if (index == 10) return group2.z;
+  if (index == 11) return group2.w;
+  if (index == 12) return group3.x;
+  if (index == 13) return group3.y;
+  if (index == 14) return group3.z;
+  return group3.w;
+}
+
+float applyCurve(
+  float value,
+  vec4 group0,
+  vec4 group1,
+  vec4 group2,
+  vec4 group3
+) {
+  float position = clamp(value, 0.0, 1.0) * 15.0;
+  int lowerIndex = int(floor(position));
+  int upperIndex = lowerIndex < 15 ? lowerIndex + 1 : 15;
+  float fraction = position - float(lowerIndex);
+
+  float lower = curveSample(
+    lowerIndex,
+    group0,
+    group1,
+    group2,
+    group3
+  );
+  float upper = curveSample(
+    upperIndex,
+    group0,
+    group1,
+    group2,
+    group3
+  );
+
+  return mix(lower, upper, fraction);
+}
+
+vec3 applyToneCurves(vec3 rgb) {
+  return vec3(
+    applyCurve(rgb.r, u_curveRed0, u_curveRed1, u_curveRed2, u_curveRed3),
+    applyCurve(
+      rgb.g,
+      u_curveGreen0,
+      u_curveGreen1,
+      u_curveGreen2,
+      u_curveGreen3
+    ),
+    applyCurve(
+      rgb.b,
+      u_curveBlue0,
+      u_curveBlue1,
+      u_curveBlue2,
+      u_curveBlue3
+    )
+  );
+}
 
 vec3 applyTonalRanges(
   vec3 rgb,
@@ -50,7 +138,6 @@ vec3 applyContrast(vec3 rgb, float contrast) {
   float factor = 1.0 + (contrast / 100.0);
   return ((rgb - vec3(0.5)) * factor) + vec3(0.5);
 }
-
 
 vec3 applyColorBalance(vec3 rgb, float temperature, float tint) {
   float normalizedTemperature = temperature / 100.0;
@@ -117,11 +204,7 @@ vec3 applyVignette(
 }
 
 void main() {
-  // FlutterFragCoord() already uses the correct image-filter coordinate
-  // orientation for this runtime effect. Flipping Y again on Impeller/OpenGLES
-  // mirrors the source vertically on Windows.
   vec2 uv = FlutterFragCoord().xy / u_size;
-
   vec4 sampled = texture(u_texture, uv);
 
   if (sampled.a <= 0.0) {
@@ -132,7 +215,6 @@ void main() {
   vec3 rgb = sampled.rgb / sampled.a;
 
   rgb *= pow(2.0, u_exposure);
-
   rgb = applyTonalRanges(
     rgb,
     u_highlights,
@@ -140,11 +222,15 @@ void main() {
     u_whites,
     u_blacks
   );
-
   rgb = applyContrast(rgb, u_contrast);
   rgb = applyColorBalance(rgb, u_temperature, u_tint);
   rgb = applyVibrance(rgb, u_vibrance);
   rgb = applySaturation(rgb, u_saturation);
+
+  // Curves operate on the fully adjusted color result. The LUT already
+  // composes Master first and then the per-channel curve.
+  rgb = applyToneCurves(clamp(rgb, 0.0, 1.0));
+
   rgb = applyVignette(
     rgb,
     uv,
@@ -154,6 +240,5 @@ void main() {
   );
 
   rgb = clamp(rgb, 0.0, 1.0);
-
   fragColor = vec4(rgb * sampled.a, sampled.a);
 }

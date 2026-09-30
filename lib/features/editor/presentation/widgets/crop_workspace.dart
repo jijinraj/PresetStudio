@@ -16,6 +16,7 @@ import '../../domain/crop_resize_geometry.dart';
 import '../../domain/crop_state.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
+import '../../domain/tone_curves.dart';
 import 'composition_guide_controller.dart';
 import 'composition_guide_overlay.dart';
 import 'editor_rendered_image.dart';
@@ -542,6 +543,7 @@ class _CropWorkspaceState extends State<CropWorkspace> {
             final canvas = _CropCanvas(
               sourceImagePath: sourceImagePath,
               adjustments: controller.previewAdjustments,
+              toneCurves: controller.previewToneCurves,
               transform: session.transform,
               crop: crop,
               sourceAspectRatio: _originalAspectRatio ?? 4 / 3,
@@ -704,6 +706,7 @@ class _CropCanvas extends StatefulWidget {
   const _CropCanvas({
     required this.sourceImagePath,
     required this.adjustments,
+    required this.toneCurves,
     required this.transform,
     required this.crop,
     required this.sourceAspectRatio,
@@ -716,6 +719,7 @@ class _CropCanvas extends StatefulWidget {
 
   final String sourceImagePath;
   final ImageAdjustments adjustments;
+  final ToneCurves toneCurves;
   final ImageTransform transform;
   final CropState crop;
   final double sourceAspectRatio;
@@ -1272,6 +1276,7 @@ class _CropCanvasState extends State<_CropCanvas> {
                                     _CropImagePreview(
                                       sourceImagePath: widget.sourceImagePath,
                                       adjustments: widget.adjustments,
+                                      toneCurves: widget.toneCurves,
                                       transform: widget.transform,
                                       crop: widget.crop,
                                       frameSize: frameSize,
@@ -1395,6 +1400,7 @@ class _CropImagePreview extends StatelessWidget {
   const _CropImagePreview({
     required this.sourceImagePath,
     required this.adjustments,
+    required this.toneCurves,
     required this.transform,
     required this.crop,
     required this.frameSize,
@@ -1403,6 +1409,7 @@ class _CropImagePreview extends StatelessWidget {
 
   final String sourceImagePath;
   final ImageAdjustments adjustments;
+  final ToneCurves toneCurves;
   final ImageTransform transform;
   final CropState crop;
   final Size frameSize;
@@ -1454,6 +1461,7 @@ class _CropImagePreview extends StatelessWidget {
             child: EditorRenderedImage(
               sourceImagePath: sourceImagePath,
               adjustments: adjustments,
+              toneCurves: toneCurves,
               transform: previewTransform,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {

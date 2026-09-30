@@ -6,6 +6,7 @@ import '../../../../theme/tokens/app_spacing.dart';
 import '../../domain/crop_state.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
+import '../../domain/tone_curves.dart';
 import 'editor_image_viewport.dart';
 
 /// Image-first mobile editor workspace.
@@ -22,6 +23,7 @@ class MobileEditorCanvas extends StatelessWidget {
     required this.crop,
     required this.onImportImage,
     required this.isImporting,
+    this.toneCurves,
     this.topAction,
     this.imageOverlay,
     this.onTap,
@@ -33,6 +35,7 @@ class MobileEditorCanvas extends StatelessWidget {
   final ImageAdjustments adjustments;
   final ImageTransform transform;
   final CropState crop;
+  final ToneCurves? toneCurves;
   final Future<void> Function() onImportImage;
   final bool isImporting;
   final Widget? topAction;
@@ -56,6 +59,7 @@ class MobileEditorCanvas extends StatelessWidget {
           adjustments: adjustments,
           transform: transform,
           crop: crop,
+          toneCurves: toneCurves,
           onImportImage: onImportImage,
           isImporting: isImporting,
           compactZoomControls: true,

@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
+import '../../domain/tone_curves.dart';
 import '../../rendering/editor_render_pipeline.dart';
+import '../../rendering/tone_curve_lut.dart';
 import 'editor_rotation_layout.dart';
 
 class EditorRenderedImage extends StatefulWidget {
@@ -13,6 +15,7 @@ class EditorRenderedImage extends StatefulWidget {
     required this.sourceImagePath,
     required this.adjustments,
     required this.transform,
+    this.toneCurves,
     this.fit = BoxFit.contain,
     this.filterQuality = FilterQuality.medium,
     this.errorBuilder,
@@ -22,6 +25,7 @@ class EditorRenderedImage extends StatefulWidget {
   final String sourceImagePath;
   final ImageAdjustments adjustments;
   final ImageTransform transform;
+  final ToneCurves? toneCurves;
 
   final BoxFit fit;
   final FilterQuality filterQuality;
@@ -76,6 +80,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
     final renderPlan = _pipeline.buildPlan(
       widget.adjustments,
       transform: widget.transform,
+      toneCurves: widget.toneCurves,
     );
 
     final sourceImage = Image.file(
@@ -93,6 +98,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
       sourceImage,
       renderPlan.adjustments,
       renderPlan.colorMatrix,
+      renderPlan.toneCurveLut,
     );
 
     return RepaintBoundary(
@@ -113,6 +119,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
     Widget sourceImage,
     ImageAdjustments adjustments,
     List<double> fallbackColorMatrix,
+    ToneCurveLut toneCurveLut,
   ) {
     final shader = _tonalShader;
 
@@ -124,7 +131,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
       );
     }
 
-    _configureTonalShader(shader, adjustments);
+    _configureTonalShader(shader, adjustments, toneCurveLut);
 
     return ImageFiltered(
       key: const ValueKey('editor-color-filter'),
@@ -136,6 +143,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
   void _configureTonalShader(
     ui.FragmentShader shader,
     ImageAdjustments adjustments,
+    ToneCurveLut toneCurveLut,
   ) {
     // Float slots 0 and 1 belong to u_size and are supplied automatically
     // by ImageFilter.shader.
@@ -151,5 +159,17 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
     shader.setFloat(11, adjustments.saturation);
     shader.setFloat(12, adjustments.vignetteAmount);
     shader.setFloat(13, adjustments.vignetteFeather);
+
+    var slot = 14;
+
+    for (final value in toneCurveLut.red) {
+      shader.setFloat(slot++, value);
+    }
+    for (final value in toneCurveLut.green) {
+      shader.setFloat(slot++, value);
+    }
+    for (final value in toneCurveLut.blue) {
+      shader.setFloat(slot++, value);
+    }
   }
 }

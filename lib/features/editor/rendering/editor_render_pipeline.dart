@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import '../domain/image_adjustments.dart';
 import '../domain/image_transform.dart';
+import '../domain/tone_curves.dart';
 import 'editor_render_plan.dart';
+import 'tone_curve_lut.dart';
 
 class EditorRenderPipeline {
   const EditorRenderPipeline();
@@ -39,8 +41,12 @@ class EditorRenderPipeline {
   EditorRenderPlan buildPlan(
     ImageAdjustments adjustments, {
     ImageTransform transform = ImageTransform.initial,
+    ToneCurves? toneCurves,
   }) {
     final sanitizedAdjustments = adjustments.sanitized();
+    final curveLut = ToneCurveLut.fromToneCurves(
+      toneCurves ?? ToneCurves.initial,
+    );
 
     final exposureMatrix = _buildExposureMatrix(sanitizedAdjustments.exposure);
 
@@ -80,6 +86,7 @@ class EditorRenderPipeline {
       adjustments: sanitizedAdjustments,
       transform: transform,
       colorMatrix: colorMatrix,
+      toneCurveLut: curveLut,
     );
   }
 

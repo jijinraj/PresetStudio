@@ -770,6 +770,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                     child: MobileEditorCanvas(
                       sourceImagePath: controller.session.sourceImagePath,
                       adjustments: controller.previewAdjustments,
+                      toneCurves: controller.previewToneCurves,
                       transform: controller.session.transform,
                       crop: controller.session.crop,
                       onImportImage: widget.onImportImage,
