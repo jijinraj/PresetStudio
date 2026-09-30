@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'preset.dart';
 import 'preset_adjustment_values.dart';
+import 'preset_hsl_color_mixer_values.dart';
 import 'preset_tone_curve_values.dart';
 
 class PresetFormatException implements Exception {
@@ -31,6 +32,7 @@ class PresetJsonCodec {
       'revision': preset.revision,
       'adjustments': _encodeAdjustments(preset.adjustments),
       'toneCurves': _encodeToneCurves(preset.toneCurves),
+      'hslColorMixer': _encodeHslColorMixer(preset.hslColorMixer),
     };
 
     return JsonEncoder.withIndent('  ').convert(json);
@@ -96,6 +98,7 @@ class PresetJsonCodec {
         revision: _requiredInt(json, 'revision'),
         adjustments: _decodeAdjustments(adjustmentsJson),
         toneCurves: _decodeToneCurves(json['toneCurves']),
+        hslColorMixer: _decodeHslColorMixer(json['hslColorMixer']),
       );
     } on PresetValidationException catch (error) {
       throw PresetFormatException(error.message);
@@ -133,6 +136,65 @@ class PresetJsonCodec {
       saturation: _requiredDouble(json, 'saturation'),
       vignetteAmount: _optionalDouble(json, 'vignetteAmount') ?? 0,
       vignetteFeather: _optionalDouble(json, 'vignetteFeather') ?? 50,
+    );
+  }
+
+  Map<String, Object?> _encodeHslColorMixer(PresetHslColorMixerValues mixer) {
+    return <String, Object?>{
+      'red': _encodeHslAdjustment(mixer.red),
+      'orange': _encodeHslAdjustment(mixer.orange),
+      'yellow': _encodeHslAdjustment(mixer.yellow),
+      'green': _encodeHslAdjustment(mixer.green),
+      'aqua': _encodeHslAdjustment(mixer.aqua),
+      'blue': _encodeHslAdjustment(mixer.blue),
+      'purple': _encodeHslAdjustment(mixer.purple),
+      'magenta': _encodeHslAdjustment(mixer.magenta),
+    };
+  }
+
+  Map<String, double> _encodeHslAdjustment(
+    PresetHslColorAdjustmentValues adjustment,
+  ) {
+    return <String, double>{
+      'hue': adjustment.hue,
+      'saturation': adjustment.saturation,
+      'luminance': adjustment.luminance,
+    };
+  }
+
+  PresetHslColorMixerValues _decodeHslColorMixer(Object? value) {
+    if (value == null) {
+      return PresetHslColorMixerValues.initial;
+    }
+    if (value is! Map<String, dynamic>) {
+      throw const PresetFormatException('hslColorMixer must be a JSON object.');
+    }
+
+    return PresetHslColorMixerValues(
+      red: _decodeHslAdjustment(value, 'red'),
+      orange: _decodeHslAdjustment(value, 'orange'),
+      yellow: _decodeHslAdjustment(value, 'yellow'),
+      green: _decodeHslAdjustment(value, 'green'),
+      aqua: _decodeHslAdjustment(value, 'aqua'),
+      blue: _decodeHslAdjustment(value, 'blue'),
+      purple: _decodeHslAdjustment(value, 'purple'),
+      magenta: _decodeHslAdjustment(value, 'magenta'),
+    );
+  }
+
+  PresetHslColorAdjustmentValues _decodeHslAdjustment(
+    Map<String, dynamic> json,
+    String key,
+  ) {
+    final value = json[key];
+    if (value is! Map<String, dynamic>) {
+      throw PresetFormatException('hslColorMixer.$key must be a JSON object.');
+    }
+
+    return PresetHslColorAdjustmentValues(
+      hue: _requiredDouble(value, 'hue'),
+      saturation: _requiredDouble(value, 'saturation'),
+      luminance: _requiredDouble(value, 'luminance'),
     );
   }
 

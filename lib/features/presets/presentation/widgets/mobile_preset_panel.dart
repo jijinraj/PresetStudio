@@ -362,6 +362,9 @@ class _MobilePresetPanelState extends State<MobilePresetPanel> {
         record.preset.adjustments,
       ),
       toneCurves: PresetAdjustmentMapper.toToneCurves(record.preset.toneCurves),
+      hslColorMixer: PresetAdjustmentMapper.toHslColorMixer(
+        record.preset.hslColorMixer,
+      ),
     );
   }
 
@@ -378,6 +381,9 @@ class _MobilePresetPanelState extends State<MobilePresetPanel> {
         ),
         toneCurves: PresetAdjustmentMapper.toToneCurves(
           record.preset.toneCurves,
+        ),
+        hslColorMixer: PresetAdjustmentMapper.toHslColorMixer(
+          record.preset.hslColorMixer,
         ),
       );
       return;
@@ -434,6 +440,9 @@ class _MobilePresetPanelState extends State<MobilePresetPanel> {
           preset.adjustments,
         ),
         toneCurves: PresetAdjustmentMapper.toToneCurves(preset.toneCurves),
+        hslColorMixer: PresetAdjustmentMapper.toHslColorMixer(
+          preset.hslColorMixer,
+        ),
       );
     } on Object catch (error) {
       if (context.mounted) {
@@ -484,6 +493,7 @@ class _MobilePresetPanelState extends State<MobilePresetPanel> {
         description: draft.description,
         adjustments: widget.editorController.session.adjustments,
         toneCurves: widget.editorController.session.effectiveToneCurves,
+        hslColorMixer: widget.editorController.session.hslColorMixer,
       );
       if (context.mounted) {
         _showMessage(context, '${draft.name} saved.');

@@ -201,6 +201,7 @@ class EditorController extends ChangeNotifier {
     String? presetName,
     required ImageAdjustments adjustments,
     ToneCurves? toneCurves,
+    HslColorMixer hslColorMixer = HslColorMixer.initial,
   }) {
     final normalizedName = presetName?.trim();
     final label = normalizedName == null || normalizedName.isEmpty
@@ -212,6 +213,7 @@ class EditorController extends ChangeNotifier {
         activePresetId: presetId,
         adjustments: adjustments.sanitized(),
         toneCurves: toneCurves ?? ToneCurves.initial,
+        hslColorMixer: hslColorMixer,
       ),
       label: label,
       action: EditorHistoryAction.preset,

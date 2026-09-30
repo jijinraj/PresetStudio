@@ -468,6 +468,9 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
           preset.adjustments,
         ),
         toneCurves: PresetAdjustmentMapper.toToneCurves(preset.toneCurves),
+        hslColorMixer: PresetAdjustmentMapper.toHslColorMixer(
+          preset.hslColorMixer,
+        ),
       );
     } on Object catch (error) {
       if (mounted) {
@@ -503,7 +506,10 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
     }
 
     final activeCandidate = _activeCandidate();
-    final hasCustomLook = !controller.session.adjustments.isDefault;
+    final hasCustomLook =
+        !controller.session.adjustments.isDefault ||
+        !controller.session.effectiveToneCurves.isDefault ||
+        !controller.session.hslColorMixer.isDefault;
     final activeRemoteItem = activeCandidate?.remoteItem;
     final activeLocalRecord = activeCandidate?.localRecord;
     final savedRemote = activeRemoteItem == null
@@ -666,6 +672,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
         name: name,
         adjustments: controller.session.adjustments,
         toneCurves: controller.session.effectiveToneCurves,
+        hslColorMixer: controller.session.hslColorMixer,
       );
 
       if (mounted) {

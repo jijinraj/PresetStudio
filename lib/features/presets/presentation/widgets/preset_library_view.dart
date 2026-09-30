@@ -332,6 +332,9 @@ class PresetLibraryView extends StatelessWidget {
           preset.adjustments,
         ),
         toneCurves: PresetAdjustmentMapper.toToneCurves(preset.toneCurves),
+        hslColorMixer: PresetAdjustmentMapper.toHslColorMixer(
+          preset.hslColorMixer,
+        ),
       );
       onPresetApplied?.call();
     } on Object catch (error) {
@@ -380,6 +383,7 @@ class PresetLibraryView extends StatelessWidget {
         description: draft.description,
         adjustments: editorController.session.adjustments,
         toneCurves: editorController.session.effectiveToneCurves,
+        hslColorMixer: editorController.session.hslColorMixer,
       );
 
       if (!context.mounted) {
@@ -482,6 +486,9 @@ class PresetLibraryView extends StatelessWidget {
         record.preset.adjustments,
       ),
       toneCurves: PresetAdjustmentMapper.toToneCurves(record.preset.toneCurves),
+      hslColorMixer: PresetAdjustmentMapper.toHslColorMixer(
+        record.preset.hslColorMixer,
+      ),
     );
 
     _showMessage(context, 'Applied ${record.preset.name}.');

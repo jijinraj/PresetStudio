@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../../editor/domain/hsl_color_mixer.dart';
 import '../../editor/domain/image_adjustments.dart';
 import '../../editor/domain/tone_curves.dart';
 import '../domain/preset.dart';
@@ -81,6 +82,7 @@ class PresetLibraryController extends ChangeNotifier {
     String? author,
     required ImageAdjustments adjustments,
     ToneCurves? toneCurves,
+    HslColorMixer hslColorMixer = HslColorMixer.initial,
   }) async {
     final library = _requireLibrary();
     final preset = Preset(
@@ -93,6 +95,7 @@ class PresetLibraryController extends ChangeNotifier {
       toneCurves: PresetAdjustmentMapper.fromToneCurves(
         toneCurves ?? ToneCurves.initial,
       ),
+      hslColorMixer: PresetAdjustmentMapper.fromHslColorMixer(hslColorMixer),
     );
 
     try {
@@ -131,6 +134,9 @@ class PresetLibraryController extends ChangeNotifier {
     final sanitizedToneCurves = PresetAdjustmentMapper.fromToneCurves(
       PresetAdjustmentMapper.toToneCurves(preset.toneCurves),
     );
+    final sanitizedHslColorMixer = PresetAdjustmentMapper.fromHslColorMixer(
+      PresetAdjustmentMapper.toHslColorMixer(preset.hslColorMixer),
+    );
     final importedPreset = Preset(
       schemaVersion: preset.schemaVersion,
       id: asCopy ? _idGenerator() : preset.id,
@@ -141,6 +147,7 @@ class PresetLibraryController extends ChangeNotifier {
       revision: preset.revision,
       adjustments: sanitizedAdjustments,
       toneCurves: sanitizedToneCurves,
+      hslColorMixer: sanitizedHslColorMixer,
     );
 
     try {

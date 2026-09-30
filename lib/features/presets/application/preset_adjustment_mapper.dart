@@ -1,7 +1,9 @@
 import '../../editor/domain/curve_point.dart';
+import '../../editor/domain/hsl_color_mixer.dart';
 import '../../editor/domain/image_adjustments.dart';
 import '../../editor/domain/tone_curves.dart';
 import '../domain/preset_adjustment_values.dart';
+import '../domain/preset_hsl_color_mixer_values.dart';
 import '../domain/preset_tone_curve_values.dart';
 
 class PresetAdjustmentMapper {
@@ -43,6 +45,52 @@ class PresetAdjustmentMapper {
       vignetteAmount: values.vignetteAmount,
       vignetteFeather: values.vignetteFeather,
     ).sanitized();
+  }
+
+  static PresetHslColorMixerValues fromHslColorMixer(HslColorMixer mixer) {
+    return PresetHslColorMixerValues(
+      red: _fromHslAdjustment(mixer.red),
+      orange: _fromHslAdjustment(mixer.orange),
+      yellow: _fromHslAdjustment(mixer.yellow),
+      green: _fromHslAdjustment(mixer.green),
+      aqua: _fromHslAdjustment(mixer.aqua),
+      blue: _fromHslAdjustment(mixer.blue),
+      purple: _fromHslAdjustment(mixer.purple),
+      magenta: _fromHslAdjustment(mixer.magenta),
+    );
+  }
+
+  static HslColorMixer toHslColorMixer(PresetHslColorMixerValues values) {
+    return HslColorMixer(
+      red: _toHslAdjustment(values.red),
+      orange: _toHslAdjustment(values.orange),
+      yellow: _toHslAdjustment(values.yellow),
+      green: _toHslAdjustment(values.green),
+      aqua: _toHslAdjustment(values.aqua),
+      blue: _toHslAdjustment(values.blue),
+      purple: _toHslAdjustment(values.purple),
+      magenta: _toHslAdjustment(values.magenta),
+    );
+  }
+
+  static PresetHslColorAdjustmentValues _fromHslAdjustment(
+    HslColorAdjustment adjustment,
+  ) {
+    return PresetHslColorAdjustmentValues(
+      hue: adjustment.hue,
+      saturation: adjustment.saturation,
+      luminance: adjustment.luminance,
+    );
+  }
+
+  static HslColorAdjustment _toHslAdjustment(
+    PresetHslColorAdjustmentValues values,
+  ) {
+    return HslColorAdjustment(
+      hue: values.hue,
+      saturation: values.saturation,
+      luminance: values.luminance,
+    );
   }
 
   static PresetToneCurvesValues fromToneCurves(ToneCurves curves) {

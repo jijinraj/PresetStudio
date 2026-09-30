@@ -1,4 +1,5 @@
 import 'preset_adjustment_values.dart';
+import 'preset_hsl_color_mixer_values.dart';
 import 'preset_tone_curve_values.dart';
 
 class PresetValidationException implements Exception {
@@ -21,6 +22,7 @@ class Preset {
     int revision = 1,
     required PresetAdjustmentValues adjustments,
     PresetToneCurvesValues? toneCurves,
+    PresetHslColorMixerValues? hslColorMixer,
   }) {
     final normalizedId = id.trim();
     final normalizedName = name.trim();
@@ -74,6 +76,7 @@ class Preset {
       revision: revision,
       adjustments: adjustments,
       toneCurves: toneCurves ?? PresetToneCurvesValues.initial,
+      hslColorMixer: hslColorMixer ?? PresetHslColorMixerValues.initial,
     );
   }
 
@@ -87,6 +90,7 @@ class Preset {
     required this.revision,
     required this.adjustments,
     required this.toneCurves,
+    required this.hslColorMixer,
   });
 
   static const int currentSchemaVersion = 1;
@@ -100,6 +104,7 @@ class Preset {
   final int revision;
   final PresetAdjustmentValues adjustments;
   final PresetToneCurvesValues toneCurves;
+  final PresetHslColorMixerValues hslColorMixer;
 
   Preset copyWith({
     String? name,
@@ -110,6 +115,7 @@ class Preset {
     int? revision,
     PresetAdjustmentValues? adjustments,
     PresetToneCurvesValues? toneCurves,
+    PresetHslColorMixerValues? hslColorMixer,
   }) {
     return Preset(
       schemaVersion: schemaVersion,
@@ -121,6 +127,7 @@ class Preset {
       revision: revision ?? this.revision,
       adjustments: adjustments ?? this.adjustments,
       toneCurves: toneCurves ?? this.toneCurves,
+      hslColorMixer: hslColorMixer ?? this.hslColorMixer,
     );
   }
 
@@ -146,7 +153,8 @@ class Preset {
             createdAt == other.createdAt &&
             revision == other.revision &&
             adjustments == other.adjustments &&
-            toneCurves == other.toneCurves;
+            toneCurves == other.toneCurves &&
+            hslColorMixer == other.hslColorMixer;
   }
 
   @override
@@ -160,5 +168,6 @@ class Preset {
     revision,
     adjustments,
     toneCurves,
+    hslColorMixer,
   );
 }
