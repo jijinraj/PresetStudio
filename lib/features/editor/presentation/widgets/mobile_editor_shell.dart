@@ -776,6 +776,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
                       sourceImagePath: controller.session.sourceImagePath,
                       adjustments: controller.previewAdjustments,
                       toneCurves: controller.previewToneCurves,
+                      hslColorMixer: controller.previewHslColorMixer,
                       transform: controller.session.transform,
                       crop: controller.session.crop,
                       onImportImage: widget.onImportImage,

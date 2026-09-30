@@ -180,6 +180,8 @@ class _MobileToneCurveWorkspaceState extends State<MobileToneCurveWorkspace> {
                                     transform: controller.session.transform,
                                     toneCurves:
                                         controller.session.effectiveToneCurves,
+                                    hslColorMixer:
+                                        controller.session.hslColorMixer,
                                     fit: BoxFit.fill,
                                   ),
                                 ),

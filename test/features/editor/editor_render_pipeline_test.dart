@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:presetstudio/features/editor/domain/hsl_color_mixer.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
 import 'package:presetstudio/features/editor/domain/image_transform.dart';
 import 'package:presetstudio/features/editor/rendering/editor_render_pipeline.dart';
@@ -263,6 +264,23 @@ void main() {
       expect(adjustments.exposure, 500.0);
 
       expect(plan.adjustments.exposure, 5.0);
+    });
+
+    test('carries HSL color mixer state into the render plan', () {
+      final mixer = HslColorMixer.initial.withAdjustment(
+        HslColorRange.blue,
+        HslColorAdjustment(hue: 20, saturation: 35, luminance: -15),
+      );
+
+      final plan = pipeline.buildPlan(
+        ImageAdjustments.initial,
+        hslColorMixer: mixer,
+      );
+
+      expect(plan.hslColorMixer, mixer);
+      expect(plan.hslColorMixer.blue.hue, 20);
+      expect(plan.hslColorMixer.blue.saturation, 35);
+      expect(plan.hslColorMixer.blue.luminance, -15);
     });
 
     test('includes image transform in render plan', () {

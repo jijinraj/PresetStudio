@@ -14,6 +14,7 @@ import '../../application/editor_controller.dart';
 import '../../application/editor_history_entry.dart';
 import '../../domain/crop_resize_geometry.dart';
 import '../../domain/crop_state.dart';
+import '../../domain/hsl_color_mixer.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
 import '../../domain/tone_curves.dart';
@@ -544,6 +545,7 @@ class _CropWorkspaceState extends State<CropWorkspace> {
               sourceImagePath: sourceImagePath,
               adjustments: controller.previewAdjustments,
               toneCurves: controller.previewToneCurves,
+              hslColorMixer: controller.previewHslColorMixer,
               transform: session.transform,
               crop: crop,
               sourceAspectRatio: _originalAspectRatio ?? 4 / 3,
@@ -707,6 +709,7 @@ class _CropCanvas extends StatefulWidget {
     required this.sourceImagePath,
     required this.adjustments,
     required this.toneCurves,
+    required this.hslColorMixer,
     required this.transform,
     required this.crop,
     required this.sourceAspectRatio,
@@ -720,6 +723,7 @@ class _CropCanvas extends StatefulWidget {
   final String sourceImagePath;
   final ImageAdjustments adjustments;
   final ToneCurves toneCurves;
+  final HslColorMixer hslColorMixer;
   final ImageTransform transform;
   final CropState crop;
   final double sourceAspectRatio;
@@ -1277,6 +1281,7 @@ class _CropCanvasState extends State<_CropCanvas> {
                                       sourceImagePath: widget.sourceImagePath,
                                       adjustments: widget.adjustments,
                                       toneCurves: widget.toneCurves,
+                                      hslColorMixer: widget.hslColorMixer,
                                       transform: widget.transform,
                                       crop: widget.crop,
                                       frameSize: frameSize,
@@ -1401,6 +1406,7 @@ class _CropImagePreview extends StatelessWidget {
     required this.sourceImagePath,
     required this.adjustments,
     required this.toneCurves,
+    required this.hslColorMixer,
     required this.transform,
     required this.crop,
     required this.frameSize,
@@ -1410,6 +1416,7 @@ class _CropImagePreview extends StatelessWidget {
   final String sourceImagePath;
   final ImageAdjustments adjustments;
   final ToneCurves toneCurves;
+  final HslColorMixer hslColorMixer;
   final ImageTransform transform;
   final CropState crop;
   final Size frameSize;
@@ -1462,6 +1469,7 @@ class _CropImagePreview extends StatelessWidget {
               sourceImagePath: sourceImagePath,
               adjustments: adjustments,
               toneCurves: toneCurves,
+              hslColorMixer: hslColorMixer,
               transform: previewTransform,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {

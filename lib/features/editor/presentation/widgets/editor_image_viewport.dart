@@ -7,6 +7,7 @@ import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../../../theme/tokens/app_typography.dart';
 import '../../domain/crop_state.dart';
+import '../../domain/hsl_color_mixer.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
 import '../../domain/tone_curves.dart';
@@ -24,6 +25,7 @@ class EditorImageViewport extends StatefulWidget {
     required this.isImporting,
     this.crop = CropState.initial,
     this.toneCurves,
+    this.hslColorMixer = HslColorMixer.initial,
     this.viewportController,
     this.compactZoomControls = false,
     this.invertDesktopVerticalPan = true,
@@ -45,6 +47,7 @@ class EditorImageViewport extends StatefulWidget {
   final ImageTransform transform;
   final CropState crop;
   final ToneCurves? toneCurves;
+  final HslColorMixer hslColorMixer;
 
   final Future<void> Function() onImportImage;
   final bool isImporting;
@@ -165,6 +168,7 @@ class _EditorImageViewportState extends State<EditorImageViewport> {
       transform: widget.transform,
       crop: widget.crop,
       toneCurves: widget.toneCurves,
+      hslColorMixer: widget.hslColorMixer,
       onImportImage: widget.onImportImage,
       isImporting: widget.isImporting,
       viewportController: _viewportController,
@@ -234,6 +238,7 @@ class _LoadedViewport extends StatefulWidget {
     required this.transform,
     required this.crop,
     required this.toneCurves,
+    required this.hslColorMixer,
     required this.onImportImage,
     required this.isImporting,
     required this.viewportController,
@@ -256,6 +261,7 @@ class _LoadedViewport extends StatefulWidget {
   final ImageTransform transform;
   final CropState crop;
   final ToneCurves? toneCurves;
+  final HslColorMixer hslColorMixer;
 
   final Future<void> Function() onImportImage;
   final bool isImporting;
@@ -482,6 +488,7 @@ class _LoadedViewportState extends State<_LoadedViewport> {
                                 transform: widget.transform,
                                 crop: widget.crop,
                                 toneCurves: widget.toneCurves,
+                                hslColorMixer: widget.hslColorMixer,
                                 filterQuality: FilterQuality.medium,
                                 uncroppedFit: widget.imageFit,
                                 errorBuilder: (context, error, stackTrace) {

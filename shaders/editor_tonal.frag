@@ -29,6 +29,15 @@ uniform vec4 u_curveBlue1;
 uniform vec4 u_curveBlue2;
 uniform vec4 u_curveBlue3;
 
+uniform vec3 u_hslRed;
+uniform vec3 u_hslOrange;
+uniform vec3 u_hslYellow;
+uniform vec3 u_hslGreen;
+uniform vec3 u_hslAqua;
+uniform vec3 u_hslBlue;
+uniform vec3 u_hslPurple;
+uniform vec3 u_hslMagenta;
+
 uniform sampler2D u_texture;
 
 out vec4 fragColor;
@@ -176,6 +185,149 @@ vec3 applySaturation(vec3 rgb, float saturation) {
   return mix(vec3(luminance), rgb, factor);
 }
 
+
+float hueDistance(float a, float b) {
+  float distance = abs(a - b);
+  return min(distance, 1.0 - distance);
+}
+
+float hueWeight(float hue, float center) {
+  // 60 degrees of influence on either side. Adjacent ranges overlap and the
+  // weighted result is normalized, avoiding hard boundaries between bands.
+  return max(0.0, 1.0 - (hueDistance(hue, center) * 6.0));
+}
+
+vec3 rgbToHsl(vec3 color) {
+  float maximum = max(max(color.r, color.g), color.b);
+  float minimum = min(min(color.r, color.g), color.b);
+  float chroma = maximum - minimum;
+  float lightness = (maximum + minimum) * 0.5;
+
+  if (chroma <= 0.000001) {
+    return vec3(0.0, 0.0, lightness);
+  }
+
+  float saturation = chroma / max(
+    0.000001,
+    1.0 - abs((2.0 * lightness) - 1.0)
+  );
+
+  float hue;
+  if (maximum == color.r) {
+    hue = mod((color.g - color.b) / chroma, 6.0);
+  } else if (maximum == color.g) {
+    hue = ((color.b - color.r) / chroma) + 2.0;
+  } else {
+    hue = ((color.r - color.g) / chroma) + 4.0;
+  }
+
+  hue = mod(hue / 6.0, 1.0);
+  if (hue < 0.0) {
+    hue += 1.0;
+  }
+
+  return vec3(hue, saturation, lightness);
+}
+
+float hueToRgb(float p, float q, float t) {
+  if (t < 0.0) t += 1.0;
+  if (t > 1.0) t -= 1.0;
+  if (t < 1.0 / 6.0) return p + (q - p) * 6.0 * t;
+  if (t < 1.0 / 2.0) return q;
+  if (t < 2.0 / 3.0) return p + (q - p) * (2.0 / 3.0 - t) * 6.0;
+  return p;
+}
+
+vec3 hslToRgb(vec3 hsl) {
+  float hue = mod(hsl.x, 1.0);
+  if (hue < 0.0) {
+    hue += 1.0;
+  }
+
+  float saturation = clamp(hsl.y, 0.0, 1.0);
+  float lightness = clamp(hsl.z, 0.0, 1.0);
+
+  if (saturation <= 0.000001) {
+    return vec3(lightness);
+  }
+
+  float q = lightness < 0.5
+      ? lightness * (1.0 + saturation)
+      : lightness + saturation - lightness * saturation;
+  float p = (2.0 * lightness) - q;
+
+  return vec3(
+    hueToRgb(p, q, hue + 1.0 / 3.0),
+    hueToRgb(p, q, hue),
+    hueToRgb(p, q, hue - 1.0 / 3.0)
+  );
+}
+
+vec3 applyHslColorMixer(vec3 rgb) {
+  vec3 hsl = rgbToHsl(clamp(rgb, 0.0, 1.0));
+
+  // Near-neutral pixels have no meaningful hue and should not acquire color
+  // merely because a selective band is edited.
+  if (hsl.y <= 0.000001) {
+    return rgb;
+  }
+
+  float weights[8];
+  weights[0] = hueWeight(hsl.x, 0.0);
+  weights[1] = hueWeight(hsl.x, 30.0 / 360.0);
+  weights[2] = hueWeight(hsl.x, 60.0 / 360.0);
+  weights[3] = hueWeight(hsl.x, 120.0 / 360.0);
+  weights[4] = hueWeight(hsl.x, 180.0 / 360.0);
+  weights[5] = hueWeight(hsl.x, 240.0 / 360.0);
+  weights[6] = hueWeight(hsl.x, 270.0 / 360.0);
+  weights[7] = hueWeight(hsl.x, 315.0 / 360.0);
+
+  float weightSum = 0.0;
+  vec3 adjustment = vec3(0.0);
+
+  weightSum += weights[0];
+  adjustment += u_hslRed * weights[0];
+  weightSum += weights[1];
+  adjustment += u_hslOrange * weights[1];
+  weightSum += weights[2];
+  adjustment += u_hslYellow * weights[2];
+  weightSum += weights[3];
+  adjustment += u_hslGreen * weights[3];
+  weightSum += weights[4];
+  adjustment += u_hslAqua * weights[4];
+  weightSum += weights[5];
+  adjustment += u_hslBlue * weights[5];
+  weightSum += weights[6];
+  adjustment += u_hslPurple * weights[6];
+  weightSum += weights[7];
+  adjustment += u_hslMagenta * weights[7];
+
+  if (weightSum <= 0.000001) {
+    return rgb;
+  }
+
+  adjustment /= weightSum;
+
+  // Hue ±100 maps to ±30 degrees. Saturation and luminance use normalized
+  // ±1 deltas with headroom-aware positive movement.
+  hsl.x = mod(hsl.x + (adjustment.x / 100.0) / 12.0, 1.0);
+  if (hsl.x < 0.0) {
+    hsl.x += 1.0;
+  }
+
+  float saturationDelta = adjustment.y / 100.0;
+  hsl.y = saturationDelta >= 0.0
+      ? hsl.y + (1.0 - hsl.y) * saturationDelta
+      : hsl.y * (1.0 + saturationDelta);
+
+  float luminanceDelta = adjustment.z / 100.0;
+  hsl.z = luminanceDelta >= 0.0
+      ? hsl.z + (1.0 - hsl.z) * luminanceDelta
+      : hsl.z * (1.0 + luminanceDelta);
+
+  return hslToRgb(hsl);
+}
+
 vec3 applyVignette(
   vec3 rgb,
   vec2 uv,
@@ -226,6 +378,10 @@ void main() {
   rgb = applyColorBalance(rgb, u_temperature, u_tint);
   rgb = applyVibrance(rgb, u_vibrance);
   rgb = applySaturation(rgb, u_saturation);
+
+  // Selective HSL operates after the global color controls and before Curves.
+  // Neutral HSL state is an identity operation.
+  rgb = applyHslColorMixer(clamp(rgb, 0.0, 1.0));
 
   // Curves operate on the fully adjusted color result. The LUT already
   // composes Master first and then the per-channel curve.

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../domain/hsl_color_mixer.dart';
 import '../domain/image_adjustments.dart';
 import '../domain/image_transform.dart';
 import '../domain/tone_curves.dart';
@@ -42,6 +43,7 @@ class EditorRenderPipeline {
     ImageAdjustments adjustments, {
     ImageTransform transform = ImageTransform.initial,
     ToneCurves? toneCurves,
+    HslColorMixer hslColorMixer = HslColorMixer.initial,
   }) {
     final sanitizedAdjustments = adjustments.sanitized();
     final curveLut = ToneCurveLut.fromToneCurves(
@@ -87,6 +89,7 @@ class EditorRenderPipeline {
       transform: transform,
       colorMatrix: colorMatrix,
       toneCurveLut: curveLut,
+      hslColorMixer: hslColorMixer,
     );
   }
 

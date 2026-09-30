@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:presetstudio/features/editor/domain/hsl_color_mixer.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
 import 'package:presetstudio/features/editor/domain/image_transform.dart';
 import 'package:presetstudio/features/editor/presentation/widgets/editor_rendered_image.dart';
@@ -187,6 +188,33 @@ void main() {
                 vibrance: 45,
               ),
               transform: ImageTransform.initial,
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const ValueKey('editor-color-filter')), findsOneWidget);
+    });
+
+    testWidgets('accepts HSL color mixer state in the color stage', (
+      tester,
+    ) async {
+      final mixer = HslColorMixer.initial.withAdjustment(
+        HslColorRange.red,
+        HslColorAdjustment(hue: 15, saturation: 25, luminance: -10),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EditorRenderedImage(
+              sourceImagePath: 'missing-test-image.jpg',
+              adjustments: ImageAdjustments.initial,
+              transform: ImageTransform.initial,
+              hslColorMixer: mixer,
               errorBuilder: (context, error, stackTrace) {
                 return const SizedBox();
               },

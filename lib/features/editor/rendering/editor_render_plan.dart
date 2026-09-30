@@ -1,3 +1,4 @@
+import '../domain/hsl_color_mixer.dart';
 import '../domain/image_adjustments.dart';
 import '../domain/image_transform.dart';
 import 'tone_curve_lut.dart';
@@ -8,11 +9,13 @@ class EditorRenderPlan {
     required this.transform,
     required this.colorMatrix,
     required this.toneCurveLut,
+    required this.hslColorMixer,
   });
 
   final ImageAdjustments adjustments;
   final ImageTransform transform;
   final ToneCurveLut toneCurveLut;
+  final HslColorMixer hslColorMixer;
 
   /// Flutter-compatible fallback matrix for the linear adjustment stage.
   ///

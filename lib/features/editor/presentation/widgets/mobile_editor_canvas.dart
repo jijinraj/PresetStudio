@@ -4,6 +4,7 @@ import '../../../../theme/tokens/app_colors.dart';
 import '../../../../theme/tokens/app_radii.dart';
 import '../../../../theme/tokens/app_spacing.dart';
 import '../../domain/crop_state.dart';
+import '../../domain/hsl_color_mixer.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
 import '../../domain/tone_curves.dart';
@@ -24,6 +25,7 @@ class MobileEditorCanvas extends StatelessWidget {
     required this.onImportImage,
     required this.isImporting,
     this.toneCurves,
+    this.hslColorMixer = HslColorMixer.initial,
     this.topAction,
     this.imageOverlay,
     this.onTap,
@@ -36,6 +38,7 @@ class MobileEditorCanvas extends StatelessWidget {
   final ImageTransform transform;
   final CropState crop;
   final ToneCurves? toneCurves;
+  final HslColorMixer hslColorMixer;
   final Future<void> Function() onImportImage;
   final bool isImporting;
   final Widget? topAction;
@@ -60,6 +63,7 @@ class MobileEditorCanvas extends StatelessWidget {
           transform: transform,
           crop: crop,
           toneCurves: toneCurves,
+          hslColorMixer: hslColorMixer,
           onImportImage: onImportImage,
           isImporting: isImporting,
           compactZoomControls: true,

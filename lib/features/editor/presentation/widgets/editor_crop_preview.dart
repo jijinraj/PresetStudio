@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../domain/crop_state.dart';
+import '../../domain/hsl_color_mixer.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
 import '../../domain/tone_curves.dart';
@@ -22,6 +23,7 @@ class EditorCropPreview extends StatefulWidget {
     required this.transform,
     required this.crop,
     this.toneCurves,
+    this.hslColorMixer = HslColorMixer.initial,
     this.filterQuality = FilterQuality.medium,
     this.uncroppedFit = BoxFit.contain,
     this.errorBuilder,
@@ -33,6 +35,7 @@ class EditorCropPreview extends StatefulWidget {
   final ImageTransform transform;
   final CropState crop;
   final ToneCurves? toneCurves;
+  final HslColorMixer hslColorMixer;
   final FilterQuality filterQuality;
   final BoxFit uncroppedFit;
   final ImageErrorWidgetBuilder? errorBuilder;
@@ -129,6 +132,7 @@ class _EditorCropPreviewState extends State<EditorCropPreview> {
         adjustments: widget.adjustments,
         transform: widget.transform,
         toneCurves: widget.toneCurves,
+        hslColorMixer: widget.hslColorMixer,
         fit: widget.uncroppedFit,
         filterQuality: widget.filterQuality,
         errorBuilder: widget.errorBuilder,
@@ -198,6 +202,7 @@ class _EditorCropPreviewState extends State<EditorCropPreview> {
                       adjustments: widget.adjustments,
                       transform: previewTransform,
                       toneCurves: widget.toneCurves,
+                      hslColorMixer: widget.hslColorMixer,
                       fit: BoxFit.contain,
                       filterQuality: widget.filterQuality,
                       errorBuilder: widget.errorBuilder,

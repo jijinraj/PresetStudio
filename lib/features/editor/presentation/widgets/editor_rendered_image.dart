@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/hsl_color_mixer.dart';
 import '../../domain/image_adjustments.dart';
 import '../../domain/image_transform.dart';
 import '../../domain/tone_curves.dart';
@@ -16,6 +17,7 @@ class EditorRenderedImage extends StatefulWidget {
     required this.adjustments,
     required this.transform,
     this.toneCurves,
+    this.hslColorMixer = HslColorMixer.initial,
     this.fit = BoxFit.contain,
     this.filterQuality = FilterQuality.medium,
     this.errorBuilder,
@@ -26,6 +28,7 @@ class EditorRenderedImage extends StatefulWidget {
   final ImageAdjustments adjustments;
   final ImageTransform transform;
   final ToneCurves? toneCurves;
+  final HslColorMixer hslColorMixer;
 
   final BoxFit fit;
   final FilterQuality filterQuality;
@@ -81,6 +84,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
       widget.adjustments,
       transform: widget.transform,
       toneCurves: widget.toneCurves,
+      hslColorMixer: widget.hslColorMixer,
     );
 
     final sourceImage = Image.file(
@@ -99,6 +103,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
       renderPlan.adjustments,
       renderPlan.colorMatrix,
       renderPlan.toneCurveLut,
+      renderPlan.hslColorMixer,
     );
 
     return RepaintBoundary(
@@ -120,6 +125,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
     ImageAdjustments adjustments,
     List<double> fallbackColorMatrix,
     ToneCurveLut toneCurveLut,
+    HslColorMixer hslColorMixer,
   ) {
     final shader = _tonalShader;
 
@@ -131,7 +137,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
       );
     }
 
-    _configureTonalShader(shader, adjustments, toneCurveLut);
+    _configureTonalShader(shader, adjustments, toneCurveLut, hslColorMixer);
 
     return ImageFiltered(
       key: const ValueKey('editor-color-filter'),
@@ -144,6 +150,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
     ui.FragmentShader shader,
     ImageAdjustments adjustments,
     ToneCurveLut toneCurveLut,
+    HslColorMixer hslColorMixer,
   ) {
     // Float slots 0 and 1 belong to u_size and are supplied automatically
     // by ImageFilter.shader.
@@ -170,6 +177,13 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
     }
     for (final value in toneCurveLut.blue) {
       shader.setFloat(slot++, value);
+    }
+
+    for (final range in HslColorRange.values) {
+      final adjustment = hslColorMixer.adjustmentFor(range);
+      shader.setFloat(slot++, adjustment.hue);
+      shader.setFloat(slot++, adjustment.saturation);
+      shader.setFloat(slot++, adjustment.luminance);
     }
   }
 }
