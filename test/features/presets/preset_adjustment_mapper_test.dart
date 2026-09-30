@@ -16,6 +16,8 @@ void main() {
       tint: -6,
       vibrance: 25,
       saturation: -4,
+      vignetteAmount: 35,
+      vignetteFeather: 72,
     );
 
     final values = PresetAdjustmentMapper.fromImageAdjustments(adjustments);
@@ -30,6 +32,8 @@ void main() {
     expect(values.tint, -6);
     expect(values.vibrance, 25);
     expect(values.saturation, -4);
+    expect(values.vignetteAmount, 35);
+    expect(values.vignetteFeather, 72);
   });
 
   test('sanitizes preset values when they enter the editor', () {

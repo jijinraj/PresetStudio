@@ -13,6 +13,8 @@ class ImageAdjustments {
     this.tint = 0,
     this.vibrance = 0,
     this.saturation = 0,
+    this.vignetteAmount = 0,
+    this.vignetteFeather = 50,
   });
 
   final double exposure;
@@ -26,6 +28,8 @@ class ImageAdjustments {
   final double tint;
   final double vibrance;
   final double saturation;
+  final double vignetteAmount;
+  final double vignetteFeather;
 
   static const ImageAdjustments initial = ImageAdjustments();
 
@@ -49,6 +53,8 @@ class ImageAdjustments {
       AdjustmentType.tint => tint,
       AdjustmentType.vibrance => vibrance,
       AdjustmentType.saturation => saturation,
+      AdjustmentType.vignetteAmount => vignetteAmount,
+      AdjustmentType.vignetteFeather => vignetteFeather,
     };
   }
 
@@ -72,6 +78,10 @@ class ImageAdjustments {
       AdjustmentType.tint => copyWith(tint: sanitizedValue),
       AdjustmentType.vibrance => copyWith(vibrance: sanitizedValue),
       AdjustmentType.saturation => copyWith(saturation: sanitizedValue),
+      AdjustmentType.vignetteAmount => copyWith(vignetteAmount: sanitizedValue),
+      AdjustmentType.vignetteFeather => copyWith(
+        vignetteFeather: sanitizedValue,
+      ),
     };
   }
 
@@ -96,6 +106,8 @@ class ImageAdjustments {
     double? tint,
     double? vibrance,
     double? saturation,
+    double? vignetteAmount,
+    double? vignetteFeather,
   }) {
     return ImageAdjustments(
       exposure: exposure ?? this.exposure,
@@ -108,6 +120,8 @@ class ImageAdjustments {
       tint: tint ?? this.tint,
       vibrance: vibrance ?? this.vibrance,
       saturation: saturation ?? this.saturation,
+      vignetteAmount: vignetteAmount ?? this.vignetteAmount,
+      vignetteFeather: vignetteFeather ?? this.vignetteFeather,
     );
   }
 }

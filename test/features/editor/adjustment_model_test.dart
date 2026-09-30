@@ -30,6 +30,18 @@ void main() {
       expect(definition.coarseStep, 0.5);
     });
 
+    test('defines vignette amount and feather metadata', () {
+      final amount = AdjustmentDefinitions.of(AdjustmentType.vignetteAmount);
+      final feather = AdjustmentDefinitions.of(AdjustmentType.vignetteFeather);
+
+      expect(amount.minValue, -100);
+      expect(amount.maxValue, 100);
+      expect(amount.defaultValue, 0);
+      expect(feather.minValue, 0);
+      expect(feather.maxValue, 100);
+      expect(feather.defaultValue, 50);
+    });
+
     test('defines standard adjustment range and interaction steps', () {
       final definition = AdjustmentDefinitions.of(AdjustmentType.contrast);
 
@@ -109,6 +121,14 @@ void main() {
     test('initial adjustments are default', () {
       const adjustments = ImageAdjustments.initial;
 
+      expect(adjustments.isDefault, isTrue);
+    });
+
+    test('neutral vignette state is default', () {
+      const adjustments = ImageAdjustments(
+        vignetteAmount: 0,
+        vignetteFeather: 50,
+      );
       expect(adjustments.isDefault, isTrue);
     });
 

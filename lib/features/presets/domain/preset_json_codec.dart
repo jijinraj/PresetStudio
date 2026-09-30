@@ -111,6 +111,8 @@ class PresetJsonCodec {
       'tint': values.tint,
       'vibrance': values.vibrance,
       'saturation': values.saturation,
+      'vignetteAmount': values.vignetteAmount,
+      'vignetteFeather': values.vignetteFeather,
     };
   }
 
@@ -126,6 +128,8 @@ class PresetJsonCodec {
       tint: _requiredDouble(json, 'tint'),
       vibrance: _requiredDouble(json, 'vibrance'),
       saturation: _requiredDouble(json, 'saturation'),
+      vignetteAmount: _optionalDouble(json, 'vignetteAmount') ?? 0,
+      vignetteFeather: _optionalDouble(json, 'vignetteFeather') ?? 50,
     );
   }
 
@@ -161,6 +165,14 @@ class PresetJsonCodec {
     }
 
     return value;
+  }
+
+  static double? _optionalDouble(Map<String, dynamic> json, String key) {
+    if (!json.containsKey(key) || json[key] == null) {
+      return null;
+    }
+
+    return _requiredDouble(json, key);
   }
 
   static double _requiredDouble(Map<String, dynamic> json, String key) {

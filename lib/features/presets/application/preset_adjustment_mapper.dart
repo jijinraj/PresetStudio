@@ -20,6 +20,8 @@ class PresetAdjustmentMapper {
       tint: sanitized.tint,
       vibrance: sanitized.vibrance,
       saturation: sanitized.saturation,
+      vignetteAmount: sanitized.vignetteAmount,
+      vignetteFeather: sanitized.vignetteFeather,
     );
   }
 
@@ -35,6 +37,8 @@ class PresetAdjustmentMapper {
       tint: values.tint,
       vibrance: values.vibrance,
       saturation: values.saturation,
+      vignetteAmount: values.vignetteAmount,
+      vignetteFeather: values.vignetteFeather,
     ).sanitized();
   }
 }

@@ -17,7 +17,14 @@ class ExportTonalProcessor {
 
   final ImageAdjustments adjustments;
 
-  (double, double, double) apply(double r, double g, double b) {
+  (double, double, double) apply(
+    double r,
+    double g,
+    double b, {
+    double normalizedX = 0.5,
+    double normalizedY = 0.5,
+    double aspectRatio = 1.0,
+  }) {
     final exposureMultiplier = math.pow(2.0, adjustments.exposure).toDouble();
 
     r *= exposureMultiplier;
@@ -74,6 +81,36 @@ class ExportTonalProcessor {
     r = _mix(saturationLuminance, r, saturationFactor);
     g = _mix(saturationLuminance, g, saturationFactor);
     b = _mix(saturationLuminance, b, saturationFactor);
+
+    if (adjustments.vignetteAmount != 0.0) {
+      final centeredX = (normalizedX - 0.5) * aspectRatio;
+      final centeredY = normalizedY - 0.5;
+      final maxRadius = math.sqrt(
+        (0.5 * aspectRatio) * (0.5 * aspectRatio) + 0.25,
+      );
+      final radius =
+          math.sqrt(centeredX * centeredX + centeredY * centeredY) / maxRadius;
+      final feather = (adjustments.vignetteFeather / 100.0)
+          .clamp(0.0, 1.0)
+          .toDouble();
+      final start = _mix(0.78, 0.18, feather);
+      final mask = _smoothstep(start, 1.0, radius);
+      final strength =
+          (adjustments.vignetteAmount / 100.0).clamp(-1.0, 1.0).toDouble() *
+          0.85;
+
+      if (strength >= 0.0) {
+        final factor = 1.0 - strength * mask;
+        r *= factor;
+        g *= factor;
+        b *= factor;
+      } else {
+        final lift = -strength * mask;
+        r += (1.0 - r) * lift;
+        g += (1.0 - g) * lift;
+        b += (1.0 - b) * lift;
+      }
+    }
 
     return (
       r.clamp(0.0, 1.0).toDouble(),

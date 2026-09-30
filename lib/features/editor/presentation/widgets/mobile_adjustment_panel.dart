@@ -63,7 +63,7 @@ class _MobileAdjustmentPanelState extends State<MobileAdjustmentPanel> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Light & Color',
+                          'Adjustments',
                           style: AppTypography.label.copyWith(
                             color: AppColors.textSecondary,
                           ),
@@ -237,6 +237,8 @@ class _MobileAdjustmentPanelState extends State<MobileAdjustmentPanel> {
       AdjustmentType.tint => Icons.water_drop_outlined,
       AdjustmentType.vibrance => Icons.graphic_eq_rounded,
       AdjustmentType.saturation => Icons.opacity_outlined,
+      AdjustmentType.vignetteAmount => Icons.vignette_outlined,
+      AdjustmentType.vignetteFeather => Icons.blur_on_outlined,
     };
   }
 }

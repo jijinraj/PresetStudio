@@ -711,6 +711,14 @@ class _AdjustmentsPanelState extends State<_AdjustmentsPanel> {
       AdjustmentType.saturation,
     );
 
+    final vignetteAmountDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.vignetteAmount,
+    );
+
+    final vignetteFeatherDefinition = AdjustmentDefinitions.of(
+      AdjustmentType.vignetteFeather,
+    );
+
     return Container(
       color: AppColors.surface,
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -909,6 +917,38 @@ class _AdjustmentsPanelState extends State<_AdjustmentsPanel> {
                       onChanged: (value) {
                         controller.updateAdjustment(
                           AdjustmentType.saturation,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Divider(height: 1),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text('Effects', style: AppTypography.label),
+                    const SizedBox(height: AppSpacing.md),
+                    AdjustmentControl(
+                      definition: vignetteAmountDefinition,
+                      value: session.adjustments.vignetteAmount,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.vignetteAmount,
+                          value,
+                        );
+                      },
+                      onInteractionStart: controller.beginEditTransaction,
+                      onInteractionEnd: controller.endEditTransaction,
+                      wheelInteractionGuard: () => !_panelOwnsWheelBurst,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AdjustmentControl(
+                      definition: vignetteFeatherDefinition,
+                      value: session.adjustments.vignetteFeather,
+                      onChanged: (value) {
+                        controller.updateAdjustment(
+                          AdjustmentType.vignetteFeather,
                           value,
                         );
                       },

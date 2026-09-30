@@ -149,5 +149,7 @@ class _EditorRenderedImageState extends State<EditorRenderedImage> {
     shader.setFloat(9, adjustments.tint);
     shader.setFloat(10, adjustments.vibrance);
     shader.setFloat(11, adjustments.saturation);
+    shader.setFloat(12, adjustments.vignetteAmount);
+    shader.setFloat(13, adjustments.vignetteFeather);
   }
 }

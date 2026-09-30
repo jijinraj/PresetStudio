@@ -199,6 +199,26 @@ class AdjustmentDefinitions {
       interactionStep: 1,
       coarseStep: 10,
     ),
+    AdjustmentType.vignetteAmount: AdjustmentDefinition(
+      type: AdjustmentType.vignetteAmount,
+      label: 'Vignette',
+      minValue: -100,
+      maxValue: 100,
+      defaultValue: 0,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
+    ),
+    AdjustmentType.vignetteFeather: AdjustmentDefinition(
+      type: AdjustmentType.vignetteFeather,
+      label: 'Vignette Feather',
+      minValue: 0,
+      maxValue: 100,
+      defaultValue: 50,
+      precisionStep: 1,
+      interactionStep: 1,
+      coarseStep: 10,
+    ),
   };
 
   static AdjustmentDefinition of(AdjustmentType type) {

@@ -13,6 +13,8 @@ uniform float u_temperature;
 uniform float u_tint;
 uniform float u_vibrance;
 uniform float u_saturation;
+uniform float u_vignetteAmount;
+uniform float u_vignetteFeather;
 
 uniform sampler2D u_texture;
 
@@ -87,6 +89,33 @@ vec3 applySaturation(vec3 rgb, float saturation) {
   return mix(vec3(luminance), rgb, factor);
 }
 
+vec3 applyVignette(
+  vec3 rgb,
+  vec2 uv,
+  vec2 size,
+  float amount,
+  float feather
+) {
+  if (amount == 0.0) {
+    return rgb;
+  }
+
+  float aspect = size.x / max(size.y, 1.0);
+  vec2 centered = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
+  float maxRadius = length(vec2(0.5 * aspect, 0.5));
+  float radius = length(centered) / max(maxRadius, 0.0001);
+  float featherValue = clamp(feather / 100.0, 0.0, 1.0);
+  float start = mix(0.78, 0.18, featherValue);
+  float mask = smoothstep(start, 1.0, radius);
+  float strength = clamp(amount / 100.0, -1.0, 1.0) * 0.85;
+
+  if (strength >= 0.0) {
+    return rgb * (1.0 - strength * mask);
+  }
+
+  return rgb + (vec3(1.0) - rgb) * (-strength * mask);
+}
+
 void main() {
   // FlutterFragCoord() already uses the correct image-filter coordinate
   // orientation for this runtime effect. Flipping Y again on Impeller/OpenGLES
@@ -116,6 +145,13 @@ void main() {
   rgb = applyColorBalance(rgb, u_temperature, u_tint);
   rgb = applyVibrance(rgb, u_vibrance);
   rgb = applySaturation(rgb, u_saturation);
+  rgb = applyVignette(
+    rgb,
+    uv,
+    u_size,
+    u_vignetteAmount,
+    u_vignetteFeather
+  );
 
   rgb = clamp(rgb, 0.0, 1.0);
 

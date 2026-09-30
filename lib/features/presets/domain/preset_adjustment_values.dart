@@ -10,6 +10,8 @@ class PresetAdjustmentValues {
     this.tint = 0,
     this.vibrance = 0,
     this.saturation = 0,
+    this.vignetteAmount = 0,
+    this.vignetteFeather = 50,
   });
 
   final double exposure;
@@ -22,6 +24,8 @@ class PresetAdjustmentValues {
   final double tint;
   final double vibrance;
   final double saturation;
+  final double vignetteAmount;
+  final double vignetteFeather;
 
   static const PresetAdjustmentValues initial = PresetAdjustmentValues();
 
@@ -38,7 +42,9 @@ class PresetAdjustmentValues {
             temperature == other.temperature &&
             tint == other.tint &&
             vibrance == other.vibrance &&
-            saturation == other.saturation;
+            saturation == other.saturation &&
+            vignetteAmount == other.vignetteAmount &&
+            vignetteFeather == other.vignetteFeather;
   }
 
   @override
@@ -53,5 +59,7 @@ class PresetAdjustmentValues {
     tint,
     vibrance,
     saturation,
+    vignetteAmount,
+    vignetteFeather,
   );
 }

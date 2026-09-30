@@ -114,6 +114,9 @@ class ExportImageRenderer {
           sampled.rNormalized.toDouble(),
           sampled.gNormalized.toDouble(),
           sampled.bNormalized.toDouble(),
+          normalizedX: raster.width <= 1 ? 0.5 : x / (raster.width - 1),
+          normalizedY: raster.height <= 1 ? 0.5 : y / (raster.height - 1),
+          aspectRatio: raster.width / raster.height,
         );
 
         raster.setPixelRgba(

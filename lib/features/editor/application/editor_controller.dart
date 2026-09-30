@@ -582,6 +582,19 @@ class EditorController extends ChangeNotifier {
       );
     }
 
+    if (before.adjustments.vignetteAmount != after.adjustments.vignetteAmount) {
+      adjustments = adjustments.copyWith(
+        vignetteAmount: after.adjustments.vignetteAmount,
+      );
+    }
+
+    if (before.adjustments.vignetteFeather !=
+        after.adjustments.vignetteFeather) {
+      adjustments = adjustments.copyWith(
+        vignetteFeather: after.adjustments.vignetteFeather,
+      );
+    }
+
     var transform = current.transform;
 
     final beforeRotation = before.transform.normalizedRotationDegrees;
@@ -744,7 +757,9 @@ class EditorController extends ChangeNotifier {
         a.temperature == b.temperature &&
         a.tint == b.tint &&
         a.vibrance == b.vibrance &&
-        a.saturation == b.saturation;
+        a.saturation == b.saturation &&
+        a.vignetteAmount == b.vignetteAmount &&
+        a.vignetteFeather == b.vignetteFeather;
   }
 
   bool _sameTransform(ImageTransform a, ImageTransform b) {

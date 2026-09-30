@@ -46,4 +46,37 @@ void main() {
     expect(vividSpread, greaterThan(0.80));
     expect(mutedSpread / 0.10, greaterThan(vividSpread / 0.80));
   });
+
+  test('positive vignette darkens edges while preserving center', () {
+    const processor = ExportTonalProcessor(
+      ImageAdjustments(vignetteAmount: 80, vignetteFeather: 50),
+    );
+    final center = processor.apply(0.6, 0.6, 0.6);
+    final corner = processor.apply(
+      0.6,
+      0.6,
+      0.6,
+      normalizedX: 0,
+      normalizedY: 0,
+      aspectRatio: 1.5,
+    );
+    expect(center.$1, closeTo(0.6, 0.000001));
+    expect(corner.$1, lessThan(center.$1));
+    expect(corner.$2, lessThan(center.$2));
+    expect(corner.$3, lessThan(center.$3));
+  });
+
+  test('negative vignette lifts edges', () {
+    const processor = ExportTonalProcessor(
+      ImageAdjustments(vignetteAmount: -80, vignetteFeather: 50),
+    );
+    final corner = processor.apply(
+      0.4,
+      0.4,
+      0.4,
+      normalizedX: 1,
+      normalizedY: 1,
+    );
+    expect(corner.$1, greaterThan(0.4));
+  });
 }

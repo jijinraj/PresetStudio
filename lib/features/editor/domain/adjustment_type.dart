@@ -9,4 +9,6 @@ enum AdjustmentType {
   tint,
   vibrance,
   saturation,
+  vignetteAmount,
+  vignetteFeather,
 }
