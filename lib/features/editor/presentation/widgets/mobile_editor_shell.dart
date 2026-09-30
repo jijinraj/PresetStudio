@@ -424,6 +424,9 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
           adjustments: PresetAdjustmentMapper.toImageAdjustments(
             localRecord.preset.adjustments,
           ),
+          toneCurves: PresetAdjustmentMapper.toToneCurves(
+            localRecord.preset.toneCurves,
+          ),
         );
         return;
       }
@@ -464,6 +467,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
         adjustments: PresetAdjustmentMapper.toImageAdjustments(
           preset.adjustments,
         ),
+        toneCurves: PresetAdjustmentMapper.toToneCurves(preset.toneCurves),
       );
     } on Object catch (error) {
       if (mounted) {
@@ -661,6 +665,7 @@ class _MobileEditorShellState extends State<MobileEditorShell> {
       await library.saveCurrent(
         name: name,
         adjustments: controller.session.adjustments,
+        toneCurves: controller.session.effectiveToneCurves,
       );
 
       if (mounted) {

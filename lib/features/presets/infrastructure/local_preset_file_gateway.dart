@@ -17,7 +17,7 @@ class LocalPresetFileGateway implements PresetFileGateway {
   Future<Preset?> importPreset() async {
     final file = await FilePicker.pickFile(
       type: FileType.custom,
-      allowedExtensions: const ['json'],
+      allowedExtensions: const ['presetstudio', 'json'],
     );
 
     if (file == null) {
@@ -59,7 +59,7 @@ class LocalPresetFileGateway implements PresetFileGateway {
       bytes: bytes,
       mimeType: 'application/json',
       type: FileType.custom,
-      allowedExtensions: const ['json'],
+      allowedExtensions: const ['presetstudio'],
     );
   }
 

@@ -361,6 +361,7 @@ class _MobilePresetPanelState extends State<MobilePresetPanel> {
       adjustments: PresetAdjustmentMapper.toImageAdjustments(
         record.preset.adjustments,
       ),
+      toneCurves: PresetAdjustmentMapper.toToneCurves(record.preset.toneCurves),
     );
   }
 
@@ -374,6 +375,9 @@ class _MobilePresetPanelState extends State<MobilePresetPanel> {
         presetName: record.preset.name,
         adjustments: PresetAdjustmentMapper.toImageAdjustments(
           record.preset.adjustments,
+        ),
+        toneCurves: PresetAdjustmentMapper.toToneCurves(
+          record.preset.toneCurves,
         ),
       );
       return;
@@ -429,6 +433,7 @@ class _MobilePresetPanelState extends State<MobilePresetPanel> {
         adjustments: PresetAdjustmentMapper.toImageAdjustments(
           preset.adjustments,
         ),
+        toneCurves: PresetAdjustmentMapper.toToneCurves(preset.toneCurves),
       );
     } on Object catch (error) {
       if (context.mounted) {
@@ -478,6 +483,7 @@ class _MobilePresetPanelState extends State<MobilePresetPanel> {
         name: draft.name,
         description: draft.description,
         adjustments: widget.editorController.session.adjustments,
+        toneCurves: widget.editorController.session.effectiveToneCurves,
       );
       if (context.mounted) {
         _showMessage(context, '${draft.name} saved.');

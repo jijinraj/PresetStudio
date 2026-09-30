@@ -1,7 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:presetstudio/features/editor/domain/curve_point.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
+import 'package:presetstudio/features/editor/domain/tone_curves.dart';
+import 'package:presetstudio/features/presets/application/preset_adjustment_mapper.dart';
 import 'package:presetstudio/features/presets/application/preset_library.dart';
 import 'package:presetstudio/features/presets/application/preset_library_controller.dart';
 import 'package:presetstudio/features/presets/domain/preset.dart';
@@ -37,6 +40,9 @@ void main() {
     expect(controller.isReady, isTrue);
     expect(controller.records, isEmpty);
 
+    final curves = ToneCurves.initial.copyWith(
+      master: ToneCurve(points: [CurvePoint(input: 0.5, output: 0.68)]),
+    );
     final record = await controller.saveCurrent(
       name: 'Dark Forest',
       description: 'Muted greens',
@@ -46,6 +52,7 @@ void main() {
         temperature: 8,
         vibrance: 17,
       ),
+      toneCurves: curves,
     );
 
     expect(record.origin.type, PresetOriginType.local);
@@ -53,6 +60,10 @@ void main() {
     expect(record.preset.createdAt, createdAt);
     expect(record.preset.adjustments.exposure, -0.4);
     expect(record.preset.adjustments.contrast, 22);
+    expect(
+      PresetAdjustmentMapper.toToneCurves(record.preset.toneCurves),
+      curves,
+    );
     expect(controller.records, [record]);
 
     final reloaded = _controller(tempDirectory);
@@ -61,6 +72,12 @@ void main() {
     expect(reloaded.records, hasLength(1));
     expect(reloaded.records.single.preset.name, 'Dark Forest');
     expect(reloaded.records.single.preset.description, 'Muted greens');
+    expect(
+      PresetAdjustmentMapper.toToneCurves(
+        reloaded.records.single.preset.toneCurves,
+      ),
+      curves,
+    );
   });
 
   test(

@@ -185,6 +185,7 @@ class EditorController extends ChangeNotifier {
     required String presetId,
     String? presetName,
     required ImageAdjustments adjustments,
+    ToneCurves? toneCurves,
   }) {
     final normalizedName = presetName?.trim();
     final label = normalizedName == null || normalizedName.isEmpty
@@ -195,6 +196,7 @@ class EditorController extends ChangeNotifier {
       _session.copyWith(
         activePresetId: presetId,
         adjustments: adjustments.sanitized(),
+        toneCurves: toneCurves ?? ToneCurves.initial,
       ),
       label: label,
       action: EditorHistoryAction.preset,

@@ -64,7 +64,7 @@ void main() {
       '${tempDirectory.path}${Platform.pathSeparator}presets',
     );
     final files = await presetDirectory.list().where((entity) {
-      return entity is File && entity.path.endsWith('.presetstudio.json');
+      return entity is File && entity.path.endsWith('.presetstudio');
     }).toList();
 
     expect(files, hasLength(1));

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/presets/domain/preset.dart';
 import 'package:presetstudio/features/presets/domain/preset_adjustment_values.dart';
 import 'package:presetstudio/features/presets/domain/preset_json_codec.dart';
+import 'package:presetstudio/features/presets/domain/preset_tone_curve_values.dart';
 
 void main() {
   const codec = PresetJsonCodec();
@@ -28,6 +29,18 @@ void main() {
         vignetteAmount: 42,
         vignetteFeather: 68,
       ),
+      toneCurves: PresetToneCurvesValues(
+        master: PresetToneCurveValues(
+          points: const [
+            PresetCurvePointValues(input: 0, output: 0),
+            PresetCurvePointValues(input: 0.5, output: 0.65),
+            PresetCurvePointValues(input: 1, output: 1),
+          ],
+        ),
+        red: PresetToneCurveValues.identity,
+        green: PresetToneCurveValues.identity,
+        blue: PresetToneCurveValues.identity,
+      ),
     );
 
     final encoded = codec.encode(preset);
@@ -37,6 +50,8 @@ void main() {
     expect(encoded, contains('"format": "presetstudio.preset"'));
     expect(encoded, contains('"schemaVersion": 1'));
     expect(encoded, contains('"revision": 3'));
+    expect(encoded, contains('"toneCurves"'));
+    expect(encoded, contains('"master"'));
     expect(encoded, isNot(contains('repositoryUrl')));
     expect(encoded, isNot(contains('sourceId')));
     expect(encoded, isNot(contains('crop')));
@@ -62,6 +77,30 @@ void main() {
     final decoded = codec.decode(source);
     expect(decoded.adjustments.vignetteAmount, 0);
     expect(decoded.adjustments.vignetteFeather, 50);
+    expect(decoded.toneCurves, PresetToneCurvesValues.initial);
+  });
+
+  test('rejects malformed tone curve payloads', () {
+    const source = r'''
+{
+  "format": "presetstudio.preset",
+  "schemaVersion": 1,
+  "id": "broken-curves",
+  "name": "Broken Curves",
+  "createdAt": "2026-09-25T00:00:00.000Z",
+  "revision": 1,
+  "adjustments": {
+    "exposure": 0, "contrast": 0, "highlights": 0, "shadows": 0,
+    "whites": 0, "blacks": 0, "temperature": 0, "tint": 0,
+    "vibrance": 0, "saturation": 0
+  },
+  "toneCurves": {
+    "master": "not-an-array", "red": [], "green": [], "blue": []
+  }
+}
+''';
+
+    expect(() => codec.decode(source), throwsA(isA<PresetFormatException>()));
   });
 
   test('optional metadata can be omitted', () {

@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:presetstudio/features/editor/domain/curve_point.dart';
 import 'package:presetstudio/features/editor/domain/image_adjustments.dart';
+import 'package:presetstudio/features/editor/domain/tone_curves.dart';
 import 'package:presetstudio/features/presets/application/preset_adjustment_mapper.dart';
 import 'package:presetstudio/features/presets/domain/preset_adjustment_values.dart';
 
@@ -52,5 +54,17 @@ void main() {
     expect(adjustments.temperature, 13);
     expect(adjustments.tint, -13);
     expect(adjustments.vibrance, 100);
+  });
+
+  test('round-trips shareable tone curves', () {
+    final curves = ToneCurves.initial.copyWith(
+      master: ToneCurve(points: [CurvePoint(input: 0.4, output: 0.62)]),
+      blue: ToneCurve(points: [CurvePoint(input: 0.7, output: 0.55)]),
+    );
+
+    final values = PresetAdjustmentMapper.fromToneCurves(curves);
+    final restored = PresetAdjustmentMapper.toToneCurves(values);
+
+    expect(restored, curves);
   });
 }

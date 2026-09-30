@@ -244,6 +244,7 @@ class PresetBottomTray extends StatelessWidget {
       adjustments: PresetAdjustmentMapper.toImageAdjustments(
         record.preset.adjustments,
       ),
+      toneCurves: PresetAdjustmentMapper.toToneCurves(record.preset.toneCurves),
     );
   }
 
@@ -289,6 +290,7 @@ class PresetBottomTray extends StatelessWidget {
         adjustments: PresetAdjustmentMapper.toImageAdjustments(
           preset.adjustments,
         ),
+        toneCurves: PresetAdjustmentMapper.toToneCurves(preset.toneCurves),
       );
     } on Object catch (error) {
       if (context.mounted) {
@@ -334,6 +336,7 @@ class PresetBottomTray extends StatelessWidget {
         name: draft.name,
         description: draft.description,
         adjustments: editorController.session.adjustments,
+        toneCurves: editorController.session.effectiveToneCurves,
       );
 
       if (context.mounted) {
@@ -842,6 +845,7 @@ class _LocalPresetPreview extends StatelessWidget {
           adjustments: PresetAdjustmentMapper.toImageAdjustments(
             preset.adjustments,
           ),
+          toneCurves: PresetAdjustmentMapper.toToneCurves(preset.toneCurves),
           transform: editorController.session.transform,
           crop: editorController.session.crop,
           filterQuality: FilterQuality.low,

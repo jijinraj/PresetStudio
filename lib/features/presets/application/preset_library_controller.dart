@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../../editor/domain/image_adjustments.dart';
+import '../../editor/domain/tone_curves.dart';
 import '../domain/preset.dart';
 import '../domain/preset_record.dart';
 import 'preset_adjustment_mapper.dart';
@@ -79,6 +80,7 @@ class PresetLibraryController extends ChangeNotifier {
     String? description,
     String? author,
     required ImageAdjustments adjustments,
+    ToneCurves? toneCurves,
   }) async {
     final library = _requireLibrary();
     final preset = Preset(
@@ -88,6 +90,9 @@ class PresetLibraryController extends ChangeNotifier {
       author: author,
       createdAt: _clock().toUtc(),
       adjustments: PresetAdjustmentMapper.fromImageAdjustments(adjustments),
+      toneCurves: PresetAdjustmentMapper.fromToneCurves(
+        toneCurves ?? ToneCurves.initial,
+      ),
     );
 
     try {
@@ -123,6 +128,9 @@ class PresetLibraryController extends ChangeNotifier {
     final sanitizedAdjustments = PresetAdjustmentMapper.fromImageAdjustments(
       PresetAdjustmentMapper.toImageAdjustments(preset.adjustments),
     );
+    final sanitizedToneCurves = PresetAdjustmentMapper.fromToneCurves(
+      PresetAdjustmentMapper.toToneCurves(preset.toneCurves),
+    );
     final importedPreset = Preset(
       schemaVersion: preset.schemaVersion,
       id: asCopy ? _idGenerator() : preset.id,
@@ -132,6 +140,7 @@ class PresetLibraryController extends ChangeNotifier {
       createdAt: preset.createdAt,
       revision: preset.revision,
       adjustments: sanitizedAdjustments,
+      toneCurves: sanitizedToneCurves,
     );
 
     try {

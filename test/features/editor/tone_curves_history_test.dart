@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:presetstudio/features/editor/application/editor_controller.dart';
+import 'package:presetstudio/features/editor/application/editor_history_entry.dart';
 import 'package:presetstudio/features/editor/domain/curve_point.dart';
 import 'package:presetstudio/features/editor/domain/editor_session.dart';
 import 'package:presetstudio/features/editor/domain/tone_curves.dart';
@@ -48,6 +49,24 @@ void main() {
       controller.updateToneCurves(modifiedCurves(0.65));
 
       expect(controller.session.activePresetId, isNull);
+    });
+
+    test('applying a preset replaces tone curve state in one edit', () {
+      final controller = EditorController();
+      addTearDown(controller.dispose);
+
+      controller.setSourceImage('photo.jpg');
+      final curves = modifiedCurves(0.72);
+      controller.applyPreset(
+        presetId: 'curved-preset',
+        adjustments: controller.session.adjustments,
+        toneCurves: curves,
+      );
+
+      expect(controller.session.effectiveToneCurves, curves);
+      expect(controller.session.activePresetId, 'curved-preset');
+      expect(controller.history, hasLength(2));
+      expect(controller.history.last.action, EditorHistoryAction.preset);
     });
 
     test('undo and redo restore tone curve state', () {

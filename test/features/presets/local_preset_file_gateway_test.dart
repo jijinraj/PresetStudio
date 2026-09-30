@@ -17,7 +17,7 @@ void main() {
 
         expect(
           LocalPresetFileGateway.suggestedFileName(preset),
-          'Warm- Film - Portrait-.presetstudio.json',
+          'Warm- Film - Portrait-.presetstudio',
         );
       },
     );
@@ -32,7 +32,7 @@ void main() {
 
       expect(
         LocalPresetFileGateway.suggestedFileName(preset),
-        'preset.presetstudio.json',
+        'preset.presetstudio',
       );
     });
   });

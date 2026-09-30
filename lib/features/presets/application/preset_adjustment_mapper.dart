@@ -1,5 +1,8 @@
+import '../../editor/domain/curve_point.dart';
 import '../../editor/domain/image_adjustments.dart';
+import '../../editor/domain/tone_curves.dart';
 import '../domain/preset_adjustment_values.dart';
+import '../domain/preset_tone_curve_values.dart';
 
 class PresetAdjustmentMapper {
   const PresetAdjustmentMapper._();
@@ -40,5 +43,40 @@ class PresetAdjustmentMapper {
       vignetteAmount: values.vignetteAmount,
       vignetteFeather: values.vignetteFeather,
     ).sanitized();
+  }
+
+  static PresetToneCurvesValues fromToneCurves(ToneCurves curves) {
+    return PresetToneCurvesValues(
+      master: _fromToneCurve(curves.master),
+      red: _fromToneCurve(curves.red),
+      green: _fromToneCurve(curves.green),
+      blue: _fromToneCurve(curves.blue),
+    );
+  }
+
+  static ToneCurves toToneCurves(PresetToneCurvesValues values) {
+    return ToneCurves(
+      master: _toToneCurve(values.master),
+      red: _toToneCurve(values.red),
+      green: _toToneCurve(values.green),
+      blue: _toToneCurve(values.blue),
+    );
+  }
+
+  static PresetToneCurveValues _fromToneCurve(ToneCurve curve) {
+    return PresetToneCurveValues(
+      points: curve.points.map(
+        (point) =>
+            PresetCurvePointValues(input: point.input, output: point.output),
+      ),
+    );
+  }
+
+  static ToneCurve _toToneCurve(PresetToneCurveValues curve) {
+    return ToneCurve(
+      points: curve.points.map(
+        (point) => CurvePoint(input: point.input, output: point.output),
+      ),
+    );
   }
 }

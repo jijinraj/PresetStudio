@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'preset.dart';
 import 'preset_adjustment_values.dart';
+import 'preset_tone_curve_values.dart';
 
 class PresetFormatException implements Exception {
   const PresetFormatException(this.message);
@@ -16,7 +17,7 @@ class PresetJsonCodec {
   const PresetJsonCodec();
 
   static const String format = 'presetstudio.preset';
-  static const String fileSuffix = '.presetstudio.json';
+  static const String fileSuffix = '.presetstudio';
 
   String encode(Preset preset) {
     final json = <String, Object?>{
@@ -29,6 +30,7 @@ class PresetJsonCodec {
       'createdAt': preset.createdAt.toUtc().toIso8601String(),
       'revision': preset.revision,
       'adjustments': _encodeAdjustments(preset.adjustments),
+      'toneCurves': _encodeToneCurves(preset.toneCurves),
     };
 
     return JsonEncoder.withIndent('  ').convert(json);
@@ -93,6 +95,7 @@ class PresetJsonCodec {
         createdAt: createdAt,
         revision: _requiredInt(json, 'revision'),
         adjustments: _decodeAdjustments(adjustmentsJson),
+        toneCurves: _decodeToneCurves(json['toneCurves']),
       );
     } on PresetValidationException catch (error) {
       throw PresetFormatException(error.message);
@@ -131,6 +134,67 @@ class PresetJsonCodec {
       vignetteAmount: _optionalDouble(json, 'vignetteAmount') ?? 0,
       vignetteFeather: _optionalDouble(json, 'vignetteFeather') ?? 50,
     );
+  }
+
+  Map<String, Object?> _encodeToneCurves(PresetToneCurvesValues curves) {
+    return <String, Object?>{
+      'master': _encodeToneCurve(curves.master),
+      'red': _encodeToneCurve(curves.red),
+      'green': _encodeToneCurve(curves.green),
+      'blue': _encodeToneCurve(curves.blue),
+    };
+  }
+
+  List<Map<String, double>> _encodeToneCurve(PresetToneCurveValues curve) {
+    return curve.points
+        .map(
+          (point) => <String, double>{
+            'input': point.input,
+            'output': point.output,
+          },
+        )
+        .toList(growable: false);
+  }
+
+  PresetToneCurvesValues _decodeToneCurves(Object? value) {
+    if (value == null) {
+      return PresetToneCurvesValues.initial;
+    }
+    if (value is! Map<String, dynamic>) {
+      throw const PresetFormatException('toneCurves must be a JSON object.');
+    }
+    return PresetToneCurvesValues(
+      master: _decodeToneCurve(value, 'master'),
+      red: _decodeToneCurve(value, 'red'),
+      green: _decodeToneCurve(value, 'green'),
+      blue: _decodeToneCurve(value, 'blue'),
+    );
+  }
+
+  PresetToneCurveValues _decodeToneCurve(
+    Map<String, dynamic> json,
+    String key,
+  ) {
+    final value = json[key];
+    if (value is! List) {
+      throw PresetFormatException('toneCurves.$key must be a JSON array.');
+    }
+    final points = <PresetCurvePointValues>[];
+    for (var index = 0; index < value.length; index += 1) {
+      final point = value[index];
+      if (point is! Map<String, dynamic>) {
+        throw PresetFormatException(
+          'toneCurves.$key[$index] must be a JSON object.',
+        );
+      }
+      points.add(
+        PresetCurvePointValues(
+          input: _requiredDouble(point, 'input'),
+          output: _requiredDouble(point, 'output'),
+        ),
+      );
+    }
+    return PresetToneCurveValues(points: points);
   }
 
   static String _requiredString(Map<String, dynamic> json, String key) {

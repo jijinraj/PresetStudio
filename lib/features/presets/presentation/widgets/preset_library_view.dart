@@ -331,6 +331,7 @@ class PresetLibraryView extends StatelessWidget {
         adjustments: PresetAdjustmentMapper.toImageAdjustments(
           preset.adjustments,
         ),
+        toneCurves: PresetAdjustmentMapper.toToneCurves(preset.toneCurves),
       );
       onPresetApplied?.call();
     } on Object catch (error) {
@@ -378,6 +379,7 @@ class PresetLibraryView extends StatelessWidget {
         name: draft.name,
         description: draft.description,
         adjustments: editorController.session.adjustments,
+        toneCurves: editorController.session.effectiveToneCurves,
       );
 
       if (!context.mounted) {
@@ -479,6 +481,7 @@ class PresetLibraryView extends StatelessWidget {
       adjustments: PresetAdjustmentMapper.toImageAdjustments(
         record.preset.adjustments,
       ),
+      toneCurves: PresetAdjustmentMapper.toToneCurves(record.preset.toneCurves),
     );
 
     _showMessage(context, 'Applied ${record.preset.name}.');

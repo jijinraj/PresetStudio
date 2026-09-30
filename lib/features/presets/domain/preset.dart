@@ -1,4 +1,5 @@
 import 'preset_adjustment_values.dart';
+import 'preset_tone_curve_values.dart';
 
 class PresetValidationException implements Exception {
   const PresetValidationException(this.message);
@@ -19,6 +20,7 @@ class Preset {
     required DateTime createdAt,
     int revision = 1,
     required PresetAdjustmentValues adjustments,
+    PresetToneCurvesValues? toneCurves,
   }) {
     final normalizedId = id.trim();
     final normalizedName = name.trim();
@@ -71,6 +73,7 @@ class Preset {
       createdAt: createdAt.toUtc(),
       revision: revision,
       adjustments: adjustments,
+      toneCurves: toneCurves ?? PresetToneCurvesValues.initial,
     );
   }
 
@@ -83,6 +86,7 @@ class Preset {
     required this.createdAt,
     required this.revision,
     required this.adjustments,
+    required this.toneCurves,
   });
 
   static const int currentSchemaVersion = 1;
@@ -95,6 +99,7 @@ class Preset {
   final DateTime createdAt;
   final int revision;
   final PresetAdjustmentValues adjustments;
+  final PresetToneCurvesValues toneCurves;
 
   Preset copyWith({
     String? name,
@@ -104,6 +109,7 @@ class Preset {
     bool clearAuthor = false,
     int? revision,
     PresetAdjustmentValues? adjustments,
+    PresetToneCurvesValues? toneCurves,
   }) {
     return Preset(
       schemaVersion: schemaVersion,
@@ -114,6 +120,7 @@ class Preset {
       createdAt: createdAt,
       revision: revision ?? this.revision,
       adjustments: adjustments ?? this.adjustments,
+      toneCurves: toneCurves ?? this.toneCurves,
     );
   }
 
@@ -138,7 +145,8 @@ class Preset {
             author == other.author &&
             createdAt == other.createdAt &&
             revision == other.revision &&
-            adjustments == other.adjustments;
+            adjustments == other.adjustments &&
+            toneCurves == other.toneCurves;
   }
 
   @override
@@ -151,5 +159,6 @@ class Preset {
     createdAt,
     revision,
     adjustments,
+    toneCurves,
   );
 }
