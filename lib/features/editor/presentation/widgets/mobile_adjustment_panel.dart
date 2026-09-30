@@ -9,6 +9,7 @@ import '../../application/editor_controller.dart';
 import '../../domain/adjustment_definition.dart';
 import '../../domain/adjustment_type.dart';
 import 'editor_ruler_control.dart';
+import 'mobile_hsl_color_mixer_workspace.dart';
 import 'mobile_tone_curve_workspace.dart';
 
 class MobileAdjustmentPanel extends StatefulWidget {
@@ -107,6 +108,14 @@ class _MobileAdjustmentPanelState extends State<MobileAdjustmentPanel> {
                         ],
                         const SizedBox(width: AppSpacing.xs),
                         _AdjustmentSelectorItem(
+                          key: const ValueKey('mobile-adjustment-color-mixer'),
+                          icon: Icons.palette_outlined,
+                          label: 'Mix',
+                          selected: false,
+                          onTap: _openColorMixer,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        _AdjustmentSelectorItem(
                           key: const ValueKey('mobile-adjustment-curves'),
                           icon: Icons.show_chart_rounded,
                           label: 'Curves',
@@ -164,6 +173,18 @@ class _MobileAdjustmentPanelState extends State<MobileAdjustmentPanel> {
     if (type == _selected) return;
     _finishActiveTransaction();
     setState(() => _selected = type);
+  }
+
+  Future<void> _openColorMixer() async {
+    _finishActiveTransaction();
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => MobileHslColorMixerWorkspace(
+          controller: controller,
+          onClose: () => Navigator.of(routeContext).pop(),
+        ),
+      ),
+    );
   }
 
   Future<void> _openCurves() async {
